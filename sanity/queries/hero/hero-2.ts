@@ -15,5 +15,14 @@ export const hero2Query = groq`
     links[]{
       ${linkQuery}
     },
+
+    // 🆕 pola dodane dla obrazu tła
+    backgroundAlt,
+    overlay,
+    "backgroundImage": backgroundImage{
+      asset->,
+      crop,
+      hotspot
+    },
   }
 `;
