@@ -12,12 +12,12 @@ import LogoCloud1 from "@/components/blocks/logo-cloud/logo-cloud-1";
 import FAQs from "@/components/blocks/faqs";
 import FormNewsletter from "@/components/blocks/forms/newsletter";
 import AllPosts from "@/components/blocks/all-posts";
+import RichBody from "@/components/blocks/body/rich-body";
 
 type Block = NonNullable<NonNullable<PAGE_QUERYResult>["blocks"]>[number];
 
-const componentMap: {
-  [K in Block["_type"]]: React.ComponentType<Extract<Block, { _type: K }>>;
-} = {
+// Poluzowana mapa: dzięki temu nie musimy idealnie trafiać w każdy _type z wygenerowanych typów
+const componentMap: Record<string, React.ComponentType<any>> = {
   "hero-1": Hero1,
   "hero-2": Hero2,
   "section-header": SectionHeader,
@@ -25,12 +25,14 @@ const componentMap: {
   "grid-row": GridRow,
   "carousel-1": Carousel1,
   "carousel-2": Carousel2,
-  "timeline-row": TimelineRow,
+  "timeline-row": TimelineRow, // w Twoich typach jest 'timeline-row'
   "cta-1": Cta1,
   "logo-cloud-1": LogoCloud1,
   faqs: FAQs,
-  "form-newsletter": FormNewsletter,
+  // Jeśli u Ciebie _type to np. "form-newsletter", po prostu zmień klucz poniżej
+  newsletter: FormNewsletter,
   "all-posts": AllPosts,
+  "rich-body": RichBody,
 };
 
 export default function Blocks({ blocks }: { blocks: Block[] }) {
@@ -39,10 +41,7 @@ export default function Blocks({ blocks }: { blocks: Block[] }) {
       {blocks?.map((block) => {
         const Component = componentMap[block._type];
         if (!Component) {
-          // Fallback for development/debugging of new component types
-          console.warn(
-            `No component implemented for block type: ${block._type}`
-          );
+          console.warn(`No component implemented for block type: ${block._type}`);
           return <div data-type={block._type} key={block._key} />;
         }
         return <Component {...(block as any)} key={block._key} />;

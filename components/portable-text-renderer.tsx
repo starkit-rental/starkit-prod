@@ -5,17 +5,39 @@ import { YouTubeEmbed } from "@next/third-parties/google";
 import { Highlight, themes } from "prism-react-renderer";
 import { CopyButton } from "@/components/ui/copy-button";
 
+/** ---------- aggressively normalize any incoming "value" to an array of blocks ---------- */
+function toBlocks(value: any): any[] {
+  // already an array of blocks
+  if (Array.isArray(value)) return value;
+
+  // common nests
+  if (value?.value && Array.isArray(value.value)) return value.value;
+  if (value?.blocks && Array.isArray(value.blocks)) return value.blocks;
+  if (value?.content && Array.isArray(value.content)) return value.content;
+
+  // sometimes Sanity returns { _type: 'blockContent', children: [...] } by mistake
+  if (value?.children && Array.isArray(value.children)) return value.children;
+
+  // nothing usable
+  return [];
+}
+
 const portableTextComponents: PortableTextProps["components"] = {
   types: {
     image: ({ value }) => {
-      const { url, metadata } = value.asset;
-      const { lqip, dimensions } = metadata;
+      const { url, metadata } = value.asset || {};
+      const { lqip, dimensions } = metadata || {};
+      const width = dimensions?.width ?? 1200;
+      const height = dimensions?.height ?? 630;
+
+      if (!url) return null;
+
       return (
         <Image
           src={url}
-          alt={value.alt || "Image"}
-          width={dimensions.width}
-          height={dimensions.height}
+          alt={value?.alt || "Image"}
+          width={width}
+          height={height}
           placeholder={lqip ? "blur" : undefined}
           blurDataURL={lqip || undefined}
           style={{
@@ -28,7 +50,8 @@ const portableTextComponents: PortableTextProps["components"] = {
       );
     },
     youtube: ({ value }) => {
-      const { videoId } = value;
+      const videoId = value?.videoId;
+      if (!videoId) return null;
       return (
         <div className="aspect-video max-w-[45rem] rounded-xl overflow-hidden mb-4">
           <YouTubeEmbed videoid={videoId} params="rel=0" />
@@ -36,19 +59,17 @@ const portableTextComponents: PortableTextProps["components"] = {
       );
     },
     code: ({ value }) => {
+      const code = value?.code ?? "";
+      const language = value?.language || "typescript";
       return (
         <div className="grid my-4 overflow-x-auto rounded-lg border border-border text-xs lg:text-sm bg-primary/80 dark:bg-muted/80">
           <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-primary/80 dark:bg-muted">
             <div className="text-muted-foreground font-mono">
-              {value.filename || ""}
+              {value?.filename || ""}
             </div>
-            <CopyButton code={value.code} />
+            <CopyButton code={code} />
           </div>
-          <Highlight
-            theme={themes.vsDark}
-            code={value.code}
-            language={value.language || "typescript"}
-          >
+          <Highlight theme={themes.vsDark} code={code} language={language}>
             {({ style, tokens, getLineProps, getTokenProps }) => (
               <pre
                 style={{
@@ -95,14 +116,13 @@ const portableTextComponents: PortableTextProps["components"] = {
   },
   marks: {
     link: ({ value, children }) => {
+      const href = value?.href || "#";
       const isExternal =
-        (value?.href || "").startsWith("http") ||
-        (value?.href || "").startsWith("https") ||
-        (value?.href || "").startsWith("mailto");
+        href.startsWith("http") || href.startsWith("https") || href.startsWith("mailto");
       const target = isExternal ? "_blank" : undefined;
       return (
         <Link
-          href={value?.href || "#"}
+          href={href}
           target={target}
           rel={target ? "noopener" : undefined}
           style={{ textDecoration: "underline" }}
@@ -148,12 +168,24 @@ const portableTextComponents: PortableTextProps["components"] = {
   },
 };
 
-const PortableTextRenderer = ({
-  value,
-}: {
-  value: PortableTextProps["value"];
-}) => {
-  return <PortableText value={value} components={portableTextComponents} />;
+type PortableTextRendererProps = {
+  value?: PortableTextProps["value"] | any;
+};
+
+const PortableTextRenderer = ({ value }: PortableTextRendererProps) => {
+  const blocks = toBlocks(value);
+
+  // nic do renderu
+  if (!Array.isArray(blocks) || blocks.length === 0) {
+    return null;
+  }
+
+  try {
+    return <PortableText value={blocks} components={portableTextComponents} />;
+  } catch {
+    // na wszelki wypadek — jeśli biblioteka rzuci wyjątkiem
+    return null;
+  }
 };
 
 export default PortableTextRenderer;

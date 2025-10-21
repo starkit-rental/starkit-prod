@@ -52,6 +52,7 @@ export default defineType({
         { type: "faqs" },
         { type: "form-newsletter" },
         { type: "all-posts" },
+        { type: "rich-body" },
       ],
       options: {
         insertMenu: {

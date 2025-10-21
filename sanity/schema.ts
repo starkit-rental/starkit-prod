@@ -15,6 +15,7 @@ import link from "./schemas/blocks/shared/link";
 import { colorVariant } from "./schemas/blocks/shared/color-variant";
 import { buttonVariant } from "./schemas/blocks/shared/button-variant";
 import sectionPadding from "./schemas/blocks/shared/section-padding";
+
 // Schema UI objects
 import hero1 from "./schemas/blocks/hero/hero-1";
 import hero2 from "./schemas/blocks/hero/hero-2";
@@ -39,6 +40,9 @@ import logoCloud1 from "./schemas/blocks/logo-cloud/logo-cloud-1";
 import faqs from "./schemas/blocks/faqs";
 import newsletter from "./schemas/blocks/forms/newsletter";
 import allPosts from "./schemas/blocks/all-posts";
+
+// ✅ właściwa ścieżka do nowej sekcji Body
+import richBody from "./schemas/blocks/body/rich-body";
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -81,5 +85,6 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     faqs,
     newsletter,
     allPosts,
+    richBody,
   ],
 };
