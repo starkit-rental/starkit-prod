@@ -4,15 +4,16 @@ import { stegaClean } from "next-sanity";
 import PortableTextRenderer from "@/components/portable-text-renderer";
 import { PAGE_QUERYResult } from "@/sanity.types";
 import Image from "next/image";
+// jeśli alias @ działa, użyj "@/lib/sanityImage"; jeśli nie, zostaw względną ścieżkę:
 import { urlFor } from "@/lib/sanityImage";
 
-// ⬇️ rozszerzamy typ o pola dodane w Sanity/GROQ,
-//    żeby TS przestał zgłaszać błędy
+// ➜ rozszerzamy typ o pola dodane w Sanity/GROQ
+//    WAŻNE: dopuszczamy null, bo z Sanity często przychodzi `string | null`
 type ExtraHero2 = {
-  backgroundImage?: any;
-  backgroundAlt?: string;
-  overlay?: number;
-  textColor?: "white" | "black";
+  backgroundImage?: any | null;
+  backgroundAlt?: string | null;
+  overlay?: number | null;
+  textColor?: "white" | "black" | null;
 };
 
 type Hero2Props = (
@@ -32,7 +33,9 @@ export default function Hero2({
   overlay,
   textColor,
 }: Hero2Props) {
-  const overlayOpacity = Math.min(Math.max((overlay ?? 40) as number, 0), 90) / 100;
+  const overlayOpacity =
+    Math.min(Math.max(((overlay ?? 40) as number), 0), 90) / 100;
+
   const isWhite = textColor === "white";
   const textColorStyle = { color: isWhite ? "#ffffff" : "#000000" };
 
@@ -42,7 +45,7 @@ export default function Hero2({
         <>
           <Image
             src={urlFor(backgroundImage).width(2400).height(1200).fit("crop").url()}
-            alt={backgroundAlt || ""}
+            alt={backgroundAlt ?? ""}
             fill
             className="absolute inset-0 -z-10 object-cover"
             priority
@@ -56,17 +59,26 @@ export default function Hero2({
 
       <div className="container py-20 lg:pt-40 text-center" style={textColorStyle}>
         {tagLine && (
-          <h1 className="leading-[0] font-sans animate-fade-up [animation-delay:100ms] opacity-0" style={textColorStyle}>
+          <h1
+            className="leading-[0] font-sans animate-fade-up [animation-delay:100ms] opacity-0"
+            style={textColorStyle}
+          >
             <span className="text-base font-semibold">{tagLine}</span>
           </h1>
         )}
         {title && (
-          <h2 className="mt-6 font-bold leading-[1.1] text-4xl md:text-5xl lg:text-6xl animate-fade-up [animation-delay:200ms] opacity-0" style={textColorStyle}>
+          <h2
+            className="mt-6 font-bold leading-[1.1] text-4xl md:text-5xl lg:text-6xl animate-fade-up [animation-delay:200ms] opacity-0"
+            style={textColorStyle}
+          >
             {title}
           </h2>
         )}
         {body && (
-          <div className="text-lg mt-6 max-w-2xl mx-auto animate-fade-up [animation-delay:300ms] opacity-0" style={textColorStyle}>
+          <div
+            className="text-lg mt-6 max-w-2xl mx-auto animate-fade-up [animation-delay:300ms] opacity-0"
+            style={textColorStyle}
+          >
             <PortableTextRenderer value={body} />
           </div>
         )}
