@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import Script from "next/script"; // 🆕 Booqable
 
 const isProduction = process.env.NEXT_PUBLIC_SITE_ENV === "production";
 
@@ -56,6 +57,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           fontSans.variable
         )}
       >
+        {/* 🧩 Booqable – ładowanie po interakcji (nie blokuje renderu) */}
+        <Script
+          src="https://7ec1d30c-98da-425a-9b8f-8002a1f966c0.assets.booqable.com/v2/booqable.js"
+          strategy="afterInteractive"
+        />
+
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
