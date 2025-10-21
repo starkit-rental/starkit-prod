@@ -6,7 +6,7 @@
 
 import { visionTool } from "@sanity/vision";
 import { defineConfig } from "sanity";
-import { structureTool } from "sanity/structure";
+import { deskTool } from "sanity/desk";            // ✅ zamiast structureTool
 import { presentationTool } from "sanity/presentation";
 
 // Go to https://www.sanity.io/docs/api-versioning to learn how API versioning works
@@ -48,7 +48,7 @@ export default defineConfig({
         : input,
   },
   plugins: [
-    structureTool({ structure }),
+    deskTool({ structure }),                         // ✅ tu też zmiana
     presentationTool({
       previewUrl: {
         draftMode: {
