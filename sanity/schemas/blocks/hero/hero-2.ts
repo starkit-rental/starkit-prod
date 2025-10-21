@@ -26,7 +26,7 @@ export default defineType({
       validation: (rule) => rule.max(2),
     }),
 
-    // 🆕 Dodane pola dla obrazu w tle
+    // 🆕 Obraz w tle
     defineField({
       name: "backgroundImage",
       title: "Background image",
@@ -45,11 +45,27 @@ export default defineType({
       validation: (Rule) => Rule.min(0).max(90),
       initialValue: 40,
     }),
+
+    // 🆕 Kolor tekstu
+    defineField({
+      name: "textColor",
+      title: "Text color",
+      type: "string",
+      options: {
+        list: [
+          { title: "Czarny", value: "black" },
+          { title: "Biały", value: "white" },
+        ],
+        layout: "radio",
+      },
+      initialValue: "black",
+    }),
   ],
+
   preview: {
     select: {
       title: "title",
-      media: "backgroundImage", // 🆕 żeby pokazało miniaturkę w Studio
+      media: "backgroundImage",
     },
     prepare({ title, media }) {
       return {

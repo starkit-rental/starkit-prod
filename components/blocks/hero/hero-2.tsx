@@ -23,6 +23,7 @@ export default function Hero2({
   backgroundImage,
   backgroundAlt,
   overlay,
+  textColor, // 🆕 dodane pole z Sanity
 }: Hero2Props) {
   const overlayOpacity = Math.min(Math.max((overlay ?? 40) as number, 0), 90) / 100;
 
@@ -45,8 +46,12 @@ export default function Hero2({
         </>
       )}
 
-      {/* istniejąca treść bez zmian */}
-      <div className="container dark:bg-background py-20 lg:pt-40 text-center">
+      {/* 🆕 Dynamiczny kolor tekstu */}
+      <div
+        className={`container py-20 lg:pt-40 text-center ${
+          textColor === "white" ? "text-white" : "text-black dark:text-white"
+        }`}
+      >
         {tagLine && (
           <h1 className="leading-[0] font-sans animate-fade-up [animation-delay:100ms] opacity-0">
             <span className="text-base font-semibold">{tagLine}</span>

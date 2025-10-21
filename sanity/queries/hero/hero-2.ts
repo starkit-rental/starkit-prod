@@ -19,6 +19,7 @@ export const hero2Query = groq`
     // 🆕 pola dodane dla obrazu tła
     backgroundAlt,
     overlay,
+    textColor,
     "backgroundImage": backgroundImage{
       asset->,
       crop,
