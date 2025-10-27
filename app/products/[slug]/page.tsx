@@ -6,8 +6,15 @@ import BooqableDetail from "../_components/booqable-detail";
 
 export const revalidate = 60;
 
-export default async function ProductPage({ params }: { params: { slug: string } }) {
-  const product = await client.fetch(singleProductQuery, { slug: params.slug });
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  // Next 15: params jest Promisem — trzeba go awaitować
+  const { slug } = await params;
+
+  const product = await client.fetch(singleProductQuery, { slug });
 
   if (!product) {
     return <div className="container py-12 md:py-16">Produkt nie znaleziony.</div>;
@@ -22,8 +29,9 @@ export default async function ProductPage({ params }: { params: { slug: string }
         strategy="afterInteractive"
       />
 
-      {/* Górny widok: nativy detail z Booqable (karuzela, cena, CTA itd.) */}
+      {/* Górny widok: natywny detail z Booqable (karuzela, cena, CTA itd.) */}
       <section className="container py-8 md:py-10 lg:py-12">
+        {/* W query zwracamy "slug" jako string (slug.current), więc przekazujemy wprost */}
         <BooqableDetail productId={product.slug} />
       </section>
 
