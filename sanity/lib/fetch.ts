@@ -7,11 +7,7 @@ import {
   POSTS_QUERY,
   POSTS_SLUGS_QUERY,
 } from "@/sanity/queries/post";
-import {
-  PRODUCT_QUERY,
-  PRODUCTS_QUERY,
-  PRODUCTS_SLUGS_QUERY,
-} from "@/sanity/queries/product";
+import { PRODUCT_QUERY, PRODUCTS_QUERY } from "@/sanity/queries/product";
 import {
   PAGE_QUERYResult,
   PAGES_SLUGS_QUERYResult,
@@ -98,18 +94,6 @@ export const fetchSanityProductBySlug = async ({
   });
 
   return (data ?? null) as ProductDocument | null;
-};
-
-export const fetchSanityProductsStaticParams = async (): Promise<
-  Array<{ slug?: { current?: string } }>
-> => {
-  const { data } = await sanityFetch({
-    query: PRODUCTS_SLUGS_QUERY,
-    perspective: "published",
-    stega: false,
-  });
-
-  return (data ?? []) as Array<{ slug?: { current?: string } }>;
 };
 
 export const fetchSanityNavigation =

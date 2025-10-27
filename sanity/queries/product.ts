@@ -35,5 +35,3 @@ export const PRODUCTS_QUERY = groq`*[_type == "product" && defined(slug)] | orde
     ${imageQuery}
   }
 }`;
-
-export const PRODUCTS_SLUGS_QUERY = groq`*[_type == "product" && defined(slug)]{slug}`;

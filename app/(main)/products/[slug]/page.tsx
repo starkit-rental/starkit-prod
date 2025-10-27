@@ -4,24 +4,17 @@ import Breadcrumbs from "@/components/ui/breadcrumbs";
 import PortableTextRenderer from "@/components/portable-text-renderer";
 import ProductGallery from "@/components/products/product-gallery";
 import ProductHero from "@/components/products/product-hero";
-import { fetchSanityProductBySlug, fetchSanityProductsStaticParams } from "@/sanity/lib/fetch";
+import { fetchSanityProductBySlug } from "@/sanity/lib/fetch";
 import { generatePageMetadata } from "@/sanity/lib/metadata";
 import type { BreadcrumbLink } from "@/types";
 
-export async function generateStaticParams() {
-  const products = await fetchSanityProductsStaticParams();
+export const dynamic = "force-dynamic";
 
-  return products
-    .map((product: { slug?: { current?: string } }) => ({
-      slug: product.slug?.current,
-    }))
-    .filter((product) => Boolean(product.slug));
-}
-
-export async function generateMetadata(props: {
-  params: Promise<{ slug: string }>;
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
 }) {
-  const params = await props.params;
   const product = await fetchSanityProductBySlug({ slug: params.slug });
 
   if (!product) {
@@ -34,10 +27,11 @@ export async function generateMetadata(props: {
   });
 }
 
-export default async function ProductPage(props: {
-  params: Promise<{ slug: string }>;
+export default async function ProductPage({
+  params,
+}: {
+  params: { slug: string };
 }) {
-  const params = await props.params;
   const product = await fetchSanityProductBySlug({ slug: params.slug });
 
   if (!product) {
