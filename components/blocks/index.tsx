@@ -13,6 +13,7 @@ import FAQs from "@/components/blocks/faqs";
 import FormNewsletter from "@/components/blocks/forms/newsletter";
 import AllPosts from "@/components/blocks/all-posts";
 import RichBody from "@/components/blocks/body/rich-body";
+import FeatureCarousel from "@/components/blocks/carousel/feature-carousel";
 
 type Block = NonNullable<NonNullable<PAGE_QUERYResult>["blocks"]>[number];
 
@@ -33,6 +34,7 @@ const componentMap: Record<string, React.ComponentType<any>> = {
   newsletter: FormNewsletter,
   "all-posts": AllPosts,
   "rich-body": RichBody,
+  "feature-carousel": FeatureCarousel,
 };
 
 export default function Blocks({ blocks }: { blocks: Block[] }) {

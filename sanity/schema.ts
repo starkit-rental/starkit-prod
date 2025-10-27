@@ -40,8 +40,7 @@ import logoCloud1 from "./schemas/blocks/logo-cloud/logo-cloud-1";
 import faqs from "./schemas/blocks/faqs";
 import newsletter from "./schemas/blocks/forms/newsletter";
 import allPosts from "./schemas/blocks/all-posts";
-
-// ✅ właściwa ścieżka do nowej sekcji Body
+import featureCarousel from "./schemas/blocks/carousel/feature-carousel";
 import richBody from "./schemas/blocks/body/rich-body";
 
 export const schema: { types: SchemaTypeDefinition[] } = {
@@ -86,5 +85,6 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     newsletter,
     allPosts,
     richBody,
+    featureCarousel,
   ],
 };

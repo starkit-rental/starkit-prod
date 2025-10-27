@@ -13,6 +13,7 @@ import { faqsQuery } from "./faqs";
 import { formNewsletterQuery } from "./forms/newsletter";
 import { allPostsQuery } from "./all-posts";
 import { richBodyQuery } from "./body/rich-body";
+import { featureCarouselQuery } from "./carousel/feature-carousel";
 
 export const PAGE_QUERY = groq`
   *[_type == "page" && slug.current == $slug][0]{
@@ -31,6 +32,7 @@ export const PAGE_QUERY = groq`
       ${formNewsletterQuery},
       ${allPostsQuery},
       ${richBodyQuery},
+      ${featureCarouselQuery},
     },
     meta_title,
     meta_description,

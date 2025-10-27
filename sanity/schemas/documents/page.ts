@@ -53,6 +53,7 @@ export default defineType({
         { type: "form-newsletter" },
         { type: "all-posts" },
         { type: "rich-body" },
+        { type: "feature-carousel" },  
       ],
       options: {
         insertMenu: {
