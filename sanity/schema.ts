@@ -8,6 +8,7 @@ import faq from "./schemas/documents/faq";
 import testimonial from "./schemas/documents/testimonial";
 import navigation from "./schemas/documents/navigation";
 import settings from "./schemas/documents/settings";
+import product from "./schemas/documents/product";
 
 // Schema UI shared objects
 import blockContent from "./schemas/blocks/shared/block-content";
@@ -54,6 +55,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     testimonial,
     navigation,
     settings,
+    product,
     // shared objects
     blockContent,
     link,
