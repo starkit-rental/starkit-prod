@@ -8,6 +8,11 @@ import {
   POSTS_SLUGS_QUERY,
 } from "@/sanity/queries/post";
 import {
+  PRODUCT_QUERY,
+  PRODUCTS_QUERY,
+  PRODUCTS_SLUGS_QUERY,
+} from "@/sanity/queries/product";
+import {
   PAGE_QUERYResult,
   PAGES_SLUGS_QUERYResult,
   POST_QUERYResult,
@@ -16,6 +21,7 @@ import {
   NAVIGATION_QUERYResult,
   SETTINGS_QUERYResult,
 } from "@/sanity.types";
+import { ProductDocument, ProductListItem } from "@/types/product";
 
 export const fetchSanityPageBySlug = async ({
   slug,
@@ -72,6 +78,39 @@ export const fetchSanityPostsStaticParams =
 
     return data;
   };
+
+export const fetchSanityProducts = async (): Promise<ProductListItem[]> => {
+  const { data } = await sanityFetch({
+    query: PRODUCTS_QUERY,
+  });
+
+  return (data ?? []) as ProductListItem[];
+};
+
+export const fetchSanityProductBySlug = async ({
+  slug,
+}: {
+  slug: string;
+}): Promise<ProductDocument | null> => {
+  const { data } = await sanityFetch({
+    query: PRODUCT_QUERY,
+    params: { slug },
+  });
+
+  return (data ?? null) as ProductDocument | null;
+};
+
+export const fetchSanityProductsStaticParams = async (): Promise<
+  Array<{ slug?: { current?: string } }>
+> => {
+  const { data } = await sanityFetch({
+    query: PRODUCTS_SLUGS_QUERY,
+    perspective: "published",
+    stega: false,
+  });
+
+  return (data ?? []) as Array<{ slug?: { current?: string } }>;
+};
 
 export const fetchSanityNavigation =
   async (): Promise<NAVIGATION_QUERYResult> => {
