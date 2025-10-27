@@ -19,6 +19,8 @@ export const singleProductQuery = groq`
   *[_type == "product" && slug.current == $slug][0] {
     _id,
     title,
+    "slug": slug.current,
+    booqableId,
     excerpt,
     description,
     pricePerDay,

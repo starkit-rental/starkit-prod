@@ -13,7 +13,6 @@ export default defineType({
       type: "string",
       validation: (Rule) => Rule.required(),
     }),
-
     defineField({
       name: "slug",
       title: "Slug",
@@ -21,7 +20,6 @@ export default defineType({
       options: { source: "title", maxLength: 96 },
       validation: (Rule) => Rule.required(),
     }),
-
     defineField({
       name: "category",
       title: "Category",
@@ -29,20 +27,17 @@ export default defineType({
       to: [{ type: "productCategory" }],
       validation: (Rule) => Rule.required(),
     }),
-
     defineField({
       name: "excerpt",
       title: "Short description",
       type: "text",
       rows: 3,
     }),
-
     defineField({
       name: "description",
       title: "Body",
       type: "block-content",
     }),
-
     defineField({
       name: "images",
       title: "Images",
@@ -50,21 +45,18 @@ export default defineType({
       of: [{ type: "image", options: { hotspot: true } }],
       validation: (Rule) => Rule.min(1),
     }),
-
     defineField({
       name: "pricePerDay",
       title: "Price per day (PLN)",
       type: "number",
       validation: (Rule) => Rule.min(0),
     }),
-
     defineField({
       name: "deposit",
       title: "Deposit (PLN)",
       type: "number",
       validation: (Rule) => Rule.min(0),
     }),
-
     defineField({
       name: "status",
       title: "Status",
@@ -78,14 +70,12 @@ export default defineType({
       },
       initialValue: "available",
     }),
-
     defineField({
       name: "tags",
       title: "Tags",
       type: "array",
       of: [{ type: "string" }],
     }),
-
     defineField({
       name: "specs",
       title: "Specs",
@@ -101,8 +91,12 @@ export default defineType({
         },
       ],
     }),
-
-    // 🔥 Dynamiczne sekcje (tak jak na stronie głównej)
+    defineField({
+      name: "booqableId",
+      title: "Booqable Product ID",
+      type: "string",
+      description: "Np. 'starlink-mini'. Gdy puste, użyjemy sluga.",
+    }),
     defineField({
       name: "blocks",
       title: "Blocks",
@@ -127,7 +121,6 @@ export default defineType({
         { type: "rich-body" },
       ],
     }),
-
     defineField({
       name: "orderRank",
       title: "Order Rank",
@@ -135,12 +128,7 @@ export default defineType({
       hidden: true,
     }),
   ],
-
   preview: {
-    select: {
-      title: "title",
-      media: "images.0",
-      subtitle: "category.title",
-    },
+    select: { title: "title", media: "images.0", subtitle: "category.title" },
   },
 });
