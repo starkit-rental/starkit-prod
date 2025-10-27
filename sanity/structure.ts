@@ -7,12 +7,16 @@ import {
   Quote,
   Menu,
   Settings,
+  Boxes,
+  Tags,
+  LayoutTemplate,
 } from "lucide-react";
 
 export const structure = (S: any, context: any) =>
   S.list()
     .title("Content")
     .items([
+      // --- strony i wpisy ---
       orderableDocumentListDeskItem({
         type: "page",
         title: "Pages",
@@ -26,7 +30,7 @@ export const structure = (S: any, context: any) =>
         .child(
           S.documentTypeList("post")
             .title("Post")
-            .defaultOrdering([{ field: "_createdAt", direction: "desc" }]) // Default ordering
+            .defaultOrdering([{ field: "_createdAt", direction: "desc" }])
         ),
       orderableDocumentListDeskItem({
         type: "category",
@@ -56,7 +60,40 @@ export const structure = (S: any, context: any) =>
         S,
         context,
       }),
+
+      // --- separator ---
+      S.divider(),
+
+      // --- Products Page (singleton) ---
+      S.listItem()
+        .title("Products Page")
+        .icon(LayoutTemplate)
+        .child(
+          S.document()
+            .schemaType("productsPage")
+            .documentId("productsPage")
+        ),
+
+      // --- produkty ---
+      orderableDocumentListDeskItem({
+        type: "product",
+        title: "Products",
+        icon: Boxes,
+        S,
+        context,
+      }),
+      orderableDocumentListDeskItem({
+        type: "productCategory",
+        title: "Product Categories",
+        icon: Tags,
+        S,
+        context,
+      }),
+
+      // --- separator global ---
       S.divider({ title: "Global" }),
+
+      // --- nawigacja i ustawienia ---
       S.listItem()
         .title("Navigation")
         .icon(Menu)
