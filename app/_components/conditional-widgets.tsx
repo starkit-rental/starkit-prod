@@ -15,7 +15,7 @@ export default function ConditionalWidgets() {
   return (
     <>
       <BooqableScript />
-      <SmartsuppScript />
+      {/* <SmartsuppScript /> */}
     </>
   );
 }
