@@ -79,7 +79,7 @@ export default function Carousel2({
             variant="secondary"
             className="-right-3 md:-right-8 xl:-right-12"
           />
-          <div className="w-full flex justify-center">
+          <div className="w-full flex justify-center mt-6">
             <CarouselDots />
           </div>
         </Carousel>

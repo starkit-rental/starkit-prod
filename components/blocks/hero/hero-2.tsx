@@ -37,7 +37,7 @@ export default function Hero2({
   const hasLinks = Array.isArray(links) && links.length > 0;
 
   return (
-    <section className="relative isolate overflow-hidden pb-0 md:pb-4">
+    <section className="relative isolate overflow-hidden pb-0 md:pb-4 px-4 md:px-0">
       <div className="container relative rounded-3xl overflow-hidden mt-4 md:mt-6">
         {}
         {backgroundImage?.asset && (
