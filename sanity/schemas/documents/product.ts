@@ -43,7 +43,6 @@ export default defineType({
       title: "Images",
       type: "array",
       of: [{ type: "image", options: { hotspot: true } }],
-      validation: (Rule) => Rule.min(1),
     }),
     defineField({
       name: "pricePerDay",
