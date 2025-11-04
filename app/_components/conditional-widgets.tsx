@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import BooqableScript from "./booqable-script";
-import SmartsuppScript from "./smartsupp-script";
+// import SmartsuppScript from "./smartsupp-script";
 
 export default function ConditionalWidgets() {
   const pathname = usePathname();
@@ -15,7 +15,6 @@ export default function ConditionalWidgets() {
   return (
     <>
       <BooqableScript />
-      {/* <SmartsuppScript /> */}
     </>
   );
 }
