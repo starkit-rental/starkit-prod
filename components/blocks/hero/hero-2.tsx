@@ -87,22 +87,28 @@ export default function Hero2({
 
           {hasLinks && (
             <div className="mt-10 flex flex-wrap gap-4 justify-center animate-fade-up [animation-delay:400ms] opacity-0">
-              {links.map((link) => (
-                <Button
-                  key={link._key || link.title}
-                  variant={stegaClean(link?.buttonVariant)}
-                  asChild
-                >
-                  <Link
-                    href={link.href || "#"}
-                    target={link.target ? "_blank" : undefined}
-                    rel={link.target ? "noopener" : undefined}
-                    style={textColorStyle}
+              {links.map((link) => {
+                const variant = stegaClean(link?.buttonVariant);
+                // Tylko wariant default powinien dziedziczyć kolor tekstu z hero
+                const shouldInheritColor = variant === "default";
+
+                return (
+                  <Button
+                    key={link._key || link.title}
+                    variant={variant}
+                    asChild
                   >
-                    {link.title}
-                  </Link>
-                </Button>
-              ))}
+                    <Link
+                      href={link.href || "#"}
+                      target={link.target ? "_blank" : undefined}
+                      rel={link.target ? "noopener" : undefined}
+                      style={shouldInheritColor ? textColorStyle : undefined}
+                    >
+                      {link.title}
+                    </Link>
+                  </Button>
+                );
+              })}
             </div>
           )}
         </div>
