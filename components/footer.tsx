@@ -15,9 +15,6 @@ export default async function Footer() {
   return (
     <footer>
       <div className="dark:bg-background pb-5 xl:pb-5 dark:text-gray-300 text-center">
-        <div className="text-foreground/60 text-sm mb-8">
-          &copy; {new Date().getFullYear()}
-        </div>
         <Link
           href="/"
           className="inline-block text-center"
@@ -43,6 +40,9 @@ export default async function Footer() {
               {navItem.title}
             </Link>
           ))}
+        </div>
+        <div className="text-foreground/60 text-sm mt-8">
+          &copy; {new Date().getFullYear()}
         </div>
         <div className="mt-8 flex flex-row gap-6 justify-center lg:mt-5 text-xs border-t pt-8">
           <div className="flex items-center gap-2 text-foreground/60">
