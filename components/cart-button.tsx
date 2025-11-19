@@ -66,35 +66,64 @@ export function CartButton() {
   const handleClick = () => {
     console.log('[CartButton] Cart button clicked');
 
-    // Otwórz koszyk Booqable - próbuj różne metody
+    // Metoda 1: Spróbuj znaleźć i kliknąć istniejący widget koszyka
+    const cartSelectors = [
+      '.booqable-shopping-cart',
+      '.booqable-cart',
+      '[data-booqable-cart]',
+      '.booqable-component[data-component="shopping-cart"]',
+      'button[aria-label*="cart" i]',
+      'button[aria-label*="koszyk" i]',
+    ];
+
+    let cartElement: HTMLElement | null = null;
+
+    for (const selector of cartSelectors) {
+      cartElement = document.querySelector(selector) as HTMLElement;
+      if (cartElement) {
+        console.log(`[CartButton] Found cart element with selector: ${selector}`);
+        break;
+      }
+    }
+
+    if (cartElement) {
+      console.log('[CartButton] Clicking cart element:', cartElement);
+      cartElement.click();
+      return;
+    }
+
+    // Metoda 2: Spróbuj wszystkie metody w window.Booqable
     if (typeof window !== 'undefined' && window.Booqable) {
-      const possibleMethods = [
-        ['cart', 'open'],
-        ['cart', 'show'],
-        ['cart', 'toggle'],
-        ['shopping_cart', 'open'],
-        ['shoppingCart', 'open'],
-      ];
+      console.log('[CartButton] Trying all Booqable methods...');
 
-      let success = false;
+      const booqable = window.Booqable as any;
+      const allKeys = Object.keys(booqable);
+      console.log('[CartButton] All Booqable keys:', allKeys);
 
-      for (const [obj, method] of possibleMethods) {
-        try {
-          const target = (window.Booqable as any)[obj];
-          if (target && typeof target[method] === 'function') {
-            console.log(`[CartButton] Calling Booqable.${obj}.${method}()`);
-            target[method]();
-            success = true;
-            break;
+      // Spróbuj metody które mogą otwierać koszyk
+      const possibleCartMethods = allKeys.filter((key: string) =>
+        key.toLowerCase().includes('cart') ||
+        key.toLowerCase().includes('open') ||
+        key.toLowerCase().includes('show') ||
+        key.toLowerCase().includes('toggle')
+      );
+
+      console.log('[CartButton] Possible cart methods:', possibleCartMethods);
+
+      for (const method of possibleCartMethods) {
+        if (typeof booqable[method] === 'function') {
+          console.log(`[CartButton] Trying Booqable.${method}()`);
+          try {
+            booqable[method]();
+            console.log(`[CartButton] Successfully called ${method}()`);
+            return;
+          } catch (err) {
+            console.error(`[CartButton] Failed calling ${method}:`, err);
           }
-        } catch (err) {
-          console.error(`[CartButton] Failed to call ${obj}.${method}:`, err);
         }
       }
 
-      if (!success) {
-        console.warn('[CartButton] No cart open method found in Booqable API');
-      }
+      console.warn('[CartButton] No working cart method found');
     }
   };
 
