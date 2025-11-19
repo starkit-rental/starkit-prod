@@ -40,38 +40,39 @@ export default function BooqableScript() {
     script.async = true;
 
     script.onload = () => {
-      console.log("[Booqable] Script file loaded, waiting for API...");
+      console.log("[Booqable] Script file loaded");
       window.booqableScriptLoaded = true;
       window.booqableScriptLoading = false;
 
-      // Czekaj aż Booqable API będzie w pełni dostępny
-      let attempts = 0;
-      const maxAttempts = 50;
+      // Sprawdź co jest dostępne w window.Booqable
+      setTimeout(() => {
+        console.log("[Booqable] Checking available API...");
+        console.log("[Booqable] window.Booqable:", window.Booqable);
 
-      const checkAndInit = () => {
-        attempts++;
+        if (window.Booqable) {
+          console.log("[Booqable] Available methods:", Object.keys(window.Booqable));
 
-        if (window.Booqable?.widgets?.scan) {
-          console.log("[Booqable] API ready, initializing widgets...");
-          try {
-            window.Booqable.widgets.scan();
-            window.Booqable.refresh?.();
-            window.dispatchEvent(new Event("booqable:loaded"));
-            console.log("[Booqable] Widgets initialized successfully");
-          } catch (err) {
-            console.error("[Booqable] Init error:", err);
+          // Spróbuj różne możliwe metody inicjalizacji
+          if (typeof window.Booqable === 'function') {
+            console.log("[Booqable] Calling Booqable() function");
+            try {
+              (window.Booqable as any)();
+            } catch (err) {
+              console.error("[Booqable] Error calling function:", err);
+            }
           }
-        } else if (attempts < maxAttempts) {
-          if (attempts % 10 === 0) {
-            console.log(`[Booqable] API not ready yet, attempt ${attempts}/${maxAttempts}`);
+
+          if (window.Booqable.widgets) {
+            console.log("[Booqable] widgets methods:", Object.keys(window.Booqable.widgets));
           }
-          setTimeout(checkAndInit, 200);
-        } else {
-          console.error("[Booqable] Failed to initialize after maximum attempts");
         }
-      };
 
-      checkAndInit();
+        // Poczekaj jeszcze chwilę i wyślij event
+        setTimeout(() => {
+          window.dispatchEvent(new Event("booqable:loaded"));
+          console.log("[Booqable] Dispatched booqable:loaded event");
+        }, 500);
+      }, 100);
     };
 
     script.onerror = (error) => {

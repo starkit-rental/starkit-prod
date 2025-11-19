@@ -25,11 +25,28 @@ export default function BooqableEmbed({ kind, id, className }: Props) {
       if (!isSubscribed) return;
 
       // Sprawdź czy Booqable jest dostępny
-      if (typeof window !== "undefined" && window.Booqable?.widgets?.scan) {
+      if (typeof window !== "undefined" && window.Booqable) {
+        console.log(`[BooqableEmbed] Booqable detected for ${kind}:${id}`);
+        console.log(`[BooqableEmbed] Booqable object:`, window.Booqable);
+
         try {
-          console.log(`[BooqableEmbed] Initializing widget ${kind}:${id}`);
-          window.Booqable.widgets.scan();
-          window.Booqable.refresh?.();
+          // Spróbuj różne metody inicjalizacji
+          if (window.Booqable.widgets?.scan) {
+            console.log(`[BooqableEmbed] Calling widgets.scan() for ${kind}:${id}`);
+            window.Booqable.widgets.scan();
+          }
+
+          if (window.Booqable.refresh) {
+            console.log(`[BooqableEmbed] Calling refresh() for ${kind}:${id}`);
+            window.Booqable.refresh();
+          }
+
+          // Jeśli Booqable jest funkcją, wywołaj ją
+          if (typeof window.Booqable === 'function') {
+            console.log(`[BooqableEmbed] Calling Booqable() for ${kind}:${id}`);
+            (window.Booqable as any)();
+          }
+
           mountedRef.current = true;
           retryCountRef.current = 0;
           console.log(`[BooqableEmbed] Widget ${kind}:${id} initialized successfully`);
@@ -40,9 +57,10 @@ export default function BooqableEmbed({ kind, id, className }: Props) {
         // Jeśli Booqable nie jest jeszcze dostępny, spróbuj ponownie
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current++;
-          if (retryCountRef.current % 10 === 0) {
+          if (retryCountRef.current % 5 === 0) {
             console.log(
-              `[BooqableEmbed] Still waiting for Booqable... attempt ${retryCountRef.current}/${maxRetries}`
+              `[BooqableEmbed] Still waiting for Booqable... attempt ${retryCountRef.current}/${maxRetries}, window.Booqable =`,
+              window.Booqable
             );
           }
           retryTimeout = setTimeout(init, 200);
@@ -50,6 +68,7 @@ export default function BooqableEmbed({ kind, id, className }: Props) {
           console.error(
             `[BooqableEmbed] Widget ${kind}:${id} failed to initialize after ${maxRetries} retries. Script may not be loaded.`
           );
+          console.error(`[BooqableEmbed] Final window.Booqable state:`, window.Booqable);
         }
       }
     };
