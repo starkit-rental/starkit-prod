@@ -6,17 +6,29 @@ export default defineType({
   title: "Product",
   type: "document",
   icon: Boxes,
+  groups: [
+    {
+      name: "content",
+      title: "Content",
+    },
+    {
+      name: "seo",
+      title: "SEO",
+    },
+  ],
   fields: [
     defineField({
       name: "title",
       title: "Title",
       type: "string",
+      group: "content",
       validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: "slug",
       title: "Slug",
       type: "slug",
+      group: "content",
       options: { source: "title", maxLength: 96 },
       validation: (Rule) => Rule.required(),
     }),
@@ -24,6 +36,7 @@ export default defineType({
       name: "category",
       title: "Category",
       type: "reference",
+      group: "content",
       to: [{ type: "productCategory" }],
       validation: (Rule) => Rule.required(),
     }),
@@ -31,17 +44,20 @@ export default defineType({
       name: "excerpt",
       title: "Short description",
       type: "text",
+      group: "content",
       rows: 3,
     }),
     defineField({
       name: "description",
       title: "Body",
       type: "block-content",
+      group: "content",
     }),
     defineField({
       name: "images",
       title: "Images",
       type: "array",
+      group: "content",
       of: [{ type: "image", options: { hotspot: true } }],
       validation: (Rule) => Rule.min(1),
     }),
@@ -49,18 +65,21 @@ export default defineType({
       name: "pricePerDay",
       title: "Price per day (PLN)",
       type: "number",
+      group: "content",
       validation: (Rule) => Rule.min(0),
     }),
     defineField({
       name: "deposit",
       title: "Deposit (PLN)",
       type: "number",
+      group: "content",
       validation: (Rule) => Rule.min(0),
     }),
     defineField({
       name: "status",
       title: "Status",
       type: "string",
+      group: "content",
       options: {
         list: [
           { title: "Available", value: "available" },
@@ -74,12 +93,14 @@ export default defineType({
       name: "tags",
       title: "Tags",
       type: "array",
+      group: "content",
       of: [{ type: "string" }],
     }),
     defineField({
       name: "specs",
       title: "Specs",
       type: "array",
+      group: "content",
       of: [
         {
           type: "object",
@@ -95,12 +116,14 @@ export default defineType({
       name: "booqableId",
       title: "Booqable Product ID",
       type: "string",
+      group: "content",
       description: "Np. 'starlink-mini'. Gdy puste, użyjemy sluga.",
     }),
     defineField({
       name: "blocks",
       title: "Blocks",
       type: "array",
+      group: "content",
       of: [
         { type: "hero-1" },
         { type: "hero-2" },
@@ -120,6 +143,32 @@ export default defineType({
         { type: "all-posts" },
         { type: "rich-body" },
       ],
+    }),
+    // SEO Fields
+    defineField({
+      name: "meta_title",
+      title: "Meta Title",
+      type: "string",
+      group: "seo",
+    }),
+    defineField({
+      name: "meta_description",
+      title: "Meta Description",
+      type: "text",
+      group: "seo",
+    }),
+    defineField({
+      name: "noindex",
+      title: "No Index",
+      type: "boolean",
+      initialValue: false,
+      group: "seo",
+    }),
+    defineField({
+      name: "ogImage",
+      title: "Open Graph Image - [1200x630]",
+      type: "image",
+      group: "seo",
     }),
     defineField({
       name: "orderRank",

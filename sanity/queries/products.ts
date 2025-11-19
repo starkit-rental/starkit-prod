@@ -60,6 +60,21 @@ export const singleProductQuery = groq`
       ${allPostsQuery},
       ${richBodyQuery},
       ${featureCarouselQuery},
+    },
+    meta_title,
+    meta_description,
+    noindex,
+    ogImage {
+      asset->{
+        _id,
+        url,
+        metadata {
+          dimensions {
+            width,
+            height
+          }
+        }
+      },
     }
   }
 `;
@@ -84,6 +99,20 @@ export const productsPageQuery = groq`
       ${richBodyQuery},
       ${featureCarouselQuery},
     },
-    seo
+    meta_title,
+    meta_description,
+    noindex,
+    ogImage {
+      asset->{
+        _id,
+        url,
+        metadata {
+          dimensions {
+            width,
+            height
+          }
+        }
+      },
+    }
   }
 `;
