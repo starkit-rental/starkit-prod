@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 
-import webpack from 'webpack';
-
 const nextConfig = {
   async redirects() {
     return [
@@ -22,7 +20,7 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
     // Ignoruj błędy związane z brakującymi lokalizacjami w bluebird
     if (!isServer) {
       config.plugins.push(
