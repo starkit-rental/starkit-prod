@@ -72,16 +72,16 @@ export function CartButton() {
     // Znajdź wszystkie buttony na stronie
     const allButtons = Array.from(document.querySelectorAll('button'));
 
-    // Filtruj buttony które mają position: fixed
-    const fixedButtons = allButtons.filter(btn => {
+    // Filtruj buttony które mają position: fixed lub absolute
+    const positionedButtons = allButtons.filter(btn => {
       const style = window.getComputedStyle(btn);
-      return style.position === 'fixed';
+      return style.position === 'fixed' || style.position === 'absolute';
     });
 
-    console.log('[CartButton] Found fixed buttons:', fixedButtons);
+    console.log('[CartButton] Found positioned buttons:', positionedButtons);
 
-    // Znajdź button w prawym dolnym rogu (Booqable cart)
-    const bottomRightButton = fixedButtons.find(btn => {
+    // Znajdź button w prawym dolnym rogu (Booqable cart) - poza headerem
+    const bottomRightButton = positionedButtons.find(btn => {
       // Pomiń buttony w headerze
       if (btn.closest('header')) return false;
 
@@ -90,10 +90,10 @@ export function CartButton() {
       const windowHeight = window.innerHeight;
 
       // Sprawdź czy button jest w prawym dolnym rogu
-      // Prawy dolny róg: right > 80% szerokości i bottom > 80% wysokości
-      const isBottomRight = rect.right > windowWidth * 0.8 && rect.bottom > windowHeight * 0.8;
+      // Prawy dolny róg: right > 70% szerokości i bottom > 70% wysokości
+      const isBottomRight = rect.right > windowWidth * 0.7 && rect.bottom > windowHeight * 0.7;
 
-      console.log(`[CartButton] Button position: right=${rect.right}, bottom=${rect.bottom}, windowWidth=${windowWidth}, windowHeight=${windowHeight}, isBottomRight=${isBottomRight}`, btn);
+      console.log(`[CartButton] Button check: right=${rect.right.toFixed(0)}, bottom=${rect.bottom.toFixed(0)}, window=${windowWidth}x${windowHeight}, bottomRight=${isBottomRight}`, btn);
 
       return isBottomRight;
     });
@@ -104,7 +104,7 @@ export function CartButton() {
       return;
     }
 
-    console.warn('[CartButton] Could not find Booqable cart button in bottom-right corner');
+    console.warn('[CartButton] Could not find Booqable cart button');
   };
 
   return (
