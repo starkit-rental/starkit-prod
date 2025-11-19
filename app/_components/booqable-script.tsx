@@ -10,34 +10,26 @@ export default function BooqableScript() {
   useEffect(() => {
     // Sprawdź czy skrypt już nie jest w DOM
     if (document.getElementById("booqable-script")) {
-      console.log("[Booqable] Script already exists in DOM");
       return;
     }
 
-    console.log("[Booqable] Loading script...");
+    // Ustaw konfigurację Booqable przed załadowaniem skryptu
+    // Używamy 'en' zamiast 'pl-pl' aby uniknąć błędu brakującego modułu
+    (window as any).BooqableConfig = {
+      locale: 'en'
+    };
 
     // Utwórz i załaduj skrypt
     const script = document.createElement("script");
     script.id = "booqable-script";
     script.src = SCRIPT_SRC;
-    script.defer = true; // Defer zamiast async - gwarantuje wykonanie po parsowaniu DOM
+    script.defer = true;
 
     script.onload = () => {
-      console.log("[Booqable] Script loaded, waiting for auto-initialization...");
-
-      // Booqable powinno automatycznie skanować DOM
-      // Poczekaj 2 sekundy i sprawdź czy widgety się wyrenderowały
+      // Wyślij event że skrypt jest gotowy
       setTimeout(() => {
-        const widgets = document.querySelectorAll('[class*="booqable-"]');
-        console.log(`[Booqable] Found ${widgets.length} widget elements in DOM`);
-
-        widgets.forEach((widget) => {
-          console.log(`[Booqable] Widget:`, widget.className, widget.innerHTML.substring(0, 100));
-        });
-
-        // Wyślij event że skrypt jest gotowy
         window.dispatchEvent(new Event("booqable:loaded"));
-      }, 2000);
+      }, 100);
     };
 
     script.onerror = (error) => {
@@ -46,8 +38,6 @@ export default function BooqableScript() {
 
     // Dodaj skrypt do dokumentu
     document.head.appendChild(script);
-
-    // Nie usuwaj skryptu przy unmount - ma być globalny
   }, []);
 
   return null;
