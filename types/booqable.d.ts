@@ -9,6 +9,10 @@ declare global {
         scan?: () => void;
       };
       refresh?: () => void;
+      cart?: {
+        open?: () => void;
+        itemCount?: () => number;
+      };
     };
   }
 }

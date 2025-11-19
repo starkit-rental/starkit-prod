@@ -4,18 +4,6 @@ import { useEffect, useState } from "react";
 import { ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-declare global {
-  interface Window {
-    Booqable?: {
-      init?: () => void;
-      cart?: {
-        open?: () => void;
-        itemCount?: () => number;
-      };
-    };
-  }
-}
-
 export function CartButton() {
   const [itemCount, setItemCount] = useState(0);
 
