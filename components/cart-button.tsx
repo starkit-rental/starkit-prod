@@ -67,25 +67,19 @@ export function CartButton() {
   }, []);
 
   const handleClick = () => {
-    console.log('[CartButton] Click handler called');
-
-    // Spróbuj znaleźć i kliknąć istniejący widget koszyka Booqable
+    // Spróbuj znaleźć i kliknąć floating button Booqable (z data-slot="button")
     const cartSelectors = [
-      'button[aria-label*="cart" i]',
-      'button[aria-label*="koszyk" i]',
-      '.booqable-shopping-cart',
-      '.booqable-cart',
+      'button[data-slot="button"][aria-label*="Shopping cart" i]',
+      'button.fixed[aria-label*="Shopping cart" i]',
+      '.booqable-shopping-cart button',
+      '.booqable-cart button',
       '[data-booqable-cart]',
       '.booqable-component[data-component="shopping-cart"]',
     ];
 
-    console.log('[CartButton] Searching for cart button...');
-
     for (const selector of cartSelectors) {
       const cartElement = document.querySelector(selector) as HTMLElement;
-      console.log(`[CartButton] Trying selector "${selector}":`, cartElement);
-      if (cartElement) {
-        console.log('[CartButton] Found cart element, clicking...', cartElement);
+      if (cartElement && cartElement !== document.activeElement) {
         cartElement.click();
         return;
       }
@@ -93,7 +87,6 @@ export function CartButton() {
 
     // Jeśli nie znaleziono przycisku, loguj ostrzeżenie
     console.warn('[CartButton] Could not find Booqable cart button to click');
-    console.log('[CartButton] All buttons on page:', document.querySelectorAll('button'));
   };
 
   return (
@@ -102,7 +95,7 @@ export function CartButton() {
       size="icon"
       onClick={handleClick}
       className="relative"
-      aria-label="Shopping cart"
+      aria-label="Open cart"
     >
       <ShoppingCart className="h-[1.2rem] w-[1.2rem]" />
       {itemCount > 0 && (
