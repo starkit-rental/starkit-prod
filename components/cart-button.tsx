@@ -67,6 +67,8 @@ export function CartButton() {
   }, []);
 
   const handleClick = () => {
+    console.log('[CartButton] Click handler called');
+
     // Spróbuj znaleźć i kliknąć istniejący widget koszyka Booqable
     const cartSelectors = [
       'button[aria-label*="cart" i]',
@@ -77,9 +79,13 @@ export function CartButton() {
       '.booqable-component[data-component="shopping-cart"]',
     ];
 
+    console.log('[CartButton] Searching for cart button...');
+
     for (const selector of cartSelectors) {
       const cartElement = document.querySelector(selector) as HTMLElement;
+      console.log(`[CartButton] Trying selector "${selector}":`, cartElement);
       if (cartElement) {
+        console.log('[CartButton] Found cart element, clicking...', cartElement);
         cartElement.click();
         return;
       }
@@ -87,6 +93,7 @@ export function CartButton() {
 
     // Jeśli nie znaleziono przycisku, loguj ostrzeżenie
     console.warn('[CartButton] Could not find Booqable cart button to click');
+    console.log('[CartButton] All buttons on page:', document.querySelectorAll('button'));
   };
 
   return (
