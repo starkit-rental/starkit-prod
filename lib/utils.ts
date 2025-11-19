@@ -36,3 +36,29 @@ export const extractPlainText = (blocks: BlockContent): string | null => {
     })
     .join(" ");
 };
+
+// Type for internal link reference from Sanity
+type InternalLinkRef = {
+  _type?: string;
+  slug?: string | null;
+} | null | undefined;
+
+// Helper function to generate URL from Sanity internal link
+export const getInternalLinkUrl = (internalLink: InternalLinkRef): string => {
+  if (!internalLink || !internalLink.slug || !internalLink._type) {
+    return "#";
+  }
+
+  const { _type, slug } = internalLink;
+
+  switch (_type) {
+    case "product":
+      return `/products/${slug}`;
+    case "post":
+      return `/blog/${slug}`;
+    case "page":
+      return `/${slug}`;
+    default:
+      return "#";
+  }
+};
