@@ -66,26 +66,44 @@ export function CartButton() {
     };
   }, []);
 
-  const handleClick = () => {
-    // Spróbuj znaleźć i kliknąć floating button Booqable (z data-slot="button")
-    const cartSelectors = [
-      'button[data-slot="button"][aria-label*="Shopping cart" i]',
-      'button.fixed[aria-label*="Shopping cart" i]',
-      '.booqable-shopping-cart button',
-      '.booqable-cart button',
-      '[data-booqable-cart]',
-      '.booqable-component[data-component="shopping-cart"]',
-    ];
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    console.log('[CartButton] Searching for Booqable cart button...');
 
-    for (const selector of cartSelectors) {
-      const cartElement = document.querySelector(selector) as HTMLElement;
-      if (cartElement && cartElement !== document.activeElement) {
-        cartElement.click();
-        return;
-      }
+    // Znajdź wszystkie buttony na stronie
+    const allButtons = Array.from(document.querySelectorAll('button'));
+    console.log('[CartButton] All buttons on page:', allButtons);
+
+    // Znajdź floating button (prawdopodobnie ma position fixed/absolute i jest w prawym dolnym rogu)
+    const floatingButtons = allButtons.filter(btn => {
+      const style = window.getComputedStyle(btn);
+      return style.position === 'fixed' || style.position === 'absolute';
+    });
+    console.log('[CartButton] Fixed/absolute buttons:', floatingButtons);
+
+    // Spróbuj znaleźć button z data-slot="button"
+    const booqableButton = allButtons.find(btn =>
+      btn.getAttribute('data-slot') === 'button' &&
+      btn !== event.currentTarget
+    );
+
+    if (booqableButton) {
+      console.log('[CartButton] Found Booqable button with data-slot:', booqableButton);
+      booqableButton.click();
+      return;
     }
 
-    // Jeśli nie znaleziono przycisku, loguj ostrzeżenie
+    // Fallback: znajdź button w prawym dolnym rogu
+    const bottomRightButton = floatingButtons.find(btn => {
+      const rect = btn.getBoundingClientRect();
+      return rect.right > window.innerWidth - 200 && rect.bottom > window.innerHeight - 200;
+    });
+
+    if (bottomRightButton) {
+      console.log('[CartButton] Found bottom-right button:', bottomRightButton);
+      bottomRightButton.click();
+      return;
+    }
+
     console.warn('[CartButton] Could not find Booqable cart button to click');
   };
 
