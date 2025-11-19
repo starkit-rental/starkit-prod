@@ -67,51 +67,58 @@ export function CartButton() {
   }, []);
 
   const handleClick = () => {
-    console.log('[CartButton] Attempting to open Booqable cart...');
+    if (typeof window === 'undefined') return;
 
-    if (typeof window === 'undefined' || !window.Booqable) {
-      console.warn('[CartButton] Booqable not available');
-      return;
-    }
+    // Metoda 1: Spróbuj użyć Booqable trigger do otwarcia koszyka
+    if (window.Booqable) {
+      const booqable = window.Booqable as any;
 
-    // Debuguj dostępne metody w Booqable
-    console.log('[CartButton] window.Booqable:', window.Booqable);
-    console.log('[CartButton] Available Booqable methods:', Object.keys(window.Booqable));
-
-    // Sprawdź wszystkie właściwości Booqable
-    const booqable = window.Booqable as any;
-    for (const key in booqable) {
-      console.log(`[CartButton] Booqable.${key}:`, booqable[key]);
-      if (typeof booqable[key] === 'object' && booqable[key]) {
-        console.log(`[CartButton] Booqable.${key} methods:`, Object.keys(booqable[key]));
-      }
-    }
-
-    // Spróbuj różne metody otwierania koszyka
-    const methods = [
-      () => booqable.cart?.open?.(),
-      () => booqable.openCart?.(),
-      () => booqable.showCart?.(),
-      () => booqable.toggleCart?.(),
-      () => booqable.cart?.show?.(),
-      () => booqable.cart?.toggle?.(),
-      () => booqable.widgets?.openCart?.(),
-      () => booqable.widgets?.showCart?.(),
-    ];
-
-    for (let i = 0; i < methods.length; i++) {
+      // Spróbuj trigger 'cart:open' lub podobne
       try {
-        const result = methods[i]();
-        if (result !== undefined) {
-          console.log(`[CartButton] Method ${i} succeeded:`, result);
+        if (typeof booqable._trigger === 'function') {
+          booqable._trigger('cart:open');
+          console.log('[CartButton] Triggered cart:open event');
           return;
         }
       } catch (err) {
-        // Cicho ignoruj
+        console.log('[CartButton] Trigger method failed:', err);
+      }
+
+      // Spróbuj dispatchować custom event
+      try {
+        window.dispatchEvent(new CustomEvent('booqable:cart:open'));
+        console.log('[CartButton] Dispatched booqable:cart:open event');
+      } catch (err) {
+        console.log('[CartButton] Custom event failed:', err);
       }
     }
 
-    console.warn('[CartButton] No working method found to open cart');
+    // Metoda 2: Znajdź i kliknij floating button Booqable
+    // Ten button jest w iframe lub ma specyficzne atrybuty
+    const selectors = [
+      // Szukaj po data-slot (z poprzednich logów)
+      'button[data-slot="button"]',
+      // Szukaj po aria-label zawierającym "Shopping cart"
+      'button[aria-label="Shopping cart"]',
+      // Szukaj buttona z fixed position w prawym dolnym rogu
+      'button.fixed',
+    ];
+
+    for (const selector of selectors) {
+      const elements = document.querySelectorAll(selector);
+      // Pomiń nasz własny button w headerze
+      const cartButton = Array.from(elements).find(
+        btn => !btn.closest('header') && btn !== document.activeElement
+      ) as HTMLElement;
+
+      if (cartButton) {
+        console.log('[CartButton] Found and clicking Booqable button:', cartButton);
+        cartButton.click();
+        return;
+      }
+    }
+
+    console.warn('[CartButton] Could not find Booqable cart button');
   };
 
   return (
