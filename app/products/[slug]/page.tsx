@@ -104,11 +104,11 @@ export default async function ProductPage({ params }: PageProps) {
               )}
 
               {/* Separator */}
-              {product.description && <Separator className="my-6" />}
+              {product.description && <Separator />}
 
               {/* Description */}
               {product.description && (
-                <div className="prose prose-gray dark:prose-invert max-w-none pt-0">
+                <div className="prose prose-gray dark:prose-invert max-w-none">
                   <h3>Opis produktu</h3>
                   <PortableText value={product.description} />
                 </div>
