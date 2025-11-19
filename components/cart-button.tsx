@@ -69,56 +69,42 @@ export function CartButton() {
   const handleClick = () => {
     if (typeof window === 'undefined') return;
 
-    // Metoda 1: Spróbuj użyć Booqable trigger do otwarcia koszyka
-    if (window.Booqable) {
-      const booqable = window.Booqable as any;
+    // Znajdź wszystkie buttony na stronie
+    const allButtons = Array.from(document.querySelectorAll('button'));
 
-      // Spróbuj trigger 'cart:open' lub podobne
-      try {
-        if (typeof booqable._trigger === 'function') {
-          booqable._trigger('cart:open');
-          console.log('[CartButton] Triggered cart:open event');
-          return;
-        }
-      } catch (err) {
-        console.log('[CartButton] Trigger method failed:', err);
-      }
+    // Filtruj buttony które mają position: fixed
+    const fixedButtons = allButtons.filter(btn => {
+      const style = window.getComputedStyle(btn);
+      return style.position === 'fixed';
+    });
 
-      // Spróbuj dispatchować custom event
-      try {
-        window.dispatchEvent(new CustomEvent('booqable:cart:open'));
-        console.log('[CartButton] Dispatched booqable:cart:open event');
-      } catch (err) {
-        console.log('[CartButton] Custom event failed:', err);
-      }
+    console.log('[CartButton] Found fixed buttons:', fixedButtons);
+
+    // Znajdź button w prawym dolnym rogu (Booqable cart)
+    const bottomRightButton = fixedButtons.find(btn => {
+      // Pomiń buttony w headerze
+      if (btn.closest('header')) return false;
+
+      const rect = btn.getBoundingClientRect();
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+
+      // Sprawdź czy button jest w prawym dolnym rogu
+      // Prawy dolny róg: right > 80% szerokości i bottom > 80% wysokości
+      const isBottomRight = rect.right > windowWidth * 0.8 && rect.bottom > windowHeight * 0.8;
+
+      console.log(`[CartButton] Button position: right=${rect.right}, bottom=${rect.bottom}, windowWidth=${windowWidth}, windowHeight=${windowHeight}, isBottomRight=${isBottomRight}`, btn);
+
+      return isBottomRight;
+    });
+
+    if (bottomRightButton) {
+      console.log('[CartButton] Found and clicking bottom-right button:', bottomRightButton);
+      bottomRightButton.click();
+      return;
     }
 
-    // Metoda 2: Znajdź i kliknij floating button Booqable
-    // Ten button jest w iframe lub ma specyficzne atrybuty
-    const selectors = [
-      // Szukaj po data-slot (z poprzednich logów)
-      'button[data-slot="button"]',
-      // Szukaj po aria-label zawierającym "Shopping cart"
-      'button[aria-label="Shopping cart"]',
-      // Szukaj buttona z fixed position w prawym dolnym rogu
-      'button.fixed',
-    ];
-
-    for (const selector of selectors) {
-      const elements = document.querySelectorAll(selector);
-      // Pomiń nasz własny button w headerze
-      const cartButton = Array.from(elements).find(
-        btn => !btn.closest('header') && btn !== document.activeElement
-      ) as HTMLElement;
-
-      if (cartButton) {
-        console.log('[CartButton] Found and clicking Booqable button:', cartButton);
-        cartButton.click();
-        return;
-      }
-    }
-
-    console.warn('[CartButton] Could not find Booqable cart button');
+    console.warn('[CartButton] Could not find Booqable cart button in bottom-right corner');
   };
 
   return (
