@@ -66,45 +66,52 @@ export function CartButton() {
     };
   }, []);
 
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    console.log('[CartButton] Searching for Booqable cart button...');
+  const handleClick = () => {
+    console.log('[CartButton] Attempting to open Booqable cart...');
 
-    // Znajdź wszystkie buttony na stronie
-    const allButtons = Array.from(document.querySelectorAll('button'));
-    console.log('[CartButton] All buttons on page:', allButtons);
-
-    // Znajdź floating button (prawdopodobnie ma position fixed/absolute i jest w prawym dolnym rogu)
-    const floatingButtons = allButtons.filter(btn => {
-      const style = window.getComputedStyle(btn);
-      return style.position === 'fixed' || style.position === 'absolute';
-    });
-    console.log('[CartButton] Fixed/absolute buttons:', floatingButtons);
-
-    // Spróbuj znaleźć button z data-slot="button"
-    const booqableButton = allButtons.find(btn =>
-      btn.getAttribute('data-slot') === 'button' &&
-      btn !== event.currentTarget
-    );
-
-    if (booqableButton) {
-      console.log('[CartButton] Found Booqable button with data-slot:', booqableButton);
-      booqableButton.click();
+    if (typeof window === 'undefined' || !window.Booqable) {
+      console.warn('[CartButton] Booqable not available');
       return;
     }
 
-    // Fallback: znajdź button w prawym dolnym rogu
-    const bottomRightButton = floatingButtons.find(btn => {
-      const rect = btn.getBoundingClientRect();
-      return rect.right > window.innerWidth - 200 && rect.bottom > window.innerHeight - 200;
-    });
+    // Debuguj dostępne metody w Booqable
+    console.log('[CartButton] window.Booqable:', window.Booqable);
+    console.log('[CartButton] Available Booqable methods:', Object.keys(window.Booqable));
 
-    if (bottomRightButton) {
-      console.log('[CartButton] Found bottom-right button:', bottomRightButton);
-      bottomRightButton.click();
-      return;
+    // Sprawdź wszystkie właściwości Booqable
+    const booqable = window.Booqable as any;
+    for (const key in booqable) {
+      console.log(`[CartButton] Booqable.${key}:`, booqable[key]);
+      if (typeof booqable[key] === 'object' && booqable[key]) {
+        console.log(`[CartButton] Booqable.${key} methods:`, Object.keys(booqable[key]));
+      }
     }
 
-    console.warn('[CartButton] Could not find Booqable cart button to click');
+    // Spróbuj różne metody otwierania koszyka
+    const methods = [
+      () => booqable.cart?.open?.(),
+      () => booqable.openCart?.(),
+      () => booqable.showCart?.(),
+      () => booqable.toggleCart?.(),
+      () => booqable.cart?.show?.(),
+      () => booqable.cart?.toggle?.(),
+      () => booqable.widgets?.openCart?.(),
+      () => booqable.widgets?.showCart?.(),
+    ];
+
+    for (let i = 0; i < methods.length; i++) {
+      try {
+        const result = methods[i]();
+        if (result !== undefined) {
+          console.log(`[CartButton] Method ${i} succeeded:`, result);
+          return;
+        }
+      } catch (err) {
+        // Cicho ignoruj
+      }
+    }
+
+    console.warn('[CartButton] No working method found to open cart');
   };
 
   return (
