@@ -21,47 +21,103 @@ export function CartButton() {
             return;
           }
         } catch (err) {
-          // Cicho ignoruj błąd
+          // Cicho ignoruj błąd i spróbuj innych metod
         }
       }
 
-      // Metoda 2: Spróbuj znaleźć licznik w DOM
-      const cartCountSelectors = [
-        '.booqable-cart-count',
-        '.cart-count',
-        '[data-cart-count]',
-        'button[aria-label*="cart" i] .count',
-        'button[aria-label*="cart" i] .badge',
+      // Metoda 2: Sprawdź badge w launchers Booqable
+      const badgeSelectors = [
+        '#booqable-launcher-closed .bq-badge',
+        '#booqable-launcher-open .bq-badge',
+        '.booqable-launcher .bq-badge',
       ];
 
-      for (const selector of cartCountSelectors) {
+      for (const selector of badgeSelectors) {
         const element = document.querySelector(selector);
         if (element?.textContent) {
-          const count = parseInt(element.textContent.trim(), 10);
-          if (!isNaN(count)) {
+          const text = element.textContent.trim();
+          const count = parseInt(text, 10);
+          if (!isNaN(count) && count >= 0) {
             setItemCount(count);
             return;
           }
         }
       }
+
+      // Metoda 3: Zsumuj ILOŚĆ SZTUK z każdej linii produktu
+      const allCartLines = document.querySelectorAll('#booqable-sidebar .bq-list-item:not(.bq-list-header)');
+
+      let totalQuantity = 0;
+      Array.from(allCartLines).forEach(line => {
+        const text = line.textContent?.toLowerCase() || '';
+        // Pomiń kaucje zwrotne i inne opłaty
+        const isDeposit = text.includes('kaucja') || text.includes('zwrotna') || text.includes('deposit');
+
+        if (!isDeposit) {
+          let quantity = 1;
+
+          // Szukaj spana z ilością produktu (liczba wewnątrz przycisków +/-)
+          const quantitySpans = line.querySelectorAll('.bq-quantity span, .bq-quantity-enabled span');
+
+          for (const span of Array.from(quantitySpans)) {
+            const spanText = span.textContent?.trim() || '';
+            // Szukaj spana który zawiera TYLKO cyfrę
+            if (/^\d+$/.test(spanText)) {
+              const qtyNum = parseInt(spanText, 10);
+              if (!isNaN(qtyNum) && qtyNum > 0) {
+                quantity = qtyNum;
+                break;
+              }
+            }
+          }
+
+          totalQuantity += quantity;
+        }
+      });
+
+      if (totalQuantity > 0) {
+        setItemCount(totalQuantity);
+        return;
+      }
+
+      // Jeśli nic nie znaleziono, ustaw na 0
+      setItemCount(0);
     };
 
     // Aktualizuj licznik natychmiast
     updateCartCount();
 
     // Nasłuchuj na zmiany w koszyku
-    const events = ['booqable:cart:updated', 'booqable:cart:changed', 'cart:updated'];
+    const events = [
+      'booqable:cart:updated',
+      'booqable:cart:changed',
+      'booqable:cart:item-added',
+      'booqable:cart:item-removed',
+      'cart:updated',
+      'DOMSubtreeModified' // Nasłuchuj na zmiany w DOM
+    ];
     events.forEach(event => {
       window.addEventListener(event, updateCartCount);
     });
 
-    // Aktualizuj co 3 sekundy jako fallback
-    const interval = setInterval(updateCartCount, 3000);
+    // Dodaj MutationObserver dla lepszego śledzenia zmian w DOM
+    const observer = new MutationObserver(updateCartCount);
+    const booqableContainer = document.querySelector('#booqable-cart, [id*="booqable"]');
+    if (booqableContainer) {
+      observer.observe(booqableContainer, {
+        childList: true,
+        subtree: true
+      });
+    }
+
+    // Aktualizuj co 5 sekund jako fallback
+    const interval = setInterval(updateCartCount, 5000);
 
     return () => {
       events.forEach(event => {
         window.removeEventListener(event, updateCartCount);
       });
+      observer.disconnect();
       clearInterval(interval);
     };
   }, []);
@@ -69,42 +125,51 @@ export function CartButton() {
   const handleClick = () => {
     if (typeof window === 'undefined') return;
 
-    // Znajdź wszystkie buttony na stronie
-    const allButtons = Array.from(document.querySelectorAll('button'));
-
-    // Filtruj buttony które mają position: fixed lub absolute
-    const positionedButtons = allButtons.filter(btn => {
-      const style = window.getComputedStyle(btn);
-      return style.position === 'fixed' || style.position === 'absolute';
-    });
-
-    console.log('[CartButton] Found positioned buttons:', positionedButtons);
-
-    // Znajdź button w prawym dolnym rogu (Booqable cart) - poza headerem
-    const bottomRightButton = positionedButtons.find(btn => {
-      // Pomiń buttony w headerze
-      if (btn.closest('header')) return false;
-
-      const rect = btn.getBoundingClientRect();
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
-
-      // Sprawdź czy button jest w prawym dolnym rogu
-      // Prawy dolny róg: right > 70% szerokości i bottom > 70% wysokości
-      const isBottomRight = rect.right > windowWidth * 0.7 && rect.bottom > windowHeight * 0.7;
-
-      console.log(`[CartButton] Button check: right=${rect.right.toFixed(0)}, bottom=${rect.bottom.toFixed(0)}, window=${windowWidth}x${windowHeight}, bottomRight=${isBottomRight}`, btn);
-
-      return isBottomRight;
-    });
-
-    if (bottomRightButton) {
-      console.log('[CartButton] Found and clicking bottom-right button:', bottomRightButton);
-      bottomRightButton.click();
-      return;
+    // Metoda 1: Spróbuj użyć API Booqable do otwarcia koszyka
+    const booqable = (window as any).Booqable;
+    if (booqable) {
+      // Spróbuj różnych metod API
+      if (typeof booqable.openCart === 'function') {
+        booqable.openCart();
+        return;
+      }
+      if (booqable.cart && typeof booqable.cart.open === 'function') {
+        booqable.cart.open();
+        return;
+      }
+      if (typeof booqable.showCart === 'function') {
+        booqable.showCart();
+        return;
+      }
     }
 
-    console.warn('[CartButton] Could not find Booqable cart button');
+    // Metoda 2: Znajdź launcher i dispatchuj prawdziwe zdarzenie click
+    const launcher = document.querySelector('#booqable-launcher-closed, #booqable-launcher-open, [id*="booqable-launcher"]') as HTMLElement;
+    if (launcher) {
+      // Tymczasowo pokaż element
+      const originalOpacity = launcher.style.opacity;
+      const originalPointerEvents = launcher.style.pointerEvents;
+      const originalBottom = launcher.style.bottom;
+
+      launcher.style.opacity = '1';
+      launcher.style.pointerEvents = 'auto';
+      launcher.style.bottom = '15px';
+
+      // Stwórz prawdziwe zdarzenie click (nie .click())
+      const clickEvent = new MouseEvent('click', {
+        view: window,
+        bubbles: true,
+        cancelable: true
+      });
+      launcher.dispatchEvent(clickEvent);
+
+      // Przywróć style po małym opóźnieniu
+      setTimeout(() => {
+        launcher.style.opacity = originalOpacity;
+        launcher.style.pointerEvents = originalPointerEvents;
+        launcher.style.bottom = originalBottom;
+      }, 300);
+    }
   };
 
   return (

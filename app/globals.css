@@ -237,4 +237,14 @@
       font-size: 1rem;
     }
   }
+
+  /* Ukryj floating widget Booqable - koszyk jest dostępny w headerze */
+  #booqable-launcher-closed,
+  #booqable-launcher-open,
+  div[id*="booqable-launcher"] {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    position: fixed !important;
+    bottom: -100px !important;
+  }
 }
