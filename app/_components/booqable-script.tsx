@@ -24,18 +24,25 @@ export default function BooqableScript() {
         process.env.NEXT_PUBLIC_BOOQABLE_SCRIPT ||
         "https://7ec1d30c-98da-425a-9b8f-8002a1f966c0.assets.booqable.com/v2/booqable.js"
       }
-      strategy="afterInteractive"
-      onLoad={() => {
+      strategy="lazyOnload"
+      onReady={() => {
         if (typeof window === "undefined") return;
 
         try {
-          // po załadowaniu skryptu odśwież widgety
-          window.Booqable?.widgets?.scan?.();
-          window.Booqable?.refresh?.();
-          window.dispatchEvent(new Event("booqable:loaded"));
+          // Poczekaj chwilę aby upewnić się, że Booqable jest w pełni zainicjalizowany
+          setTimeout(() => {
+            if (window.Booqable?.widgets?.scan) {
+              window.Booqable.widgets.scan();
+              window.Booqable.refresh?.();
+              window.dispatchEvent(new Event("booqable:loaded"));
+            }
+          }, 100);
         } catch (err) {
           console.warn("Booqable init error:", err);
         }
+      }}
+      onError={(e) => {
+        console.error("Failed to load Booqable script:", e);
       }}
     />
   );
