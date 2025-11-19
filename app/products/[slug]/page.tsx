@@ -4,6 +4,8 @@ import { PortableText } from "@portabletext/react";
 import Blocks from "@/components/blocks";
 import { ProductGallery } from "../_components/product-gallery";
 import BooqableEmbed from "./_components/BooqableEmbed";
+import Breadcrumbs from "@/components/ui/breadcrumbs";
+import Separator from "@/components/ui/separator";
 
 export const revalidate = 60;
 
@@ -19,13 +21,23 @@ export default async function ProductPage({ params }: PageProps) {
 
   const booqableId: string = product.booqableId || product.slug;
 
+  // Breadcrumbs data
+  const breadcrumbLinks = [
+    { label: "Strona główna", href: "/" },
+    { label: "Produkty", href: "/products" },
+    { label: product.title || "", href: `/products/${product.slug}` },
+  ];
+
   return (
     <>
       {/* Product Detail Section */}
       <section className="w-full py-8 md:py-12 lg:py-16">
         <div className="container">
+          {/* Breadcrumbs */}
+          <Breadcrumbs links={breadcrumbLinks} />
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-            
+
             {/* Left Column - Gallery */}
             <div className="w-full">
               {product.images?.length > 0 && (
@@ -35,13 +47,6 @@ export default async function ProductPage({ params }: PageProps) {
 
             {/* Right Column - Content */}
             <div className="w-full space-y-6">
-              
-              {/* Category */}
-              {product.category?.title && (
-                <div className="text-sm text-muted-foreground">
-                  {product.category.title}
-                </div>
-              )}
 
               {/* Title */}
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
@@ -98,9 +103,12 @@ export default async function ProductPage({ params }: PageProps) {
                 </div>
               )}
 
+              {/* Separator */}
+              {product.description && <Separator className="my-6" />}
+
               {/* Description */}
               {product.description && (
-                <div className="prose prose-gray dark:prose-invert max-w-none">
+                <div className="prose prose-gray dark:prose-invert max-w-none pt-0">
                   <h3>Opis produktu</h3>
                   <PortableText value={product.description} />
                 </div>
