@@ -23,7 +23,12 @@ export default defineType({
             { name: "description", type: "block-content", title: "Opis" },
             { name: "ctaTitle", type: "string", title: "CTA — tekst" },
             { name: "ctaHref", type: "url", title: "CTA — link" },
-            { name: "image", type: "image", title: "Obraz", options: { hotspot: true } },
+            {
+              name: "image",
+              type: "image",
+              title: "Obraz",
+              options: { hotspot: true }
+            },
           ],
         }),
       ],
