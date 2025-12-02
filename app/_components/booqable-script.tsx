@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Script from "next/script";
 
 const SCRIPT_SRC =
   process.env.NEXT_PUBLIC_BOOQABLE_SCRIPT ||
@@ -8,37 +9,43 @@ const SCRIPT_SRC =
 
 export default function BooqableScript() {
   useEffect(() => {
-    // Sprawdź czy skrypt już nie jest w DOM
-    if (document.getElementById("booqable-script")) {
-      return;
+    // Ustaw konfigurację Booqable NATYCHMIAST, przed załadowaniem skryptu
+    // MUSI być 'en' bo Booqable nie ma modułu 'pl-pl'
+    if (typeof window !== 'undefined') {
+      (window as any).BooqableConfig = {
+        locale: 'en',
+        language: 'en'
+      };
+      console.log('[Booqable] Config set:', (window as any).BooqableConfig);
     }
-
-    // Ustaw konfigurację Booqable przed załadowaniem skryptu
-    // Używamy 'en' zamiast 'pl-pl' aby uniknąć błędu brakującego modułu
-    (window as any).BooqableConfig = {
-      locale: 'en'
-    };
-
-    // Utwórz i załaduj skrypt
-    const script = document.createElement("script");
-    script.id = "booqable-script";
-    script.src = SCRIPT_SRC;
-    script.defer = true;
-
-    script.onload = () => {
-      // Wyślij event że skrypt jest gotowy
-      setTimeout(() => {
-        window.dispatchEvent(new Event("booqable:loaded"));
-      }, 100);
-    };
-
-    script.onerror = (error) => {
-      console.error("[Booqable] Failed to load script:", error);
-    };
-
-    // Dodaj skrypt do dokumentu
-    document.head.appendChild(script);
   }, []);
 
-  return null;
+  return (
+    <>
+      <Script
+        id="booqable-config"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.BooqableConfig = window.BooqableConfig || {};
+            window.BooqableConfig.locale = 'en';
+            window.BooqableConfig.language = 'en';
+            console.log('[Booqable] Inline config set');
+          `,
+        }}
+      />
+      <Script
+        id="booqable-script"
+        src={SCRIPT_SRC}
+        strategy="afterInteractive"
+        onLoad={() => {
+          console.log('[Booqable] Script loaded');
+          window.dispatchEvent(new Event("booqable:loaded"));
+        }}
+        onError={(error) => {
+          console.error("[Booqable] Failed to load script:", error);
+        }}
+      />
+    </>
+  );
 }
