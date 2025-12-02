@@ -8,7 +8,7 @@ import ConditionalWidgets from "./_components/conditional-widgets";
 import { GoogleTagManager } from "@next/third-parties/google";
 import Script from "next/script";
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
