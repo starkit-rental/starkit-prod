@@ -6,10 +6,37 @@ import { ProductGallery } from "../_components/product-gallery";
 import BooqableEmbed from "./_components/BooqableEmbed";
 import Breadcrumbs from "@/components/ui/breadcrumbs";
 import Separator from "@/components/ui/separator";
+import { Metadata } from "next";
 
 export const revalidate = 60;
 
 type PageProps = { params: Promise<{ slug: string }> };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await client.fetch(singleProductQuery, { slug });
+
+  if (!product) {
+    return {
+      title: "Produkt nie znaleziony",
+    };
+  }
+
+  const title = product.meta_title || product.title || "Produkt";
+  const description = product.meta_description || product.excerpt || `Wynajmij ${product.title} - najwyższej jakości sprzęt satelitarny od Starkit`;
+  const ogImage = product.ogImage?.asset?.url || product.images?.[0];
+
+  return {
+    title,
+    description,
+    robots: product.noindex ? { index: false, follow: false } : { index: true, follow: true },
+    openGraph: {
+      title,
+      description,
+      images: ogImage ? [{ url: ogImage }] : [],
+    },
+  };
+}
 
 export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params;

@@ -14,7 +14,7 @@ const siteUrl =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { template: "%s | Schema UI Starter", default: "Sanity Next.js Website | Schema UI Starter" },
+  title: { template: "%s | Starkit", default: "Starkit - Wynajem Starlink" },
   openGraph: {
     url: siteUrl,
     images: [{ url: new URL("/images/og-image.jpg", siteUrl).href, width: 1200, height: 630 }],
