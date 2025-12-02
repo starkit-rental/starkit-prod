@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import ConditionalWidgets from "./_components/conditional-widgets";
 import { GoogleTagManager } from "@next/third-parties/google";
+import Script from "next/script";
 
 const isProduction = process.env.NEXT_PUBLIC_SITE_ENV === "production";
 
@@ -37,6 +38,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pl" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-sans antialiased overscroll-none", fontSans.variable)}>
+        {isProduction && (
+          <Script
+            id="Cookiebot"
+            src="https://consent.cookiebot.com/uc.js"
+            data-cbid="fd835c41-6aae-4b40-a6a0-70f7f36710c0"
+            data-blockingmode="auto"
+            strategy="beforeInteractive"
+          />
+        )}
         <ConditionalWidgets />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
