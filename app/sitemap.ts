@@ -45,11 +45,32 @@ async function getPostsSitemap(): Promise<MetadataRoute.Sitemap[]> {
   return data;
 }
 
+async function getProductsSitemap(): Promise<MetadataRoute.Sitemap[]> {
+  const productsQuery = groq`
+    *[_type == 'product'] | order(orderRank) {
+      'url': $baseUrl + '/products/' + slug.current,
+      'lastModified': _updatedAt,
+      'changeFrequency': 'daily',
+      'priority': 0.8
+    }
+  `;
+
+  const { data } = await sanityFetch({
+    query: productsQuery,
+    params: {
+      baseUrl: process.env.NEXT_PUBLIC_SITE_URL,
+    },
+  });
+
+  return data;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap[]> {
-  const [pages, posts] = await Promise.all([
+  const [pages, posts, products] = await Promise.all([
     getPagesSitemap(),
     getPostsSitemap(),
+    getProductsSitemap(),
   ]);
 
-  return [...pages, ...posts];
+  return [...pages, ...posts, ...products];
 }
