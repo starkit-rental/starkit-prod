@@ -18,14 +18,32 @@ export default function BooqableEmbed({ kind, id, className }: Props) {
     if (initializedRef.current) return;
 
     const initWidget = () => {
-      if (typeof window === 'undefined' || !window.Booqable) return false;
+      if (typeof window === 'undefined') {
+        console.log('[Booqable] Window is undefined');
+        return false;
+      }
+
+      if (!window.Booqable) {
+        console.log('[Booqable] Booqable object not found on window');
+        return false;
+      }
+
+      console.log('[Booqable] Available methods:', Object.keys(window.Booqable));
 
       try {
-        // Wywołaj init() aby Booqable zeskanował nowe elementy DOM
+        // Spróbuj różnych metod inicjalizacji
         if (typeof window.Booqable.init === 'function') {
+          console.log('[Booqable] Calling init()');
           window.Booqable.init();
           initializedRef.current = true;
           return true;
+        } else if (window.Booqable.widgets && typeof window.Booqable.widgets.scan === 'function') {
+          console.log('[Booqable] Calling widgets.scan()');
+          window.Booqable.widgets.scan();
+          initializedRef.current = true;
+          return true;
+        } else {
+          console.log('[Booqable] No init or widgets.scan method found');
         }
       } catch (err) {
         console.error('[Booqable] Initialization error:', err);
