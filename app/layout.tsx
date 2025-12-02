@@ -45,7 +45,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pl" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-sans antialiased overscroll-none", fontSans.variable)}>
-        <OrganizationSchema />
         {isProduction && (
           <Script
             id="Cookiebot"
@@ -60,6 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </ThemeProvider>
         <Toaster position="top-center" richColors />
+        <OrganizationSchema />
       </body>
       {isProduction && <GoogleTagManager gtmId="GTM-MQXCK4RC" />}
     </html>
