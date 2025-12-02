@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import ConditionalWidgets from "./_components/conditional-widgets";
+import { GoogleTagManager } from "@next/third-parties/google";
 
 const isProduction = process.env.NEXT_PUBLIC_SITE_ENV === "production";
 
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </ThemeProvider>
         <Toaster position="top-center" richColors />
       </body>
+      {isProduction && <GoogleTagManager gtmId="GTM-MQXCK4RC" />}
     </html>
   );
 }
