@@ -44,6 +44,19 @@ const fontSans = FontSans({
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pl" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.BooqableConfig = {
+                locale: 'en',
+                language: 'en'
+              };
+              console.log('[Booqable] Head config set');
+            `,
+          }}
+        />
+      </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased overscroll-none", fontSans.variable)}>
         {isProduction && (
           <Script
