@@ -22,8 +22,16 @@ export function generatePageMetadata({
           height: page?.ogImage?.asset?.metadata?.dimensions?.height || 630,
         },
       ],
-      locale: "en_US",
+      locale: "pl_PL",
       type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: page?.meta_title,
+      description: page?.meta_description,
+      images: page?.ogImage
+        ? [urlFor(page?.ogImage).quality(100).url()]
+        : [`${process.env.NEXT_PUBLIC_SITE_URL}/images/og-image.jpg`],
     },
     robots: !isProduction
       ? "noindex, nofollow"

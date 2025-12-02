@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import ConditionalWidgets from "./_components/conditional-widgets";
 import { GoogleTagManager } from "@next/third-parties/google";
 import Script from "next/script";
+import OrganizationSchema from "@/components/seo/organization-schema";
 
 const isProduction = process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
 
@@ -23,6 +24,12 @@ export const metadata: Metadata = {
     locale: "pl_PL",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Starkit - Wynajem Starlink",
+    description: "Internet satelitarny bez ograniczeń - Wynajem Starlink dla eventów, budów i miejsc bez infrastruktury",
+    images: [new URL("/images/og-image.jpg", siteUrl).href],
+  },
   robots: { index: true, follow: true },
   icons: { icon: "/favicon.ico" },
   alternates: { canonical: siteUrl },
@@ -38,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pl" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-sans antialiased overscroll-none", fontSans.variable)}>
+        <OrganizationSchema />
         {isProduction && (
           <Script
             id="Cookiebot"

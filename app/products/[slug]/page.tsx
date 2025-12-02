@@ -7,6 +7,8 @@ import BooqableEmbed from "./_components/BooqableEmbed";
 import Breadcrumbs from "@/components/ui/breadcrumbs";
 import Separator from "@/components/ui/separator";
 import { Metadata } from "next";
+import ProductSchema from "@/components/seo/product-schema";
+import BreadcrumbsSchema from "@/components/seo/breadcrumbs-schema";
 
 export const revalidate = 60;
 
@@ -35,6 +37,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       images: ogImage ? [{ url: ogImage }] : [],
     },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ogImage ? [ogImage] : [],
+    },
   };
 }
 
@@ -57,6 +65,17 @@ export default async function ProductPage({ params }: PageProps) {
 
   return (
     <>
+      <ProductSchema
+        product={{
+          title: product.title,
+          slug: product.slug,
+          excerpt: product.excerpt,
+          pricePerDay: product.pricePerDay,
+          images: product.images,
+          status: product.status,
+        }}
+      />
+      <BreadcrumbsSchema links={breadcrumbLinks} />
       {/* Product Detail Section */}
       <section className="w-full py-8 md:py-12 lg:py-16">
         <div className="container">
