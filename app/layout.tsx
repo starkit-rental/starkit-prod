@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import ConditionalWidgets from "./_components/conditional-widgets";
-import { GoogleTagManager } from "@next/third-parties/google";
+import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
 import OrganizationSchema from "@/components/seo/organization-schema";
 
@@ -73,7 +73,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Toaster position="top-center" richColors />
         <OrganizationSchema />
       </body>
-      {isProduction && <GoogleTagManager gtmId="GTM-MQXCK4RC" />}
+      {isProduction && (
+        <>
+          <GoogleTagManager gtmId="GTM-MQXCK4RC" />
+          <GoogleAnalytics gaId="G-TFV3MF7EEF" />
+        </>
+      )}
     </html>
   );
 }
