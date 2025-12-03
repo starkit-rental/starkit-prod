@@ -52,7 +52,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 locale: 'en',
                 language: 'en'
               };
-              console.log('[Booqable] Head config set');
             `,
           }}
         />

@@ -13,11 +13,7 @@ export default function BooqableScript() {
       src={SCRIPT_SRC}
       strategy="lazyOnload"
       onLoad={() => {
-        console.log('[Booqable] Script loaded successfully');
         window.dispatchEvent(new Event("booqable:loaded"));
-      }}
-      onError={(error) => {
-        console.error("[Booqable] Failed to load script:", error);
       }}
     />
   );

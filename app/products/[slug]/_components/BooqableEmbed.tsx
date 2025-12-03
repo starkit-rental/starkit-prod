@@ -18,35 +18,22 @@ export default function BooqableEmbed({ kind, id, className }: Props) {
     if (initializedRef.current) return;
 
     const initWidget = () => {
-      if (typeof window === 'undefined') {
-        console.log('[Booqable] Window is undefined');
+      if (typeof window === 'undefined' || !window.Booqable) {
         return false;
       }
-
-      if (!window.Booqable) {
-        console.log('[Booqable] Booqable object not found on window');
-        return false;
-      }
-
-      console.log('[Booqable] Available methods:', Object.keys(window.Booqable));
 
       try {
-        // Spróbuj różnych metod inicjalizacji
         if (typeof window.Booqable.init === 'function') {
-          console.log('[Booqable] Calling init()');
           window.Booqable.init();
           initializedRef.current = true;
           return true;
         } else if (window.Booqable.widgets && typeof window.Booqable.widgets.scan === 'function') {
-          console.log('[Booqable] Calling widgets.scan()');
           window.Booqable.widgets.scan();
           initializedRef.current = true;
           return true;
-        } else {
-          console.log('[Booqable] No init or widgets.scan method found');
         }
       } catch (err) {
-        console.error('[Booqable] Initialization error:', err);
+        console.error('[Booqable] Error:', err);
       }
 
       return false;
@@ -65,7 +52,6 @@ export default function BooqableEmbed({ kind, id, className }: Props) {
       if (initWidget()) {
         clearInterval(interval);
       } else if (attempts >= maxAttempts) {
-        console.error('[Booqable] Failed to initialize after maximum attempts');
         clearInterval(interval);
       }
     }, 500);
