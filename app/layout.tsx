@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import ConditionalWidgets from "./_components/conditional-widgets";
+import CookiebotScript from "./_components/cookiebot-script";
 import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
-import Script from "next/script";
 import OrganizationSchema from "@/components/seo/organization-schema";
 
 const isProduction = process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
@@ -39,6 +39,7 @@ const fontSans = FontSans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-sans",
+  display: "swap",
 });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -49,17 +50,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.sanity.io" />
 
-        <link rel="preconnect" href="https://booqable.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://booqable.com" />
-
         <link rel="preconnect" href="https://cdn2.booqable.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn2.booqable.com" />
-
-        <link rel="preconnect" href="https://consent.cookiebot.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://consent.cookiebot.com" />
-
-        <link rel="preconnect" href="https://www.smartsuppchat.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://www.smartsuppchat.com" />
 
         <script
           dangerouslySetInnerHTML={{
@@ -73,15 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased overscroll-none", fontSans.variable)}>
-        {isProduction && (
-          <Script
-            id="Cookiebot"
-            src="https://consent.cookiebot.com/uc.js"
-            data-cbid="fd835c41-6aae-4b40-a6a0-70f7f36710c0"
-            data-blockingmode="auto"
-            strategy="beforeInteractive"
-          />
-        )}
+        {isProduction && <CookiebotScript />}
         <ConditionalWidgets />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}

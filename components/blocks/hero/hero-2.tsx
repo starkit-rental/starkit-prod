@@ -48,6 +48,7 @@ export default function Hero2({
               fill
               className="absolute inset-0 object-cover rounded-3xl"
               priority
+              fetchPriority="high"
               sizes="100vw"
             />
             <div
