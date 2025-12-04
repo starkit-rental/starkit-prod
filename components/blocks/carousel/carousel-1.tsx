@@ -70,7 +70,7 @@ export default function Carousel1({
                   >
                     <Image
                       className="object-cover"
-                      src={urlFor(image).url()}
+                      src={urlFor(image).width(1400).url()}
                       alt={image.alt || ""}
                       fill
                       placeholder={
@@ -78,7 +78,7 @@ export default function Carousel1({
                       }
                       blurDataURL={image.asset?.metadata?.lqip || ""}
                       sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-                      quality={100}
+                      priority={index === 0}
                     />
                   </div>
                 )}

@@ -16,5 +16,7 @@ export const urlFor = (source: SanityImageSource) => {
     return imageBuilder;
   }
 
-  return imageBuilder.format("webp").fit("crop");
+  // Use auto format for best browser support (WebP/AVIF)
+  // auto quality adjusts based on image content
+  return imageBuilder.format("webp").quality(85).fit("max");
 };

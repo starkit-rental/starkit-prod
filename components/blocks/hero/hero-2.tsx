@@ -4,7 +4,7 @@ import { stegaClean } from "next-sanity";
 import PortableTextRenderer from "@/components/portable-text-renderer";
 import { PAGE_QUERYResult } from "@/sanity.types";
 import Image from "next/image";
-import { urlFor } from "@/lib/sanityImage";
+import { urlFor } from "@/sanity/lib/image";
 
 type ExtraHero2 = {
   backgroundImage?: any;
@@ -43,11 +43,12 @@ export default function Hero2({
         {backgroundImage?.asset && (
           <>
             <Image
-              src={urlFor(backgroundImage).width(2400).height(1200).fit("crop").url()}
+              src={urlFor(backgroundImage).width(2400).height(1200).url()}
               alt={backgroundAlt || ""}
               fill
               className="absolute inset-0 object-cover rounded-3xl"
               priority
+              sizes="100vw"
             />
             <div
               className="absolute inset-0 rounded-3xl"

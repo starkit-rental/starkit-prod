@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { urlFor } from "@/lib/sanityImage";
+import { urlFor } from "@/sanity/lib/image";
 import PortableTextRenderer from "@/components/portable-text-renderer";
 import {
   Carousel,
@@ -56,12 +56,13 @@ export default function FeatureCarousel({
                   {item.image?.asset && (
                     <div className="relative aspect-[16/10]">
                       <Image
-                        src={urlFor(item.image).width(1200).height(750).fit("crop").url()}
+                        src={urlFor(item.image).width(1200).height(750).url()}
                         alt={item.title || item.eyebrow || ""}
                         fill
                         className="object-cover"
                         sizes="(max-width: 768px) 82vw, (max-width: 1024px) 44vw, 32vw"
                         priority={idx < 3}
+                        loading={idx >= 3 ? "lazy" : undefined}
                       />
                     </div>
                   )}

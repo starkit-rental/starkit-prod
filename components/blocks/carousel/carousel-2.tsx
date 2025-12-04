@@ -44,7 +44,7 @@ export default function Carousel2({
                         <Avatar className="w-10 h-10 mr-3">
                           {item.image && (
                             <AvatarImage
-                              src={urlFor(item.image).url()}
+                              src={urlFor(item.image).width(100).url()}
                               alt={item.name ?? ""}
                             />
                           )}

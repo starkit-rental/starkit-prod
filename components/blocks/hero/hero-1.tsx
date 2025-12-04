@@ -61,13 +61,14 @@ export default function Hero1({
           {image && image.asset?._id && (
             <Image
               className="rounded-xl animate-fade-up [animation-delay:500ms] opacity-0"
-              src={urlFor(image).url()}
+              src={urlFor(image).width(1600).url()}
               alt={image.alt || ""}
               width={image.asset?.metadata?.dimensions?.width || 800}
               height={image.asset?.metadata?.dimensions?.height || 800}
               placeholder={image?.asset?.metadata?.lqip ? "blur" : undefined}
               blurDataURL={image?.asset?.metadata?.lqip || ""}
-              quality={100}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 800px"
+              priority
             />
           )}
         </div>

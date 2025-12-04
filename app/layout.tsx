@@ -45,6 +45,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pl" suppressHydrationWarning>
       <head>
+        {/* Preconnect to external domains for performance */}
+        <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://cdn.sanity.io" />
+
+        <link rel="preconnect" href="https://booqable.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://booqable.com" />
+
+        <link rel="preconnect" href="https://cdn2.booqable.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://cdn2.booqable.com" />
+
+        <link rel="preconnect" href="https://consent.cookiebot.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://consent.cookiebot.com" />
+
+        <link rel="preconnect" href="https://www.smartsuppchat.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://www.smartsuppchat.com" />
+
         <script
           dangerouslySetInnerHTML={{
             __html: `
