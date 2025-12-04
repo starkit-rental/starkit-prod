@@ -15,6 +15,12 @@ const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: { template: "%s | Starkit", default: "Starkit - Wynajem Starlink" },
@@ -37,16 +43,30 @@ export const metadata: Metadata = {
 
 const fontSans = FontSans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "600", "700"],
   variable: "--font-sans",
   display: "swap",
+  preload: true,
+  adjustFontFallback: true,
 });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pl" suppressHydrationWarning>
       <head>
+        {/* Critical font preload for better FCP */}
+        <link
+          rel="preload"
+          href="https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZJhiI2B.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+
         {/* Preconnect to external domains for performance */}
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+
         <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.sanity.io" />
 
@@ -55,12 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              window.BooqableConfig = {
-                locale: 'en',
-                language: 'en'
-              };
-            `,
+            __html: `window.BooqableConfig={locale:'en',language:'en'};`,
           }}
         />
       </head>

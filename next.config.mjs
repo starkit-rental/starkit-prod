@@ -2,8 +2,14 @@
 
 const nextConfig = {
   turbopack: {},
+  reactStrictMode: true,
+  poweredByHeader: false,
   experimental: {
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', 'embla-carousel-react'],
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', 'embla-carousel-react', 'next-themes'],
+    optimizeCss: true,
+  },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
   },
   async redirects() {
     return [
