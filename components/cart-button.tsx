@@ -125,6 +125,9 @@ export function CartButton() {
   const handleClick = () => {
     if (typeof window === 'undefined') return;
 
+    // Wyślij event aby załadować Booqable jeśli jeszcze nie jest załadowany
+    window.dispatchEvent(new Event('cart:click'));
+
     // Metoda 1: Spróbuj użyć API Booqable do otwarcia koszyka
     const booqable = (window as any).Booqable;
     if (booqable) {
