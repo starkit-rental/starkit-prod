@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
+  turbopack: {},
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
