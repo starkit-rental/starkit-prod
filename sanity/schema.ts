@@ -46,6 +46,7 @@ import faqs from "./schemas/blocks/faqs";
 import newsletter from "./schemas/blocks/forms/newsletter";
 import allPosts from "./schemas/blocks/all-posts";
 import richBody from "./schemas/blocks/body/rich-body";
+import blogCarousel from "./schemas/blocks/blog-carousel";
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -94,6 +95,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     newsletter,
     allPosts,
     richBody,
+    blogCarousel,
     productsPage,
   ],
 };

@@ -1,5 +1,6 @@
 import { groq } from "next-sanity";
 
+// @sanity-typegen-ignore
 export const featureCarouselQuery = groq`
   _type == "feature-carousel" => {
     _type,

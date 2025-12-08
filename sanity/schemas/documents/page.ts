@@ -53,7 +53,8 @@ export default defineType({
         { type: "form-newsletter" },
         { type: "all-posts" },
         { type: "rich-body" },
-        { type: "feature-carousel" },  
+        { type: "feature-carousel" },
+        { type: "blog-carousel" },
       ],
       options: {
         insertMenu: {
@@ -86,7 +87,7 @@ export default defineType({
             {
               name: "carousel",
               title: "Carousel",
-              of: ["carousel-1", "carousel-2"],
+              of: ["carousel-1", "carousel-2", "blog-carousel"],
             },
             {
               name: "timeline",
