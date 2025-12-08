@@ -22,13 +22,22 @@ export default async function ProductsPage() {
     client.fetch(allProductsQuery),
   ]);
 
+  // Split blocks: first 2 above products, rest below
+  const blocksAbove = pageData?.blocks?.slice(0, 2) || [];
+  const blocksBelow = pageData?.blocks?.slice(2) || [];
+
   return (
     <>
-      {/* Bloki nad listingiem */}
-      {pageData?.blocks?.length ? <Blocks blocks={pageData.blocks} /> : null}
+      {/* Bloki nad listą produktów (Hero + Feature Carousel) */}
+      {blocksAbove.length > 0 && <Blocks blocks={blocksAbove} />}
 
+      {/* Lista produktów do wynajmu */}
       <section className="container py-12 md:py-16">
-        <h1 className="text-3xl font-bold mb-8">{pageData?.title || "Produkty"}</h1>
+        <h2 className="text-3xl font-bold mb-4">Dostępne zestawy Starlink do wynajmu</h2>
+        <p className="text-muted-foreground mb-8 max-w-3xl">
+          Oferujemy profesjonalny wynajem zestawów Starlink z dostawą w 24 godziny na terenie całej Polski.
+          Wybierz model dopasowany do Twoich potrzeb - mobilny Starlink Mini lub wydajny Starlink Standard.
+        </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {products.map((p: any) => (
@@ -48,7 +57,7 @@ export default async function ProductsPage() {
                 )}
               </div>
               <div className="p-4">
-                <h2 className="font-semibold text-lg mb-1">{p.title}</h2>
+                <h3 className="font-semibold text-lg mb-1">{p.title}</h3>
                 {p.excerpt && (
                   <p className="text-sm text-muted-foreground">{p.excerpt}</p>
                 )}
@@ -63,8 +72,8 @@ export default async function ProductsPage() {
         </div>
       </section>
 
-      {/* (opcjonalnie) bloki pod listingiem – jeśli chcesz tę samą listę, usuń slice */}
-      {pageData?.blocks?.length ? <Blocks blocks={pageData.blocks.slice(1)} /> : null}
+      {/* Pozostałe bloki pod listą produktów (SEO content, FAQ, Blog, CTA, etc.) */}
+      {blocksBelow.length > 0 && <Blocks blocks={blocksBelow} />}
     </>
   );
 }
