@@ -22,13 +22,13 @@ export default async function ProductsPage() {
     client.fetch(allProductsQuery),
   ]);
 
-  // Split blocks: first 2 above products, rest below
-  const blocksAbove = pageData?.blocks?.slice(0, 2) || [];
-  const blocksBelow = pageData?.blocks?.slice(2) || [];
+  // Split blocks: first 1 above products (just header), rest below
+  const blocksAbove = pageData?.blocks?.slice(0, 1) || [];
+  const blocksBelow = pageData?.blocks?.slice(1) || [];
 
   return (
     <>
-      {/* Bloki nad listą produktów (Hero + Feature Carousel) */}
+      {/* Bloki nad listą produktów (Section Header) */}
       {blocksAbove.length > 0 && <Blocks blocks={blocksAbove} />}
 
       {/* Lista produktów do wynajmu */}
@@ -72,7 +72,7 @@ export default async function ProductsPage() {
         </div>
       </section>
 
-      {/* Pozostałe bloki pod listą produktów (SEO content, FAQ, Blog, CTA, etc.) */}
+      {/* Pozostałe bloki pod listą produktów (Feature Carousel, Grid, SEO content, Blog, CTA, etc.) */}
       {blocksBelow.length > 0 && <Blocks blocks={blocksBelow} />}
     </>
   );
