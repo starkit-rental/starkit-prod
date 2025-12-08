@@ -71,7 +71,7 @@ export const structure = (S: any, context: any) =>
         .child(
           S.document()
             .schemaType("productsPage")
-            .documentId("productsPage")
+            .documentId("page-products")
         ),
 
       // --- produkty ---
