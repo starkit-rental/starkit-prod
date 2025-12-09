@@ -33,12 +33,6 @@ export default async function ProductsPage() {
 
       {/* Lista produktów do wynajmu */}
       <section className="container py-12 md:py-16">
-        <h2 className="text-3xl font-bold mb-4">Dostępne zestawy Starlink do wynajmu</h2>
-        <p className="text-muted-foreground mb-8 max-w-3xl">
-          Oferujemy profesjonalny wynajem zestawów Starlink z dostawą w 24 godziny na terenie całej Polski.
-          Wybierz model dopasowany do Twoich potrzeb - mobilny Starlink Mini lub wydajny Starlink Standard.
-        </p>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {products.map((p: any) => (
             <Link
