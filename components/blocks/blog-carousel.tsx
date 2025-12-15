@@ -75,14 +75,14 @@ export default async function BlogCarousel({
               variant="secondary"
               className="-right-3 md:-right-8 xl:-right-12"
             />
-            <div className="w-full flex justify-center mt-6">
+            <div className="w-full flex justify-center mt-8">
               <CarouselDots />
             </div>
           </Carousel>
         )}
 
         {showViewAllButton && (
-          <div className="flex justify-center mt-8">
+          <div className="flex justify-center mt-12">
             <Button asChild size="lg">
               <Link href="/blog">
                 Zobacz wszystkie

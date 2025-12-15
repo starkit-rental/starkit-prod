@@ -15,6 +15,7 @@ import AllPosts from "@/components/blocks/all-posts";
 import RichBody from "@/components/blocks/body/rich-body";
 import FeatureCarousel from "@/components/blocks/carousel/feature-carousel";
 import BlogCarousel from "@/components/blocks/blog-carousel";
+import StarlinkUseCases from "@/components/blocks/starlink-use-cases";
 
 type Block = NonNullable<NonNullable<PAGE_QUERYResult>["blocks"]>[number];
 
@@ -37,6 +38,7 @@ const componentMap: Record<string, React.ComponentType<any>> = {
   "rich-body": RichBody,
   "feature-carousel": FeatureCarousel,
   "blog-carousel": BlogCarousel,
+  "starlink-use-cases": StarlinkUseCases,
 };
 
 export default function Blocks({ blocks }: { blocks: Block[] }) {
