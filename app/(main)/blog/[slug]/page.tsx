@@ -8,6 +8,7 @@ import {
   fetchSanityPostsStaticParams,
 } from "@/sanity/lib/fetch";
 import { generatePageMetadata } from "@/sanity/lib/metadata";
+import BlogCTA from "@/components/blog/blog-cta";
 
 export async function generateStaticParams() {
   const posts = await fetchSanityPostsStaticParams();
@@ -58,14 +59,17 @@ export default async function PostPage(props: {
     : [];
 
   return (
-    <section>
-      <div className="container py-16 xl:py-20">
-        <article className="max-w-3xl mx-auto">
-          <Breadcrumbs links={links} />
-          <PostHero {...post} />
-          {post.body && <PortableTextRenderer value={post.body} />}
-        </article>
-      </div>
-    </section>
+    <>
+      <section>
+        <div className="container py-16 xl:py-20">
+          <article className="max-w-3xl mx-auto">
+            <Breadcrumbs links={links} />
+            <PostHero {...post} />
+            {post.body && <PortableTextRenderer value={post.body} />}
+          </article>
+        </div>
+      </section>
+      <BlogCTA />
+    </>
   );
 }
