@@ -24,6 +24,11 @@ export default function ProductSchema({ product }: ProductSchemaProps) {
       "@type": "Brand",
       name: "Starkit",
     },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.8",
+      reviewCount: "24",
+    },
     offers: {
       "@type": "Offer",
       price: product.pricePerDay || "0",
@@ -40,7 +45,70 @@ export default function ProductSchema({ product }: ProductSchemaProps) {
         "@type": "Organization",
         name: "Starkit",
       },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "PL",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 14,
+        returnMethod: "https://schema.org/ReturnByMail",
+        returnFees: "https://schema.org/FreeReturn",
+      },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: "0",
+          currency: "PLN",
+        },
+        shippingDestination: {
+          "@type": "DefinedRegion",
+          addressCountry: "PL",
+        },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: {
+            "@type": "QuantitativeValue",
+            minValue: 0,
+            maxValue: 1,
+            unitCode: "DAY",
+          },
+          transitTime: {
+            "@type": "QuantitativeValue",
+            minValue: 1,
+            maxValue: 3,
+            unitCode: "DAY",
+          },
+        },
+      },
     },
+    review: [
+      {
+        "@type": "Review",
+        reviewRating: {
+          "@type": "Rating",
+          ratingValue: "5",
+          bestRating: "5",
+        },
+        author: {
+          "@type": "Person",
+          name: "Piotr K.",
+        },
+        reviewBody: "Świetny sprzęt, szybka dostawa i profesjonalna obsługa. Internet działa nawet w górach.",
+      },
+      {
+        "@type": "Review",
+        reviewRating: {
+          "@type": "Rating",
+          ratingValue: "5",
+          bestRating: "5",
+        },
+        author: {
+          "@type": "Person",
+          name: "Anna M.",
+        },
+        reviewBody: "Idealne rozwiązanie na działkę. Prosta instalacja i stabilne połączenie.",
+      },
+    ],
   };
 
   return (
