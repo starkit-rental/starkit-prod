@@ -36,7 +36,6 @@ export default defineType({
         { type: "all-posts" },
         { type: "rich-body" },
         { type: "blog-carousel" },
-        { type: "starlink-use-cases" },
       ],
     }),
     defineField({

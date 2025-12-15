@@ -15,7 +15,6 @@ import { allPostsQuery } from "./all-posts";
 import { richBodyQuery } from "./body/rich-body";
 import { featureCarouselQuery } from "./carousel/feature-carousel";
 import { blogCarouselQuery } from "./blog-carousel";
-import { starlinkUseCasesQuery } from "./starlink-use-cases";
 
 export const PAGE_QUERY = groq`
   *[_type == "page" && slug.current == $slug][0]{
@@ -36,7 +35,6 @@ export const PAGE_QUERY = groq`
       ${richBodyQuery},
       ${featureCarouselQuery},
       ${blogCarouselQuery},
-      ${starlinkUseCasesQuery},
     },
     meta_title,
     meta_description,

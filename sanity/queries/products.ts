@@ -15,7 +15,6 @@ import { allPostsQuery } from "./all-posts";
 import { richBodyQuery } from "./body/rich-body";
 import { featureCarouselQuery } from "./carousel/feature-carousel";
 import { blogCarouselQuery } from "./blog-carousel";
-import { starlinkUseCasesQuery } from "./starlink-use-cases";
 
 export const allProductsQuery = groq`
   *[_type == "product"] | order(orderRank) {
@@ -63,7 +62,6 @@ export const singleProductQuery = groq`
       ${richBodyQuery},
       ${featureCarouselQuery},
       ${blogCarouselQuery},
-      ${starlinkUseCasesQuery},
     },
     meta_title,
     meta_description,
@@ -103,7 +101,6 @@ export const productsPageQuery = groq`
       ${richBodyQuery},
       ${featureCarouselQuery},
       ${blogCarouselQuery},
-      ${starlinkUseCasesQuery},
     },
     meta_title,
     meta_description,

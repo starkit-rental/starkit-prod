@@ -47,7 +47,6 @@ import newsletter from "./schemas/blocks/forms/newsletter";
 import allPosts from "./schemas/blocks/all-posts";
 import richBody from "./schemas/blocks/body/rich-body";
 import blogCarousel from "./schemas/blocks/blog-carousel";
-import starlinkUseCases from "./schemas/blocks/starlink-use-cases";
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -97,7 +96,6 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     allPosts,
     richBody,
     blogCarousel,
-    starlinkUseCases,
     productsPage,
   ],
 };
