@@ -302,6 +302,21 @@
                   "type": "inline",
                   "name": "rich-body"
                 }
+              },
+              {
+                "type": "object",
+                "attributes": {
+                  "_key": {
+                    "type": "objectAttribute",
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "rest": {
+                  "type": "inline",
+                  "name": "blog-carousel"
+                }
               }
             ]
           }
@@ -7426,6 +7441,21 @@
                 "rest": {
                   "type": "inline",
                   "name": "rich-body"
+                }
+              },
+              {
+                "type": "object",
+                "attributes": {
+                  "_key": {
+                    "type": "objectAttribute",
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "rest": {
+                  "type": "inline",
+                  "name": "blog-carousel"
                 }
               }
             ]

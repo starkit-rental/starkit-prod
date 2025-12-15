@@ -35,6 +35,7 @@ export default defineType({
         { type: "form-newsletter" },
         { type: "all-posts" },
         { type: "rich-body" },
+        { type: "blog-carousel" },
       ],
     }),
     defineField({
