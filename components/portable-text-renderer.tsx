@@ -96,22 +96,39 @@ const portableTextComponents: PortableTextProps["components"] = {
   },
   block: {
     normal: ({ children }) => (
-      <p style={{ marginBottom: "1rem" }}>{children}</p>
+      <p className="mb-4 text-base leading-7 text-muted-foreground">
+        {children}
+      </p>
     ),
     h1: ({ children }) => (
-      <h1 style={{ marginBottom: "1rem", marginTop: "1rem" }}>{children}</h1>
+      <h1 className="mt-12 mb-4 text-4xl md:text-5xl font-bold leading-tight tracking-tight">
+        {children}
+      </h1>
     ),
     h2: ({ children }) => (
-      <h2 style={{ marginBottom: "1rem", marginTop: "1rem" }}>{children}</h2>
+      <h2 className="mt-10 mb-4 text-3xl md:text-4xl font-bold leading-tight tracking-tight">
+        {children}
+      </h2>
     ),
     h3: ({ children }) => (
-      <h3 style={{ marginBottom: "1rem", marginTop: "1rem" }}>{children}</h3>
+      <h3 className="mt-8 mb-3 text-2xl md:text-3xl font-semibold leading-snug">
+        {children}
+      </h3>
     ),
     h4: ({ children }) => (
-      <h4 style={{ marginBottom: "1rem", marginTop: "1rem" }}>{children}</h4>
+      <h4 className="mt-6 mb-3 text-xl md:text-2xl font-semibold leading-snug">
+        {children}
+      </h4>
     ),
     h5: ({ children }) => (
-      <h5 style={{ marginBottom: "1rem", marginTop: "1rem" }}>{children}</h5>
+      <h5 className="mt-6 mb-2 text-lg md:text-xl font-medium leading-snug">
+        {children}
+      </h5>
+    ),
+    blockquote: ({ children }) => (
+      <blockquote className="my-6 border-l-4 border-primary pl-6 italic text-muted-foreground">
+        {children}
+      </blockquote>
     ),
   },
   marks: {
