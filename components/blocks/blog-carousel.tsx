@@ -45,7 +45,7 @@ export default async function BlogCarousel({
           <Carousel
             opts={{
               align: "start",
-              loop: true,
+              loop: false,
             }}
           >
             <CarouselContent>
