@@ -9,6 +9,8 @@ import {
 } from "@/sanity/lib/fetch";
 import { generatePageMetadata } from "@/sanity/lib/metadata";
 import BlogCTA from "@/components/blog/blog-cta";
+import BlogPostSchema from "@/components/seo/blog-post-schema";
+import FAQSchema from "@/components/seo/faq-schema";
 
 export async function generateStaticParams() {
   const posts = await fetchSanityPostsStaticParams();
@@ -60,6 +62,8 @@ export default async function PostPage(props: {
 
   return (
     <>
+      <BlogPostSchema post={post} />
+      {post.faqs && post.faqs.length > 0 && <FAQSchema faqs={post.faqs} />}
       <section>
         <div className="container py-16 xl:py-20">
           <article className="max-w-3xl mx-auto">

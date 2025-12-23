@@ -82,6 +82,20 @@ export default defineType({
       group: "content",
     }),
     defineField({
+      name: "faqs",
+      title: "FAQs",
+      type: "array",
+      group: "content",
+      description: "Dodaj pytania FAQ dla tego artykułu (opcjonalne). Jeśli dodasz FAQs, automatycznie zostanie wygenerowane schema FAQPage dla SEO.",
+      of: [
+        {
+          name: "faq",
+          type: "reference",
+          to: [{ type: "faq" }],
+        },
+      ],
+    }),
+    defineField({
       name: "meta_title",
       title: "Meta Title",
       type: "string",

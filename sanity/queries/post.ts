@@ -5,11 +5,16 @@ import { bodyQuery } from "./shared/body";
 export const POST_QUERY = groq`*[_type == "post" && slug.current == $slug][0]{
     title,
     slug,
+    excerpt,
     image{
       ${imageQuery}
     },
     body[]{
       ${bodyQuery}
+    },
+    faqs[]->{
+      title,
+      body
     },
     author->{
       name,
