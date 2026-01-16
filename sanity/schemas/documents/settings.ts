@@ -48,6 +48,13 @@ export default defineType({
       type: "block-content",
       description: "The copyright text to display in the footer",
     }),
+    defineField({
+      name: "footerLinks",
+      title: "Footer Links",
+      type: "array",
+      description: "Links to display in the footer (e.g., Privacy Policy, Terms)",
+      of: [{ type: "link" }],
+    }),
   ],
   preview: {
     select: {

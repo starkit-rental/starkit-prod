@@ -1,16 +1,17 @@
 import Logo from "@/components/logo";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, getInternalLinkUrl } from "@/lib/utils";
 import PortableTextRenderer from "@/components/portable-text-renderer";
-import { fetchSanitySettings, fetchSanityNavigation } from "@/sanity/lib/fetch";
-import { NAVIGATION_QUERYResult } from "@/sanity.types";
+import { fetchSanitySettings } from "@/sanity/lib/fetch";
+import { SETTINGS_QUERYResult } from "@/sanity.types";
 
-type SanityLink = NonNullable<NAVIGATION_QUERYResult[0]["links"]>[number];
+type FooterLink = NonNullable<
+  NonNullable<SETTINGS_QUERYResult>["footerLinks"]
+>[number];
 
 export default async function Footer() {
   const settings = await fetchSanitySettings();
-  const navigation = await fetchSanityNavigation();
 
   return (
     <footer>
@@ -25,25 +26,34 @@ export default async function Footer() {
         >
           <Logo settings={settings} />
         </Link>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-7 text-primary">
-          {navigation[0]?.links?.map((navItem: SanityLink) => (
-            <Link
-              key={navItem._key}
-              href={navItem.href || "#"}
-              target={navItem.target ? "_blank" : undefined}
-              rel={navItem.target ? "noopener noreferrer" : undefined}
-              className={cn(
-                buttonVariants({
-                  variant: navItem.buttonVariant || "default",
-                }),
-                navItem.buttonVariant === "ghost" &&
-                  "transition-colors hover:text-foreground/80 text-foreground/60 text-sm p-0 h-auto hover:bg-transparent"
-              )}
-            >
-              {navItem.title}
-            </Link>
-          ))}
-        </div>
+        {settings?.footerLinks && settings.footerLinks.length > 0 && (
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-7 text-primary">
+            {settings.footerLinks.map((footerLink: FooterLink) => {
+              // Generate URL based on whether it's external or internal link
+              const href = footerLink.isExternal
+                ? footerLink.href || "#"
+                : getInternalLinkUrl(footerLink.internalLink);
+
+              return (
+                <Link
+                  key={footerLink._key}
+                  href={href}
+                  target={footerLink.target ? "_blank" : undefined}
+                  rel={footerLink.target ? "noopener noreferrer" : undefined}
+                  className={cn(
+                    buttonVariants({
+                      variant: footerLink.buttonVariant || "default",
+                    }),
+                    footerLink.buttonVariant === "ghost" &&
+                      "transition-colors hover:text-foreground/80 text-foreground/60 text-sm p-0 h-auto hover:bg-transparent"
+                  )}
+                >
+                  {footerLink.title}
+                </Link>
+              );
+            })}
+          </div>
+        )}
         <div className="mt-8 flex flex-row gap-6 justify-center lg:mt-5 text-xs border-t pt-8">
           <div className="flex items-center gap-2 text-foreground/60">
             {settings?.copyright && (
