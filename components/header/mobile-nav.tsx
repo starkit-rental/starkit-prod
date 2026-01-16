@@ -67,7 +67,7 @@ export default function MobileNav({
                           variant: navItem.buttonVariant || "default",
                         }),
                         navItem.buttonVariant === "ghost" &&
-                          "hover:text-decoration-none hover:opacity-50 text-lg p-0 h-auto hover:bg-transparent"
+                          "hover:text-decoration-none hover:opacity-50 text-foreground text-lg p-0 h-auto hover:bg-transparent font-medium"
                       )}
                     >
                       {navItem.title}

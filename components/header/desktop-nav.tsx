@@ -11,7 +11,7 @@ export default function DesktopNav({
   navigation: NAVIGATION_QUERYResult;
 }) {
   return (
-    <div className="hidden xl:flex items-center gap-7 text-primary">
+    <div className="hidden xl:flex items-center gap-7">
       {navigation[0]?.links?.map((navItem: SanityLink) => {
         // Generate URL based on whether it's external or internal link
         const href = navItem.isExternal
@@ -29,7 +29,7 @@ export default function DesktopNav({
                 variant: navItem.buttonVariant || "default",
               }),
               navItem.buttonVariant === "ghost" &&
-                "transition-colors hover:text-foreground/80 text-foreground/60 text-sm p-0 h-auto hover:bg-transparent"
+                "transition-colors hover:text-foreground text-foreground text-sm p-0 h-auto hover:bg-transparent font-medium"
             )}
           >
             {navItem.title}
