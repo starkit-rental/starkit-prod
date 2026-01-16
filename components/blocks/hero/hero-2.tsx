@@ -80,7 +80,7 @@ export default function Hero2({
 
           {hasBody && (
             <div
-              className="text-lg mt-6 max-w-2xl mx-auto animate-fade-up [animation-delay:300ms] opacity-0"
+              className="text-lg mt-6 max-w-2xl mx-auto animate-fade-up [animation-delay:300ms] opacity-0 [&_*]:!text-inherit"
               style={textColorStyle}
             >
               <PortableTextRenderer value={body} />
