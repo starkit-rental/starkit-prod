@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   CreditCard,
   Edit3,
+  Eye,
   Loader2,
   Mail,
   MapPin,
@@ -1072,6 +1073,8 @@ function SendEmailPanel({
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   useEffect(() => {
     async function loadTemplates() {
@@ -1135,7 +1138,56 @@ function SendEmailPanel({
     }
   }
 
+  const TEMPLATE_KEY_TO_TYPE: Record<string, string> = {
+    email_body_order_received: "order_received",
+    email_body_order_confirmed: "order_confirmed",
+    email_body_order_picked_up: "order_picked_up",
+    email_body_order_returned: "order_returned",
+    email_body_order_cancelled: "order_cancelled",
+    email_body_admin_notification: "admin_notification",
+  };
+
+  async function handlePreview() {
+    const previewType = TEMPLATE_KEY_TO_TYPE[selectedTemplate];
+    if (!previewType) return;
+    setLoadingPreview(true);
+    try {
+      const rental = Number(String(order?.total_rental_price ?? 0));
+      const dep = Number(String(order?.total_deposit ?? 0));
+      const res = await fetch("/api/office/email-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: previewType,
+          vars: {
+            customer_name: customer?.full_name || customer?.company_name || "Kliencie",
+            order_number: displayNumber,
+            start_date: order?.start_date ? dateFmt(order.start_date) : "—",
+            end_date: order?.end_date ? dateFmt(order.end_date) : "—",
+            total_amount: `${(rental + dep).toFixed(2)} zł`,
+            rental_price: `${rental.toFixed(2)} zł`,
+            deposit: `${dep.toFixed(2)} zł`,
+            customer_email: customer?.email ?? "",
+            customer_phone: customer?.phone ?? "",
+            company_name: customer?.company_name ?? "",
+            nip: customer?.nip ?? "",
+            inpost_point_id: order?.inpost_point_id ?? "",
+            inpost_point_address: order?.inpost_point_address ?? "",
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Błąd podglądu");
+      setPreviewHtml(json.html);
+    } catch (e) {
+      setSendResult({ ok: false, msg: `Podgląd: ${e instanceof Error ? e.message : "Błąd"}` });
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+
   return (
+    <>
     <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
       <CardHeader className="border-b border-slate-100 pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
@@ -1211,22 +1263,75 @@ function SendEmailPanel({
               </div>
             )}
 
-            <Button
-              onClick={handleSend}
-              disabled={sending || !toEmail || !subject || !body}
-              className="w-full gap-2 bg-slate-900 hover:bg-slate-800"
-            >
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              {sending ? "Wysyłanie…" : "Wyślij wiadomość"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handlePreview}
+                disabled={loadingPreview || !TEMPLATE_KEY_TO_TYPE[selectedTemplate]}
+                className="flex-1 gap-2 border-slate-200"
+              >
+                {loadingPreview ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+                Podgląd
+              </Button>
+              <Button
+                onClick={handleSend}
+                disabled={sending || !toEmail || !subject || !body}
+                className="flex-1 gap-2 bg-slate-900 hover:bg-slate-800"
+              >
+                {sending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {sending ? "Wysyłanie…" : "Wyślij"}
+              </Button>
+            </div>
           </>
         )}
       </CardContent>
     </Card>
+
+    {/* Preview modal */}
+    {previewHtml && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        onClick={() => setPreviewHtml(null)}
+      >
+        <div
+          className="relative flex flex-col w-full max-w-3xl max-h-[90vh] rounded-xl bg-white shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 shrink-0">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Podgląd szablonu e-mail</p>
+              <p className="text-sm font-medium text-slate-900 mt-0.5">
+                {EMAIL_TEMPLATE_OPTIONS.find((t) => t.key === selectedTemplate)?.label ?? ""}
+              </p>
+            </div>
+            <button
+              onClick={() => setPreviewHtml(null)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="overflow-y-auto flex-1 bg-slate-100 p-4">
+            <iframe
+              srcDoc={previewHtml ?? undefined}
+              className="w-full rounded-lg border border-slate-200 bg-white"
+              style={{ height: "600px" }}
+              sandbox="allow-same-origin"
+              title="Podgląd maila"
+            />
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

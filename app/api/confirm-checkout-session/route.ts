@@ -119,7 +119,7 @@ export async function POST(req: Request) {
           inpostCode: orderData.inpost_point_id || "—",
           startDate,
           endDate,
-          total,
+          totalAmount: total,
         }).catch((err: Error) => console.error("Failed to send admin email:", err));
       }
     }

@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useToast } from "@/hooks/use-toast";
 
@@ -108,8 +109,7 @@ export default function ContractEditorPage() {
             Treść Regulaminu
           </CardTitle>
           <p className="mt-1 text-sm text-slate-500">
-            Edytuj punkty regulaminu, które będą wyświetlane w sekcji §5 umowy PDF.
-            Każdy punkt powinien być oddzielony podwójnym enterem (pusta linia).
+            Edytuj treść regulaminu używając edytora WYSIWYG. Możesz formatować tekst, dodawać nagłówki, listy i paragrafy.
           </p>
         </CardHeader>
         <CardContent className="p-6">
@@ -119,10 +119,9 @@ export default function ContractEditorPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <textarea
-                value={contractContent}
-                onChange={(e) => setContractContent(e.target.value)}
-                className="w-full min-h-[500px] rounded-lg border border-slate-200 bg-white p-4 text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              <RichTextEditor
+                content={contractContent}
+                onChange={setContractContent}
                 placeholder="Wprowadź treść regulaminu..."
               />
 
@@ -131,10 +130,11 @@ export default function ContractEditorPage() {
                   💡 Wskazówki dotyczące formatowania:
                 </p>
                 <ul className="mt-2 space-y-1 text-sm text-blue-700">
-                  <li>• Każdy punkt regulaminu powinien zaczynać się od numeru (np. "1. ")</li>
-                  <li>• Oddzielaj punkty podwójnym enterem (pusta linia)</li>
-                  <li>• Unikaj specjalnych znaków formatowania (PDF obsługuje tylko zwykły tekst)</li>
-                  <li>• Zmiany będą widoczne w nowych umowach PDF po zapisaniu</li>
+                  <li>• Użyj przycisków na pasku narzędzi aby formatować tekst</li>
+                  <li>• <strong>Bold</strong> i <em>italic</em> dla wyróżnień</li>
+                  <li>• Nagłówki H2 i H3 dla tytułów sekcji</li>
+                  <li>• Listy punktowane i numerowane dla wyliczenia punktów</li>
+                  <li>• Zmiany będą widoczne w checkoucie i umowach PDF po zapisaniu</li>
                 </ul>
               </div>
 

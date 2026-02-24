@@ -223,15 +223,10 @@ function TermsDialog({
               Ładowanie regulaminu…
             </div>
           ) : contractContent ? (
-            <div className="flex flex-col gap-3 leading-relaxed whitespace-pre-wrap">
-              {contractContent.split("\n").map((line, i) =>
-                line.trim() === "" ? (
-                  <div key={i} className="h-1" />
-                ) : (
-                  <p key={i} className="text-sm text-slate-700">{line}</p>
-                )
-              )}
-            </div>
+            <div 
+              className="prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: contractContent }}
+            />
           ) : (
             <p className="text-slate-400 italic">Treść regulaminu niedostępna.</p>
           )}
@@ -676,9 +671,6 @@ function CheckoutContent() {
                     umowę wynajmu razem z zamówieniem
                   </button>
                 </Label>
-                <p className="mt-1 text-xs text-slate-400">
-                  Wersja regulaminu: {TERMS_VERSION}
-                </p>
               </div>
             </div>
           </div>
