@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import BooqableScript from "./booqable-script";
 // import SmartsuppScript from "./smartsupp-script";
 
 export default function ConditionalWidgets() {
@@ -12,9 +11,5 @@ export default function ConditionalWidgets() {
     return null;
   }
 
-  return (
-    <>
-      <BooqableScript />
-    </>
-  );
+  return null;
 }

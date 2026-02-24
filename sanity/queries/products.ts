@@ -36,7 +36,6 @@ export const singleProductQuery = groq`
     _id,
     title,
     "slug": slug.current,
-    booqableId,
     excerpt,
     description,
     pricePerDay,

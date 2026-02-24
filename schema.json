@@ -7174,13 +7174,6 @@
         },
         "optional": true
       },
-      "booqableId": {
-        "type": "objectAttribute",
-        "value": {
-          "type": "string"
-        },
-        "optional": true
-      },
       "blocks": {
         "type": "objectAttribute",
         "value": {

@@ -3,7 +3,6 @@ import Logo from "@/components/logo";
 import MobileNav from "@/components/header/mobile-nav";
 import DesktopNav from "@/components/header/desktop-nav";
 import { ModeToggle } from "@/components/menu-toggle";
-import { CartButton } from "@/components/cart-button";
 import { fetchSanitySettings, fetchSanityNavigation } from "@/sanity/lib/fetch";
 import TopBar from "@/components/header/top-bar";
 
@@ -21,12 +20,10 @@ export default async function Header() {
         <div className="hidden xl:flex gap-7 items-center justify-between">
           <DesktopNav navigation={navigation} />
           <div className="flex items-center gap-2">
-            <CartButton />
             <ModeToggle />
           </div>
         </div>
         <div className="flex items-center gap-2 xl:hidden">
-          <CartButton />
           <ModeToggle />
           <MobileNav navigation={navigation} settings={settings} />
         </div>

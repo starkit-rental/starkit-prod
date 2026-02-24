@@ -69,15 +69,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.sanity.io" />
-
-        <link rel="preconnect" href="https://cdn2.booqable.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://cdn2.booqable.com" />
-
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.BooqableConfig={locale:'en',language:'en'};`,
-          }}
-        />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased overscroll-none", fontSans.variable)}>
         {isProduction && <CookiebotScript />}

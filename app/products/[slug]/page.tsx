@@ -3,12 +3,12 @@ import { singleProductQuery } from "@/sanity/queries/products";
 import { PortableText } from "@portabletext/react";
 import Blocks from "@/components/blocks";
 import { ProductGallery } from "../_components/product-gallery";
-import BooqableEmbed from "./_components/BooqableEmbed";
 import Breadcrumbs from "@/components/ui/breadcrumbs";
 import Separator from "@/components/ui/separator";
 import { Metadata } from "next";
 import ProductSchema from "@/components/seo/product-schema";
 import BreadcrumbsSchema from "@/components/seo/breadcrumbs-schema";
+import RentalWidget from "../_components/rental-widget";
 
 export const revalidate = 60;
 
@@ -54,8 +54,6 @@ export default async function ProductPage({ params }: PageProps) {
     return <div className="container py-12 md:py-16">Produkt nie znaleziony.</div>;
   }
 
-  const booqableId: string = product.booqableId || product.slug;
-
   // Breadcrumbs data
   const breadcrumbLinks = [
     { label: "Strona główna", href: "/" },
@@ -99,7 +97,7 @@ export default async function ProductPage({ params }: PageProps) {
                 {product.title}
               </h1>
 
-              {/* Price (static - will be updated by Booqable) */}
+              {/* Price */}
               {product.pricePerDay && (
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-primary">
@@ -116,11 +114,6 @@ export default async function ProductPage({ params }: PageProps) {
                 </p>
               )}
 
-              {/* Booqable Button - Calendar, Availability, Dynamic Price */}
-              <div className="py-4">
-                <BooqableEmbed kind="product-button" id={booqableId} />
-              </div>
-
               {/* Deposit Info */}
               {product.deposit && (
                 <div className="p-4 rounded-lg bg-muted/50 border">
@@ -130,6 +123,8 @@ export default async function ProductPage({ params }: PageProps) {
                   </div>
                 </div>
               )}
+
+              <RentalWidget sanitySlug={product.slug} productTitle={product.title || "Produkt"} />
 
               {/* Specs */}
               {product.specs?.length > 0 && (

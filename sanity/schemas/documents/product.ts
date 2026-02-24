@@ -113,13 +113,6 @@ export default defineType({
       ],
     }),
     defineField({
-      name: "booqableId",
-      title: "Booqable Product ID",
-      type: "string",
-      group: "content",
-      description: "Np. 'starlink-mini'. Gdy puste, użyjemy sluga.",
-    }),
-    defineField({
       name: "blocks",
       title: "Blocks",
       type: "array",
