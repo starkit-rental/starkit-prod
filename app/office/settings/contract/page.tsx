@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useToast } from "@/hooks/use-toast";
+
+const RichTextEditor = dynamic(
+  () => import("@/components/ui/rich-text-editor").then((mod) => ({ default: mod.RichTextEditor })),
+  { ssr: false, loading: () => <div className="h-[400px] rounded-lg border border-slate-200 bg-slate-50 animate-pulse" /> }
+);
 
 export default function ContractEditorPage() {
   const supabase = createSupabaseBrowserClient();
