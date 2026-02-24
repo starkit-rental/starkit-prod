@@ -223,7 +223,7 @@ function TermsDialog({
               Ładowanie regulaminu…
             </div>
           ) : contractContent ? (
-            <div className="flex flex-col gap-3 leading-relaxed">
+            <div className="flex flex-col gap-3 leading-relaxed whitespace-pre-wrap">
               {contractContent.split("\n").map((line, i) =>
                 line.trim() === "" ? (
                   <div key={i} className="h-1" />

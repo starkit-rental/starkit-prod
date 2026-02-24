@@ -1091,11 +1091,11 @@ function SendEmailPanel({
 
   // Update subject + body when template selection changes
   useEffect(() => {
+    if (loadingTemplates) return; // czekaj na załadowanie szablonów z bazy
     const tpl = EMAIL_TEMPLATE_OPTIONS.find((t) => t.key === selectedTemplate);
     if (!tpl) return;
     const rawSubject = templates[tpl.subjectKey] ?? "";
     const rawBody = templates[tpl.key] ?? "";
-    if (!rawSubject && !rawBody) return; // czekaj na załadowanie szablonów
     const customerName = customer?.full_name ?? customer?.company_name ?? "Kliencie";
     const resolve = (s: string) =>
       s
@@ -1112,7 +1112,7 @@ function SendEmailPanel({
         .replace(/\{orderNumber\}/g, displayNumber);
     setSubject(resolve(rawSubject));
     setBody(resolve(rawBody));
-  }, [selectedTemplate, templates, customer, displayNumber, order]);
+  }, [selectedTemplate, templates, loadingTemplates, customer, displayNumber, order]);
 
   async function handleSend() {
     if (!toEmail || !subject || !body) return;
