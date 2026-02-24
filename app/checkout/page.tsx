@@ -209,14 +209,14 @@ function TermsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-2xl flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2 text-slate-900">
             <FileText className="h-5 w-5" />
             Regulamin wynajmu sprzętu
           </DialogTitle>
         </DialogHeader>
-        <div className="py-4 text-sm leading-relaxed text-slate-700 min-h-[120px]">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-4 py-4 text-sm leading-relaxed text-slate-700">
           {loadingContract ? (
             <div className="flex items-center justify-center py-8 text-slate-400">
               <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -236,7 +236,7 @@ function TermsDialog({
             <p className="text-slate-400 italic">Treść regulaminu niedostępna.</p>
           )}
         </div>
-        <div className="flex justify-end pt-3 border-t border-slate-100">
+        <div className="flex shrink-0 justify-end pt-3 border-t border-slate-100">
           <Button
             onClick={() => onOpenChange(false)}
             className="bg-slate-900 hover:bg-slate-800"
