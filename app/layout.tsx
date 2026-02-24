@@ -70,7 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.sanity.io" />
       </head>
-      <body className={cn("min-h-screen bg-background font-sans antialiased overscroll-none", fontSans.variable)}>
+      <body className={cn("min-h-screen bg-background font-sans antialiased overscroll-none", fontSans.variable)} suppressHydrationWarning>
         {isProduction && <CookiebotScript />}
         <ConditionalWidgets />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
