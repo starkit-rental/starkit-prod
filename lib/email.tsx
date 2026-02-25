@@ -16,9 +16,9 @@ import {
 
 function createEmailSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) throw new Error("Missing Supabase env vars");
-  return createClient(url, key);
+  return createClient(url, key, { auth: { persistSession: false } });
 }
 
 function createEmailSupabaseAdmin() {
@@ -81,19 +81,38 @@ function calculateRentalDays(startDate: string, endDate: string): number {
 }
 
 async function logEmail(data: EmailLogData) {
-  const supabase = createEmailSupabaseAdmin();
-  const { error } = await supabase.from("email_logs").insert({
-    order_id: data.orderId,
-    recipient: data.recipient,
-    subject: data.subject,
-    body: data.body ?? null,
-    type: data.type,
-    status: data.status,
-    error_message: data.errorMessage || null,
-    resend_id: data.resendId || null,
-  });
-  if (error) {
-    console.error(`[email] logEmail INSERT failed:`, error.message);
+  try {
+    const supabase = createEmailSupabaseAdmin();
+    const basePayload: Record<string, unknown> = {
+      order_id: data.orderId,
+      recipient: data.recipient,
+      subject: data.subject,
+      type: data.type,
+      status: data.status,
+      error_message: data.errorMessage || null,
+      resend_id: data.resendId || null,
+    };
+
+    // Try with body first (newer schema), fall back without it (original schema)
+    const { error } = await supabase.from("email_logs").insert({ ...basePayload, body: data.body ?? null });
+
+    if (error) {
+      // If body column doesn't exist, retry without it
+      if (error.code === "42703" || error.message?.includes("body")) {
+        const { error: error2 } = await supabase.from("email_logs").insert(basePayload);
+        if (error2) {
+          console.error(`[email] logEmail INSERT failed (no-body retry, type=${data.type}):`, error2.code, error2.message);
+        } else {
+          console.log(`[email] logEmail OK without body (type=${data.type}, status=${data.status}, orderId=${data.orderId})`);
+        }
+      } else {
+        console.error(`[email] logEmail INSERT failed (type=${data.type}, orderId=${data.orderId}):`, error.code, error.message, error.details);
+      }
+    } else {
+      console.log(`[email] logEmail OK (type=${data.type}, status=${data.status}, orderId=${data.orderId})`);
+    }
+  } catch (e) {
+    console.error(`[email] logEmail EXCEPTION:`, e instanceof Error ? e.message : e);
   }
 }
 

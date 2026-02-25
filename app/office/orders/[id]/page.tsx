@@ -291,19 +291,18 @@ export default function OfficeOrderDetailsPage() {
     setLoading(true);
     setError(null);
 
-    const { data, error: fetchError } = await supabase
-      .from("orders")
-      .select(
-        "id,order_number,start_date,end_date,total_rental_price,total_deposit,payment_status,order_status,inpost_point_id,inpost_point_address,customers:customer_id(id,email,full_name,phone,company_name,nip),order_items(stock_item_id,stock_items(id,serial_number,products(id,name)))"
-      )
-      .eq("id", orderId)
-      .maybeSingle();
-
-    if (fetchError) {
-      setError(fetchError.message);
+    try {
+      const res = await fetch(`/api/office/order-detail?orderId=${orderId}`);
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json?.error || "Błąd ładowania zamówienia");
+        setOrder(null);
+      } else {
+        setOrder((json.order ?? null) as OrderRow | null);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Błąd ładowania zamówienia");
       setOrder(null);
-    } else {
-      setOrder((data ?? null) as OrderRow | null);
     }
     setLoading(false);
   }

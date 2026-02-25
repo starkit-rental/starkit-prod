@@ -75,7 +75,7 @@ export default function OfficeCustomersPage() {
 
     const { data, error: fetchError } = await supabase
       .from("customer_stats")
-      .select("*");
+      .select("id,full_name,email,phone,company_name,nip,created_at,total_orders,total_spent,total_deposit,first_order_at,last_order_at");
 
     if (fetchError) {
       setError(fetchError.message);
