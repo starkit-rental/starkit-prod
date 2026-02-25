@@ -317,13 +317,15 @@ export default function OfficeOrderDetailsPage() {
   async function loadEmailLogs() {
     if (!orderId) return;
     setLoadingLogs(true);
-    const { data } = await supabase
-      .from("email_logs")
-      .select("id,recipient,subject,body,type,status,error_message,sent_at")
-      .eq("order_id", orderId)
-      .order("sent_at", { ascending: false });
-    setEmailLogs((data as EmailLogRow[]) ?? []);
-    setLoadingLogs(false);
+    try {
+      const res = await fetch(`/api/office/email-logs?orderId=${orderId}`);
+      const json = await res.json();
+      setEmailLogs((json.logs as EmailLogRow[]) ?? []);
+    } catch {
+      setEmailLogs([]);
+    } finally {
+      setLoadingLogs(false);
+    }
   }
 
   // Called from Select — shows dialog for statuses that have emails
