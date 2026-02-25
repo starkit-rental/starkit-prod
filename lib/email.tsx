@@ -109,72 +109,75 @@ async function logEmail(data: EmailLogData) {
       console.warn(`[email:log] orderId "${data.orderId}" is NOT a valid UUID — setting order_id=NULL to avoid FK violation`);
     }
 
-    const basePayload: Record<string, unknown> = {
+    // Build payload with ONLY guaranteed core columns first
+    // The actual DB may not have: error_message, resend_id, body
+    const corePayload: Record<string, unknown> = {
       order_id: safeOrderId,
       recipient: data.recipient,
       subject: data.subject,
       type: data.type,
       status: data.status,
-      error_message: data.errorMessage || null,
-      resend_id: data.resendId || null,
     };
 
-    // Attempt 1: Insert with body column
-    const { error } = await supabase.from("email_logs").insert({ ...basePayload, body: data.body ?? null });
+    // Optional columns — will be stripped if DB doesn't have them (PGRST204)
+    const optionalCols: Record<string, unknown> = {};
+    if (data.errorMessage) optionalCols.error_message = data.errorMessage;
+    if (data.resendId) optionalCols.resend_id = data.resendId;
+    if (data.body) optionalCols.body = data.body;
 
-    if (!error) {
-      console.log(`[email:log] ✓ INSERT OK (type=${data.type}, orderId=${safeOrderId})`);
-      return;
-    }
+    // Attempt with all columns
+    let payload = { ...corePayload, ...optionalCols };
+    let attempt = 0;
+    const maxAttempts = 4;
 
-    const errInfo = { code: error.code, message: error.message, details: error.details, hint: (error as any).hint };
-    console.error(`[email:log] ✗ INSERT FAILED (attempt 1):`, JSON.stringify(errInfo));
+    while (attempt < maxAttempts) {
+      attempt++;
+      const { error } = await supabase.from("email_logs").insert(payload);
 
-    // Attempt 2: If body column doesn't exist (42703), retry without it
-    if (error.code === "42703" || error.message?.includes("body")) {
-      console.log(`[email:log] Retrying without body column...`);
-      const { error: err2 } = await supabase.from("email_logs").insert(basePayload);
-      if (!err2) {
-        console.log(`[email:log] ✓ INSERT OK without body (type=${data.type}, orderId=${safeOrderId})`);
+      if (!error) {
+        console.log(`[email:log] ✓ INSERT OK (attempt ${attempt}, type=${data.type}, orderId=${safeOrderId})`);
         return;
       }
-      console.error(`[email:log] ✗ INSERT FAILED (attempt 2, no body):`, JSON.stringify({ code: err2.code, message: err2.message, details: err2.details }));
-    }
 
-    // Attempt 3: If FK violation (23503) — order_id might reference non-existent order, try with NULL
-    if (error.code === "23503" || error.message?.includes("foreign key") || error.message?.includes("violates")) {
-      console.warn(`[email:log] FK violation — orderId ${safeOrderId} not found in orders table. Retrying with order_id=NULL...`);
-      const nullPayload = { ...basePayload, order_id: null, body: data.body ?? null };
-      const { error: err3 } = await supabase.from("email_logs").insert(nullPayload);
-      if (!err3) {
-        console.log(`[email:log] ✓ INSERT OK with order_id=NULL (type=${data.type})`);
-        return;
+      console.error(`[email:log] ✗ INSERT FAILED (attempt ${attempt}):`, JSON.stringify({ code: error.code, message: error.message }));
+
+      // PGRST204 or 42703: column doesn't exist — strip the offending column and retry
+      if (error.code === "PGRST204" || error.code === "42703") {
+        const match = error.message?.match(/column[\s'"]+([\w]+)[\s'"]/i)
+          || error.message?.match(/'(\w+)' column/i);
+        const badCol = match?.[1];
+        if (badCol && badCol in payload) {
+          console.warn(`[email:log] Stripping missing column '${badCol}' and retrying...`);
+          const next = { ...payload };
+          delete next[badCol];
+          payload = next;
+          continue; // retry without that column
+        }
+        // Can't identify the column — fall through to nuclear
       }
-      console.error(`[email:log] ✗ INSERT FAILED (attempt 3, null order_id):`, JSON.stringify({ code: err3.code, message: err3.message }));
+
+      // 23503: FK violation — order_id references non-existent order
+      if (error.code === "23503" || error.message?.includes("foreign key")) {
+        console.warn(`[email:log] FK violation — orderId ${safeOrderId} not in orders table. Setting order_id=NULL...`);
+        payload = { ...payload, order_id: null };
+        continue;
+      }
+
+      // 42501: RLS policy violation
+      if (error.code === "42501") {
+        console.error(`[email:log] ██ RLS POLICY VIOLATION (42501) ██ Run in Supabase SQL Editor:`);
+        console.error(`[email:log]   ALTER TABLE email_logs DISABLE ROW LEVEL SECURITY;`);
+        break; // can't recover from RLS in code
+      }
+
+      // Unknown error — try nuclear (core only, null order_id)
+      if (attempt < maxAttempts) {
+        payload = { ...corePayload, order_id: null };
+        console.log(`[email:log] Trying nuclear fallback (core columns only, null order_id)...`);
+      }
     }
 
-    // Attempt 4: Nuclear — strip everything optional, bare minimum insert
-    if (error.code === "42501") {
-      console.error(`[email:log] ██ RLS POLICY VIOLATION (42501) ██ service_role key is not bypassing RLS. Run in Supabase SQL Editor:`);
-      console.error(`[email:log]   ALTER TABLE email_logs DISABLE ROW LEVEL SECURITY;`);
-      console.error(`[email:log]   -- OR: CREATE POLICY "service_role_all" ON email_logs FOR ALL TO service_role USING (true) WITH CHECK (true);`);
-    }
-
-    // Final fallback: try absolute minimum payload (no body, no order_id)
-    console.log(`[email:log] Final fallback: bare minimum insert...`);
-    const { error: errFinal } = await supabase.from("email_logs").insert({
-      order_id: null,
-      recipient: data.recipient,
-      subject: `[LOG FALLBACK] ${data.subject}`,
-      type: data.type,
-      status: data.status,
-      error_message: `Original orderId: ${data.orderId}. Log insert error: ${error.code} ${error.message}`,
-    });
-    if (!errFinal) {
-      console.log(`[email:log] ✓ FALLBACK INSERT OK (degraded, no order_id/body)`);
-    } else {
-      console.error(`[email:log] ██ ALL INSERT ATTEMPTS FAILED ██`, JSON.stringify({ code: errFinal.code, message: errFinal.message }));
-    }
+    console.error(`[email:log] ██ ALL ${attempt} ATTEMPTS FAILED ██`);
   } catch (e) {
     console.error(`[email:log] ██ EXCEPTION ██`, e instanceof Error ? `${e.name}: ${e.message}` : e);
   }

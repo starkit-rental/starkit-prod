@@ -55,31 +55,36 @@ export async function GET() {
       diagnostics.columns = colData;
     }
 
-    // 3. Test insert with NULL order_id (no FK risk)
-    const testPayload = {
+    // 3. Test insert with CORE columns only (no FK risk, no optional columns)
+    const corePayload = {
       order_id: null,
       recipient: "diagnostic@test.local",
-      subject: "[DIAG] Test insert — safe to delete",
+      subject: "[DIAG] Core columns test — safe to delete",
       type: "manual" as const,
       status: "sent" as const,
-      error_message: `Diagnostic test at ${new Date().toISOString()}`,
     };
 
-    const { error: insertErr } = await client.from("email_logs").insert(testPayload);
-    diagnostics.nullOrderIdInsert = insertErr
+    const { error: insertErr } = await client.from("email_logs").insert(corePayload);
+    diagnostics.coreInsert = insertErr
       ? { error: true, code: insertErr.code, message: insertErr.message, hint: (insertErr as any).hint }
       : { success: true };
 
-    // 4. If null insert worked, try with body column
-    if (!insertErr) {
-      const { error: bodyInsertErr } = await client.from("email_logs").insert({
-        ...testPayload,
-        subject: "[DIAG] Test insert WITH body — safe to delete",
-        body: "<p>Test body content</p>",
+    // 4. Test each optional column individually
+    const optionalColumns = [
+      { name: "body", value: "<p>Test</p>" },
+      { name: "error_message", value: "test error" },
+      { name: "resend_id", value: "re_test123" },
+    ];
+    diagnostics.optionalColumns = {} as Record<string, unknown>;
+    for (const col of optionalColumns) {
+      const { error: colErr } = await client.from("email_logs").insert({
+        ...corePayload,
+        subject: `[DIAG] Test ${col.name} column — safe to delete`,
+        [col.name]: col.value,
       });
-      diagnostics.bodyInsert = bodyInsertErr
-        ? { error: true, code: bodyInsertErr.code, message: bodyInsertErr.message }
-        : { success: true };
+      (diagnostics.optionalColumns as Record<string, unknown>)[col.name] = colErr
+        ? { exists: false, code: colErr.code, message: colErr.message }
+        : { exists: true };
     }
 
     // 5. Check RLS status (requires service_role to read pg_class)
@@ -130,8 +135,6 @@ export async function POST() {
         subject: `[TEST] Manual diagnostic insert ${new Date().toISOString()}`,
         type: "manual",
         status: "sent",
-        body: "<p>Manual test from /api/office/email-logs/test POST</p>",
-        error_message: null,
       })
       .select("id,sent_at")
       .single();
