@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, ShoppingCart, Boxes, Settings, LogOut, FileText, Users, Mail } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Boxes, Settings, LogOut, FileText, Users, Mail, PlusCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -27,6 +27,13 @@ export default function OfficeLayout({ children }: { children: React.ReactNode }
               >
                 <ShoppingCart className="h-4 w-4 text-slate-400" />
                 Zamówienia
+              </Link>
+              <Link
+                href="/office/orders/new"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-50"
+              >
+                <PlusCircle className="h-4 w-4 text-[#D4A843]" />
+                Nowe
               </Link>
               <Link
                 href="/office/customers"

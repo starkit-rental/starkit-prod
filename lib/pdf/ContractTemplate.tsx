@@ -1,5 +1,6 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet, Font } from "@react-pdf/renderer";
+import { HtmlContent, splitHtmlForColumns } from "./html-to-pdf";
 
 // Roboto — pełna obsługa polskich znaków (Latin Extended)
 Font.register({
@@ -24,13 +25,14 @@ Font.register({
 // Wyłącz hyphenację (łamie polskie słowa)
 Font.registerHyphenationCallback((word) => [word]);
 
-interface ContractTemplateProps {
+export interface ContractTemplateProps {
   orderNumber: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
   companyName?: string;
   nip?: string;
+  customerAddress?: string;
   startDate: string;
   endDate: string;
   rentalPrice: string;
@@ -40,9 +42,10 @@ interface ContractTemplateProps {
   inpostPointAddress: string;
   contractContent: string;
   rentalDays?: number;
+  logoUrl?: string;
 }
 
-const YELLOW = "#f59e0b";
+const GOLD = "#D4A843";
 const DARK = "#1e293b";
 const GRAY = "#64748b";
 const LIGHT_BG = "#f8fafc";
@@ -50,117 +53,140 @@ const BORDER = "#e2e8f0";
 
 const styles = StyleSheet.create({
   page: {
-    padding: 45,
+    paddingTop: 35,
+    paddingBottom: 55,
+    paddingHorizontal: 40,
     fontSize: 9.5,
     fontFamily: "Roboto",
-    lineHeight: 1.55,
+    lineHeight: 1.5,
     color: DARK,
   },
   // Header
   headerBar: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: 25,
-    paddingBottom: 12,
-    borderBottom: `2 solid ${YELLOW}`,
+    alignItems: "center",
+    marginBottom: 20,
+    paddingBottom: 10,
+    borderBottom: `2 solid ${GOLD}`,
   },
-  headerLeft: {},
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  logo: {
+    width: 120,
+    height: 40,
+    objectFit: "contain",
+  },
+  headerRight: {
+    alignItems: "flex-end",
+  },
   title: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 700,
     color: DARK,
     letterSpacing: 0.5,
   },
   headerMeta: {
-    fontSize: 8.5,
+    fontSize: 8,
     color: GRAY,
-    marginTop: 3,
+    marginTop: 2,
+  },
+  orderBadge: {
+    backgroundColor: GOLD,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 3,
+    marginBottom: 3,
+  },
+  orderBadgeText: {
+    fontSize: 9,
+    fontWeight: 700,
+    color: "#ffffff",
+    letterSpacing: 0.3,
   },
   // Section
   section: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 700,
-    marginBottom: 8,
+    marginBottom: 6,
     color: DARK,
-    paddingBottom: 4,
+    paddingBottom: 3,
     borderBottom: `1 solid ${BORDER}`,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  // Compact 2-col party layout
+  partiesRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 4,
+  },
+  partyBox: {
+    flex: 1,
+    backgroundColor: LIGHT_BG,
+    borderRadius: 4,
+    padding: 8,
+  },
+  partyLabel: {
+    fontSize: 7.5,
+    fontWeight: 700,
+    color: GOLD,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
   // Table rows
   tableContainer: {
     backgroundColor: LIGHT_BG,
     borderRadius: 4,
-    padding: 10,
+    padding: 8,
     marginBottom: 4,
   },
   row: {
     flexDirection: "row",
-    marginBottom: 4,
+    marginBottom: 3,
   },
   label: {
     width: "38%",
     color: GRAY,
-    fontSize: 9,
+    fontSize: 8.5,
   },
   value: {
     width: "62%",
     fontWeight: 700,
-    fontSize: 9.5,
+    fontSize: 9,
   },
   // Text
   paragraph: {
-    marginBottom: 6,
+    marginBottom: 4,
     textAlign: "justify",
-    fontSize: 9,
-    lineHeight: 1.6,
-  },
-  listItem: {
-    marginBottom: 5,
-    paddingLeft: 12,
-    fontSize: 9,
-    lineHeight: 1.6,
+    fontSize: 8.5,
+    lineHeight: 1.5,
   },
   // Highlight box
   highlight: {
     backgroundColor: "#fffbeb",
-    padding: 10,
-    marginVertical: 8,
-    borderLeft: `3 solid ${YELLOW}`,
+    padding: 8,
+    marginVertical: 6,
+    borderLeft: `3 solid ${GOLD}`,
     borderRadius: 2,
   },
   highlightText: {
-    fontSize: 8.5,
+    fontSize: 8,
     color: "#92400e",
-    lineHeight: 1.5,
-  },
-  // Divider
-  divider: {
-    borderBottom: `1 solid ${BORDER}`,
-    marginVertical: 12,
-  },
-  // Footer
-  footer: {
-    position: "absolute",
-    bottom: 30,
-    left: 45,
-    right: 45,
-    paddingTop: 10,
-    borderTop: `1 solid ${BORDER}`,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  footerText: {
-    fontSize: 7.5,
-    color: GRAY,
+    lineHeight: 1.4,
   },
   // Finance total
   totalRow: {
     flexDirection: "row",
-    marginTop: 6,
-    paddingTop: 6,
+    marginTop: 4,
+    paddingTop: 4,
     borderTop: `1 solid ${BORDER}`,
   },
   totalLabel: {
@@ -174,6 +200,57 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: DARK,
   },
+  // §5 Multi-column legal
+  legalSection: {
+    marginBottom: 8,
+  },
+  legalColumnsRow: {
+    flexDirection: "row",
+    gap: 14,
+  },
+  legalColumn: {
+    flex: 1,
+  },
+  // Footer
+  footer: {
+    position: "absolute",
+    bottom: 20,
+    left: 40,
+    right: 40,
+    paddingTop: 8,
+    borderTop: `1 solid ${BORDER}`,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  footerText: {
+    fontSize: 7,
+    color: GRAY,
+  },
+  footerRight: {
+    alignItems: "flex-end",
+  },
+  // Signatures
+  signaturesRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+    paddingTop: 12,
+  },
+  signatureBox: {
+    width: "40%",
+    alignItems: "center",
+  },
+  signatureLine: {
+    borderBottom: `1 solid ${DARK}`,
+    width: "100%",
+    marginBottom: 4,
+  },
+  signatureLabel: {
+    fontSize: 7.5,
+    color: GRAY,
+    textAlign: "center",
+  },
 });
 
 export const ContractTemplate: React.FC<ContractTemplateProps> = ({
@@ -183,6 +260,7 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
   customerPhone,
   companyName,
   nip,
+  customerAddress,
   startDate,
   endDate,
   rentalPrice,
@@ -192,151 +270,242 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
   inpostPointAddress,
   contractContent,
   rentalDays,
+  logoUrl,
 }) => {
-  const currentDate = new Date().toLocaleDateString("pl-PL");
+  const currentDate = new Date().toLocaleDateString("pl-PL", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
+  // Detect if contractContent is HTML (from TipTap editor) or plain text
+  const isHtmlContent = /<[a-z][\s\S]*>/i.test(contractContent);
+
+  // Split legal content into 2 columns
+  const [leftLegalHtml, rightLegalHtml] = isHtmlContent
+    ? splitHtmlForColumns(contractContent)
+    : ["", ""];
+
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
+  const resolvedLogoUrl = logoUrl || `${baseUrl}/logo.png`;
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
+        {/* ── Header with Logo ── */}
         <View style={styles.headerBar}>
           <View style={styles.headerLeft}>
-            <Text style={styles.title}>UMOWA NAJMU STARLINK MINI</Text>
-            <Text style={styles.headerMeta}>Starkit Sp. z o.o. | wynajem@starkit.pl</Text>
+            <Image style={styles.logo} src={resolvedLogoUrl} />
+            <View>
+              <Text style={styles.title}>UMOWA NAJMU</Text>
+              <Text style={styles.headerMeta}>Starkit Sp. z o.o. | wynajem@starkit.pl</Text>
+            </View>
           </View>
-          <View>
-            <Text style={styles.headerMeta}>Nr: {orderNumber}</Text>
-            <Text style={styles.headerMeta}>Data: {currentDate}</Text>
+          <View style={styles.headerRight}>
+            <View style={styles.orderBadge}>
+              <Text style={styles.orderBadgeText}>{orderNumber}</Text>
+            </View>
+            <Text style={styles.headerMeta}>{currentDate}</Text>
           </View>
         </View>
 
-        {/* §1 Strony umowy */}
+        {/* ── §1 Strony umowy — Compact 2-col ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{"\u00A7"}1 STRONY UMOWY</Text>
-
-          <Text style={[styles.paragraph, { fontWeight: 700, marginBottom: 2 }]}>Wynajmuj{"ą"}cy:</Text>
-          <View style={styles.tableContainer}>
-            <View style={styles.row}>
-              <Text style={styles.label}>Firma:</Text>
-              <Text style={styles.value}>Starkit Sp. z o.o.</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Email:</Text>
-              <Text style={styles.value}>wynajem@starkit.pl</Text>
-            </View>
-          </View>
-
-          <Text style={[styles.paragraph, { fontWeight: 700, marginBottom: 2, marginTop: 8 }]}>Najemca:</Text>
-          <View style={styles.tableContainer}>
-            <View style={styles.row}>
-              <Text style={styles.label}>Imi{"ę"} i nazwisko:</Text>
-              <Text style={styles.value}>{customerName}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Email:</Text>
-              <Text style={styles.value}>{customerEmail}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Telefon:</Text>
-              <Text style={styles.value}>{customerPhone}</Text>
-            </View>
-            {companyName && (
+          <Text style={styles.sectionTitle}>{"\u00A7"}1 Strony umowy</Text>
+          <View style={styles.partiesRow}>
+            {/* Wynajmujący */}
+            <View style={styles.partyBox}>
+              <Text style={styles.partyLabel}>Wynajmuj\u0105cy</Text>
               <View style={styles.row}>
                 <Text style={styles.label}>Firma:</Text>
-                <Text style={styles.value}>{companyName}</Text>
+                <Text style={styles.value}>Starkit Sp. z o.o.</Text>
               </View>
-            )}
-            {nip && (
               <View style={styles.row}>
-                <Text style={styles.label}>NIP:</Text>
-                <Text style={styles.value}>{nip}</Text>
+                <Text style={styles.label}>Email:</Text>
+                <Text style={styles.value}>wynajem@starkit.pl</Text>
               </View>
-            )}
+            </View>
+            {/* Najemca */}
+            <View style={styles.partyBox}>
+              <Text style={styles.partyLabel}>Najemca</Text>
+              <View style={styles.row}>
+                <Text style={styles.label}>Imi\u0119 i nazwisko:</Text>
+                <Text style={styles.value}>{customerName}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Email:</Text>
+                <Text style={styles.value}>{customerEmail}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Telefon:</Text>
+                <Text style={styles.value}>{customerPhone}</Text>
+              </View>
+              {companyName && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Firma:</Text>
+                  <Text style={styles.value}>{companyName}</Text>
+                </View>
+              )}
+              {nip && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>NIP:</Text>
+                  <Text style={styles.value}>{nip}</Text>
+                </View>
+              )}
+              {customerAddress && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Adres:</Text>
+                  <Text style={styles.value}>{customerAddress}</Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
 
-        {/* §2 Przedmiot najmu */}
+        {/* ── §2 Przedmiot najmu ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{"\u00A7"}2 PRZEDMIOT NAJMU</Text>
+          <Text style={styles.sectionTitle}>{"\u00A7"}2 Przedmiot najmu</Text>
           <Text style={styles.paragraph}>
-            Wynajmuj{"ą"}cy oddaje Najemcy w najem zestaw Starlink Mini wraz z niezb{"ę"}dnym wyposa{"ż"}eniem
-            (router, kable, instrukcja obs{"ł"}ugi) na okres okre{"ś"}lony w {"\u00A7"}3 niniejszej umowy.
+            Wynajmuj\u0105cy oddaje Najemcy w najem zestaw Starlink Mini wraz z niezb\u0119dnym
+            wyposa\u017Ceniem (router, kable, instrukcja obs\u0142ugi) na okres okre\u015Blony
+            w {"\u00A7"}3 niniejszej umowy.
           </Text>
         </View>
 
-        {/* §3 Okres najmu */}
+        {/* ── §3 Okres najmu — Compact row ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{"\u00A7"}3 OKRES NAJMU I LOGISTYKA</Text>
-          <View style={styles.tableContainer}>
-            <View style={styles.row}>
-              <Text style={styles.label}>Data rozpocz{"ę"}cia:</Text>
-              <Text style={styles.value}>{startDate}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Data zako{"ń"}czenia:</Text>
-              <Text style={styles.value}>{endDate}</Text>
-            </View>
-            {rentalDays && (
+          <Text style={styles.sectionTitle}>{"\u00A7"}3 Okres najmu i logistyka</Text>
+          <View style={styles.partiesRow}>
+            <View style={styles.partyBox}>
               <View style={styles.row}>
-                <Text style={styles.label}>Liczba dni:</Text>
-                <Text style={styles.value}>{rentalDays}</Text>
+                <Text style={styles.label}>Rozpocz\u0119cie:</Text>
+                <Text style={styles.value}>{startDate}</Text>
               </View>
-            )}
-            <View style={styles.row}>
-              <Text style={styles.label}>Punkt odbioru:</Text>
-              <Text style={styles.value}>{inpostPointId}</Text>
+              <View style={styles.row}>
+                <Text style={styles.label}>Zako\u0144czenie:</Text>
+                <Text style={styles.value}>{endDate}</Text>
+              </View>
+              {rentalDays && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Liczba dni:</Text>
+                  <Text style={styles.value}>{rentalDays}</Text>
+                </View>
+              )}
             </View>
-            <View style={styles.row}>
-              <Text style={styles.label}>Adres paczkomatu:</Text>
-              <Text style={styles.value}>{inpostPointAddress}</Text>
+            <View style={styles.partyBox}>
+              <View style={styles.row}>
+                <Text style={styles.label}>Paczkomat:</Text>
+                <Text style={styles.value}>{inpostPointId || "\u2014"}</Text>
+              </View>
+              {inpostPointAddress && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Adres:</Text>
+                  <Text style={styles.value}>{inpostPointAddress}</Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
 
-        {/* §4 Wynagrodzenie */}
+        {/* ── §4 Wynagrodzenie ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{"\u00A7"}4 WYNAGRODZENIE I KAUCJA</Text>
+          <Text style={styles.sectionTitle}>{"\u00A7"}4 Wynagrodzenie i kaucja</Text>
           <View style={styles.tableContainer}>
             <View style={styles.row}>
-              <Text style={styles.label}>Op{"ł"}ata za najem:</Text>
-              <Text style={styles.value}>{rentalPrice} z{"ł"}</Text>
+              <Text style={styles.label}>Op\u0142ata za najem:</Text>
+              <Text style={styles.value}>{rentalPrice} z\u0142</Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>Kaucja zwrotna:</Text>
-              <Text style={styles.value}>{deposit} z{"ł"}</Text>
+              <Text style={styles.value}>{deposit} z\u0142</Text>
             </View>
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>{"Ł"}{"ą"}cznie:</Text>
-              <Text style={styles.totalValue}>{totalAmount} z{"ł"}</Text>
+              <Text style={styles.totalLabel}>\u0141\u0105cznie:</Text>
+              <Text style={styles.totalValue}>{totalAmount} z\u0142</Text>
             </View>
           </View>
 
           <View style={styles.highlight}>
             <Text style={styles.highlightText}>
-              Kaucja zostanie zwr{"ó"}cona na konto Najemcy w ci{"ą"}gu 48 godzin od momentu zwrotu
-              i weryfikacji sprz{"ę"}tu pod warunkiem braku uszkodze{"ń"} i kompletno{"ś"}ci zestawu.
+              Kaucja zostanie zwr\u00F3cona na konto Najemcy w ci\u0105gu 48 godzin od momentu zwrotu
+              i weryfikacji sprz\u0119tu pod warunkiem braku uszkodze\u0144 i kompletno\u015Bci zestawu.
             </Text>
           </View>
         </View>
 
-        {/* §5 Regulamin */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{"\u00A7"}5 REGULAMIN WYNAJMU</Text>
-          {contractContent.split("\n\n").map((paragraph, index) => {
-            const trimmed = paragraph.trim();
-            if (!trimmed) return null;
-            return (
-              <View key={index} style={styles.listItem}>
-                <Text>{trimmed}</Text>
-              </View>
-            );
-          })}
+        {/* ── §5 Regulamin — Multi-column fine-print ── */}
+        <View style={styles.legalSection}>
+          <Text style={styles.sectionTitle}>{"\u00A7"}5 Regulamin wynajmu</Text>
+
+          {isHtmlContent ? (
+            <View style={styles.legalColumnsRow}>
+              <HtmlContent html={leftLegalHtml} style={styles.legalColumn} />
+              {rightLegalHtml && (
+                <HtmlContent html={rightLegalHtml} style={styles.legalColumn} />
+              )}
+            </View>
+          ) : (
+            // Fallback for plain text content (legacy)
+            <View style={styles.legalColumnsRow}>
+              {(() => {
+                const paragraphs = contractContent
+                  .split("\n\n")
+                  .map((p) => p.trim())
+                  .filter(Boolean);
+                const mid = Math.ceil(paragraphs.length / 2);
+                const left = paragraphs.slice(0, mid);
+                const right = paragraphs.slice(mid);
+
+                return (
+                  <>
+                    <View style={styles.legalColumn}>
+                      {left.map((p, i) => (
+                        <Text
+                          key={`l-${i}`}
+                          style={{ fontSize: 7.5, lineHeight: 1.45, marginBottom: 3, textAlign: "justify" }}
+                        >
+                          {p}
+                        </Text>
+                      ))}
+                    </View>
+                    <View style={styles.legalColumn}>
+                      {right.map((p, i) => (
+                        <Text
+                          key={`r-${i}`}
+                          style={{ fontSize: 7.5, lineHeight: 1.45, marginBottom: 3, textAlign: "justify" }}
+                        >
+                          {p}
+                        </Text>
+                      ))}
+                    </View>
+                  </>
+                );
+              })()}
+            </View>
+          )}
         </View>
 
-        {/* Footer */}
+        {/* ── Signatures ── */}
+        <View style={styles.signaturesRow}>
+          <View style={styles.signatureBox}>
+            <View style={styles.signatureLine} />
+            <Text style={styles.signatureLabel}>Wynajmuj\u0105cy</Text>
+          </View>
+          <View style={styles.signatureBox}>
+            <View style={styles.signatureLine} />
+            <Text style={styles.signatureLabel}>Najemca</Text>
+          </View>
+        </View>
+
+        {/* ── Footer ── */}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>Starkit Office Pro | Dokument wygenerowany automatycznie</Text>
-          <Text style={styles.footerText}>{orderNumber} | {currentDate}</Text>
+          <Text style={styles.footerText}>
+            Starkit Sp. z o.o. | Dokument wygenerowany automatycznie | www.starkit.pl
+          </Text>
+          <View style={styles.footerRight}>
+            <Text style={styles.footerText}>{orderNumber}</Text>
+            <Text style={styles.footerText}>{currentDate}</Text>
+          </View>
         </View>
       </Page>
     </Document>

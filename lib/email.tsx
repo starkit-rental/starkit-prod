@@ -334,6 +334,7 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
 
   // Generate PDF
   let pdfBuffer: Buffer;
+  const pdfFilename = `Umowa_Najmu_Starkit_${displayId.replace(/[^a-zA-Z0-9-]/g, "_")}.pdf`;
   try {
     pdfBuffer = await renderToBuffer(
       <ContractTemplate
@@ -360,6 +361,28 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
     throw pdfError;
   }
 
+  // Store PDF in Supabase Storage (/contracts/)
+  try {
+    const admin = createEmailSupabaseAdmin();
+    const storagePath = `contracts/${params.orderId}/${pdfFilename}`;
+    const { error: uploadError } = await admin.storage
+      .from("contracts")
+      .upload(storagePath, pdfBuffer, { contentType: "application/pdf", upsert: true });
+    if (uploadError) {
+      // Try creating the bucket if it doesn't exist
+      if (uploadError.message?.includes("not found") || uploadError.message?.includes("Bucket")) {
+        await admin.storage.createBucket("contracts", { public: false, fileSizeLimit: 10485760 });
+        await admin.storage.from("contracts").upload(storagePath, pdfBuffer, { contentType: "application/pdf", upsert: true });
+      } else {
+        console.warn(`[email] PDF storage upload failed (non-blocking): ${uploadError.message}`);
+      }
+    } else {
+      console.log(`[email] PDF stored at ${storagePath}`);
+    }
+  } catch (storageErr) {
+    console.warn(`[email] PDF storage failed (non-blocking):`, storageErr instanceof Error ? storageErr.message : storageErr);
+  }
+
   try {
     return await sendAndLog({
       to: params.customerEmail,
@@ -367,7 +390,7 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
       html,
       orderId: params.orderId,
       type: "order_confirmed",
-      attachments: [{ filename: `Umowa_Najmu_Starkit_${displayId}.pdf`, content: pdfBuffer }],
+      attachments: [{ filename: pdfFilename, content: pdfBuffer }],
     });
   } catch (error) {
     await logEmail({ orderId: params.orderId, recipient: params.customerEmail, subject, type: "order_confirmed", status: "failed", errorMessage: error instanceof Error ? error.message : "Unknown error" });

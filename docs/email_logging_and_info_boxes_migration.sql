@@ -28,31 +28,31 @@ COMMENT ON COLUMN email_logs.body IS 'Full rendered HTML of the sent email (with
 -- 3. Seed site_settings keys for dynamic info boxes
 --    Values are empty by default (yellow box won't appear until filled).
 -- ─────────────────────────────────────────────────────────────
-INSERT INTO site_settings (key, value, description, updated_at, created_at)
+INSERT INTO site_settings (key, value, updated_at, created_at)
 VALUES
-  ('email_info_box_order_received',  '', 'Żółty box w mailu "Potwierdzenie zamówienia"',  now(), now()),
-  ('email_info_box_order_confirmed', '', 'Żółty box w mailu "Potwierdzenie rezerwacji"', now(), now()),
-  ('email_info_box_order_picked_up', '', 'Żółty box w mailu "Wysyłka / Instrukcja"',     now(), now()),
-  ('email_info_box_order_returned',  '', 'Żółty box w mailu "Potwierdzenie zwrotu"',     now(), now()),
-  ('email_info_box_order_cancelled', '', 'Żółty box w mailu "Anulowanie zamówienia"',    now(), now())
+  ('email_info_box_order_received',  '', now(), now()),
+  ('email_info_box_order_confirmed', '', now(), now()),
+  ('email_info_box_order_picked_up', '', now(), now()),
+  ('email_info_box_order_returned',  '', now(), now()),
+  ('email_info_box_order_cancelled', '', now(), now())
 ON CONFLICT (key) DO NOTHING;
 
 -- ─────────────────────────────────────────────────────────────
 -- 4. Seed site_settings keys for CTA buttons (text + link per template)
 --    Empty = no button shown. Supports {{order_link}} variable.
 -- ─────────────────────────────────────────────────────────────
-INSERT INTO site_settings (key, value, description, updated_at, created_at)
+INSERT INTO site_settings (key, value, updated_at, created_at)
 VALUES
-  ('email_cta_text_order_received',  '', 'Tekst przycisku CTA — Potwierdzenie zamówienia',   now(), now()),
-  ('email_cta_link_order_received',  '', 'Link przycisku CTA — Potwierdzenie zamówienia',    now(), now()),
-  ('email_cta_text_order_confirmed', '', 'Tekst przycisku CTA — Potwierdzenie rezerwacji',   now(), now()),
-  ('email_cta_link_order_confirmed', '', 'Link przycisku CTA — Potwierdzenie rezerwacji',    now(), now()),
-  ('email_cta_text_order_picked_up', '', 'Tekst przycisku CTA — Wysyłka / Instrukcja',      now(), now()),
-  ('email_cta_link_order_picked_up', '', 'Link przycisku CTA — Wysyłka / Instrukcja',       now(), now()),
-  ('email_cta_text_order_returned',  '', 'Tekst przycisku CTA — Potwierdzenie zwrotu',      now(), now()),
-  ('email_cta_link_order_returned',  '', 'Link przycisku CTA — Potwierdzenie zwrotu',       now(), now()),
-  ('email_cta_text_order_cancelled', '', 'Tekst przycisku CTA — Anulowanie zamówienia',     now(), now()),
-  ('email_cta_link_order_cancelled', '', 'Link przycisku CTA — Anulowanie zamówienia',      now(), now())
+  ('email_cta_text_order_received',  '', now(), now()),
+  ('email_cta_link_order_received',  '', now(), now()),
+  ('email_cta_text_order_confirmed', '', now(), now()),
+  ('email_cta_link_order_confirmed', '', now(), now()),
+  ('email_cta_text_order_picked_up', '', now(), now()),
+  ('email_cta_link_order_picked_up', '', now(), now()),
+  ('email_cta_text_order_returned',  '', now(), now()),
+  ('email_cta_link_order_returned',  '', now(), now()),
+  ('email_cta_text_order_cancelled', '', now(), now()),
+  ('email_cta_link_order_cancelled', '', now(), now())
 ON CONFLICT (key) DO NOTHING;
 
 -- ─────────────────────────────────────────────────────────────

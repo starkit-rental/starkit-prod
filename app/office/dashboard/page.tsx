@@ -1,22 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { addDays, format, isAfter, isBefore, parseISO, startOfDay } from "date-fns";
-import { CalendarDays, Plus, Save } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { calculatePrice, checkAvailability } from "@/lib/rental-engine";
 
 type StockItemWithProduct = {
   id: string;
@@ -66,6 +57,7 @@ function clampToDate(date: Date): Date {
 }
 
 export default function OfficeDashboardPage() {
+  const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [loading, setLoading] = useState(true);
@@ -151,23 +143,14 @@ export default function OfficeDashboardPage() {
           <h1 className="text-lg font-semibold">Dashboard</h1>
         </div>
 
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="secondary" size="sm">
-              <Plus className="h-4 w-4" />
-              Ręczne zamówienie
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="border-slate-200 bg-white sm:max-w-xl">
-            <SheetHeader>
-              <SheetTitle>Ręczne zamówienie</SheetTitle>
-              <SheetDescription>Dodaj rezerwację i przypisz klienta oraz egzemplarz.</SheetDescription>
-            </SheetHeader>
-            <div className="px-4 pb-4">
-              <ManualOrderForm stockItems={stockItems} onCreated={() => load()} supabase={supabase} />
-            </div>
-          </SheetContent>
-        </Sheet>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => router.push("/office/orders/new")}
+        >
+          <Plus className="h-4 w-4" />
+          Nowe zamówienie
+        </Button>
       </div>
 
       {error && <div className="text-sm text-destructive">{error}</div>}
@@ -300,228 +283,3 @@ function getCellState(dayIso: string, orders: OrderRow[]): "none" | "buffer" | "
   return "none";
 }
 
-function ManualOrderForm(props: {
-  stockItems: StockItemWithProduct[];
-  onCreated: () => void;
-  supabase: ReturnType<typeof createSupabaseBrowserClient>;
-}) {
-  const [productId, setProductId] = useState<string>(props.stockItems[0]?.product_id ?? "");
-  const [startDate, setStartDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
-  const [endDate, setEndDate] = useState<string>(format(addDays(new Date(), 1), "yyyy-MM-dd"));
-  const [dailyRate, setDailyRate] = useState<string>("");
-  const [deposit, setDeposit] = useState<string>("");
-
-  const [customerEmail, setCustomerEmail] = useState<string>("");
-  const [customerFullName, setCustomerFullName] = useState<string>("");
-  const [customerPhone, setCustomerPhone] = useState<string>("");
-  const [addressStreet, setAddressStreet] = useState<string>("");
-  const [addressCity, setAddressCity] = useState<string>("");
-  const [addressZip, setAddressZip] = useState<string>("");
-
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-
-  const pricing = useMemo(() => {
-    try {
-      return calculatePrice({
-        startDate,
-        endDate,
-        dailyRateCents: Math.round(Number(dailyRate || 0) * 100),
-        depositCents: Math.round(Number(deposit || 0) * 100),
-      });
-    } catch {
-      return null;
-    }
-  }, [startDate, endDate, dailyRate, deposit]);
-
-  const availableStockItemIdsForProduct = useMemo(() => {
-    return props.stockItems.filter((si) => si.product_id === productId).map((si) => si.id);
-  }, [props.stockItems, productId]);
-
-  async function createManualOrder() {
-    setSubmitting(true);
-    setSubmitError(null);
-    setSubmitSuccess(null);
-
-    try {
-      if (!customerEmail) throw new Error("Podaj email klienta");
-      if (!pricing) throw new Error("Nieprawidłowe daty lub ceny");
-      if (!productId) throw new Error("Podaj product_id");
-
-      const availability = await checkAvailability({
-        supabase: props.supabase,
-        productId,
-        startDate,
-        endDate,
-        bufferDays: 2,
-      });
-
-      const availableForProduct = availability.availableStockItemIds.filter((id) =>
-        availableStockItemIdsForProduct.includes(id)
-      );
-
-      const stockItemId = availableForProduct[0];
-      if (!stockItemId) throw new Error("Brak dostępnych egzemplarzy dla wybranego produktu w tym terminie");
-
-      const { data: existingCustomer, error: customerLookupError } = await props.supabase
-        .from("customers")
-        .select("id,email")
-        .eq("email", customerEmail)
-        .maybeSingle();
-
-      if (customerLookupError) throw new Error(customerLookupError.message);
-
-      let customerId: string;
-
-      if (existingCustomer?.id) {
-        customerId = String((existingCustomer as any).id);
-        const { error: customerUpdateError } = await props.supabase
-          .from("customers")
-          .update({
-            full_name: customerFullName || null,
-            phone: customerPhone || null,
-            address_street: addressStreet || null,
-            address_city: addressCity || null,
-            address_zip: addressZip || null,
-          })
-          .eq("id", customerId);
-
-        if (customerUpdateError) throw new Error(customerUpdateError.message);
-      } else {
-        const { data: createdCustomer, error: customerCreateError } = await props.supabase
-          .from("customers")
-          .insert({
-            email: customerEmail,
-            full_name: customerFullName || null,
-            phone: customerPhone || null,
-            address_street: addressStreet || null,
-            address_city: addressCity || null,
-            address_zip: addressZip || null,
-          })
-          .select("id")
-          .single();
-
-        if (customerCreateError) throw new Error(customerCreateError.message);
-        customerId = String((createdCustomer as any).id);
-      }
-
-      const totalRentalDecimal = pricing.rentalSubtotalCents / 100;
-      const totalDepositDecimal = pricing.depositCents / 100;
-
-      const { data: createdOrder, error: orderCreateError } = await props.supabase
-        .from("orders")
-        .insert({
-          customer_id: customerId,
-          start_date: startDate,
-          end_date: endDate,
-          total_rental_price: totalRentalDecimal,
-          total_deposit: totalDepositDecimal,
-          payment_status: "pending",
-        })
-        .select("id")
-        .single();
-
-      if (orderCreateError) throw new Error(orderCreateError.message);
-
-      const orderId = String((createdOrder as any).id);
-
-      const { error: orderItemError } = await props.supabase.from("order_items").insert({
-        order_id: orderId,
-        stock_item_id: stockItemId,
-      });
-
-      if (orderItemError) throw new Error(orderItemError.message);
-
-      setSubmitSuccess(`Zapisano zamówienie ${orderId}`);
-      props.onCreated();
-    } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : "Nieznany błąd");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-      <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">product_id</label>
-        <Input value={productId} onChange={(e) => setProductId(e.target.value)} />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">start_date</label>
-        <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">end_date</label>
-        <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">cena doby (DECIMAL)</label>
-        <Input value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">kaucja (DECIMAL)</label>
-        <Input value={deposit} onChange={(e) => setDeposit(e.target.value)} />
-      </div>
-
-      <div className="md:col-span-4" />
-
-      <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">email</label>
-        <Input value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} type="email" />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">full_name</label>
-        <Input value={customerFullName} onChange={(e) => setCustomerFullName(e.target.value)} />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">phone</label>
-        <Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">address_street</label>
-        <Input value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">address_city</label>
-        <Input value={addressCity} onChange={(e) => setAddressCity(e.target.value)} />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">address_zip</label>
-        <Input value={addressZip} onChange={(e) => setAddressZip(e.target.value)} />
-      </div>
-
-      <div className="rounded-md border bg-muted/20 p-3 text-sm">
-        {pricing ? (
-          <div className="flex flex-col gap-1">
-            <div>Dni: {pricing.days}</div>
-            <div>Wynajem: {(pricing.rentalSubtotalCents / 100).toFixed(2)} zł</div>
-            <div>Kaucja: {(pricing.depositCents / 100).toFixed(2)} zł</div>
-            <div className="font-semibold">Razem: {(pricing.totalCents / 100).toFixed(2)} zł</div>
-          </div>
-        ) : (
-          <div className="text-muted-foreground">Uzupełnij dane, aby zobaczyć wycenę.</div>
-        )}
-      </div>
-
-      <div className="md:col-span-4">
-        {submitError && <div className="mb-2 text-sm text-destructive">{submitError}</div>}
-        {submitSuccess && <div className="mb-2 text-sm text-emerald-600">{submitSuccess}</div>}
-        <Button onClick={createManualOrder} disabled={submitting}>
-          <Save className="h-4 w-4" />
-          {submitting ? "Zapisywanie..." : "Zapisz ręczne zamówienie"}
-        </Button>
-      </div>
-    </div>
-  );
-}
