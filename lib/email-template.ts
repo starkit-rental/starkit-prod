@@ -162,6 +162,146 @@ function ctaButton(text: string, href: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  KOZAK UX COMPONENTS — Rich email blocks
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * {{summary_box}} — Order summary with number, dates, amount.
+ * Used in: Order Received
+ */
+export function renderSummaryBox(vars: Record<string, string>): string {
+  const rows: [string, string][] = [
+    ["Numer zamówienia:", vars.order_number || "—"],
+    ["Okres wynajmu:", `${vars.start_date || "—"} – ${vars.end_date || "—"}`],
+    ["Łączna kwota:", vars.total_amount || "—"],
+  ];
+  return infoBox("📋 Podsumowanie zamówienia", rows);
+}
+
+/**
+ * {{reservation_details_box}} — Full reservation details with days + InPost.
+ * Used in: Order Confirmed
+ */
+export function renderReservationDetailsBox(vars: Record<string, string>): string {
+  const rows: [string, string][] = [
+    ["Numer zamówienia:", `<strong>${vars.order_number || "—"}</strong>`],
+    ["Okres wynajmu:", `${vars.start_date || "—"} – ${vars.end_date || "—"}`],
+  ];
+  if (vars.rental_days) rows.push(["Liczba dni:", `${vars.rental_days} dni`]);
+  if (vars.inpost_point_id) {
+    rows.push(["Paczkomat InPost:", vars.inpost_point_id]);
+    if (vars.inpost_point_address) rows.push(["Adres paczkomatu:", vars.inpost_point_address]);
+  }
+  return infoBox("📋 Szczegóły rezerwacji", rows);
+}
+
+/**
+ * {{financial_box}} — Price breakdown with deposit highlight.
+ * Used in: Order Confirmed
+ */
+export function renderFinancialBox(vars: Record<string, string>): string {
+  const rows: [string, string][] = [];
+  if (vars.rental_price) rows.push(["Opłata za najem:", vars.rental_price]);
+  if (vars.deposit) rows.push(["Kaucja zwrotna:", vars.deposit]);
+  rows.push(["Łącznie:", `<strong style="font-size:16px;color:${BRAND.dark}">${vars.total_amount || "—"}</strong>`]);
+
+  const box = infoBox("💰 Podsumowanie finansowe", rows);
+  const depositNote = vars.deposit
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:-8px 0 20px 0">
+        <tr><td style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 20px">
+          <p style="margin:0;font-size:13px;line-height:1.6;color:#166534">💳 <strong>Zwrot kaucji:</strong> Kaucja w wysokości ${vars.deposit} zostanie zwrócona na Twoje konto po zwrocie i weryfikacji sprzętu. Sprzęt musi być kompletny i nieuszkodzony.</p>
+        </td></tr>
+      </table>`
+    : "";
+  return box + depositNote;
+}
+
+/**
+ * {{pdf_box}} — Attachment notice for the PDF contract.
+ * Used in: Order Confirmed
+ */
+export function renderPdfBox(): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0">
+    <tr><td style="background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:18px 24px">
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="vertical-align:top;padding-right:14px">
+            <span style="font-size:28px;line-height:1">📄</span>
+          </td>
+          <td>
+            <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#1e40af">Umowa Najmu w załączniku</p>
+            <p style="margin:0;font-size:13px;color:#3b82f6;line-height:1.5">Umowa Najmu jest dołączona do tego maila w formacie PDF. Prosimy o zapoznanie się z regulaminem przed odbiorem sprzętu.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>`;
+}
+
+/**
+ * {{pickup_box}} — InPost point details with map-style blue card.
+ * Used in: Order Picked Up
+ */
+export function renderPickupBox(vars: Record<string, string>): string {
+  const pointId = vars.inpost_point_id || "—";
+  const pointAddr = vars.inpost_point_address || "";
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0">
+    <tr><td style="background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:20px 24px">
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="vertical-align:top;padding-right:14px">
+            <span style="font-size:28px;line-height:1">📦</span>
+          </td>
+          <td>
+            <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1e40af">Punkt odbioru InPost</p>
+            <p style="margin:0 0 2px;font-size:16px;font-weight:700;color:${BRAND.dark}">${pointId}</p>
+            ${pointAddr ? `<p style="margin:0;font-size:13px;color:#3b82f6;line-height:1.4">${pointAddr}</p>` : ""}
+            <p style="margin:10px 0 0;font-size:12px;color:#64748b;line-height:1.5">Otrzymasz osobne powiadomienie SMS od InPost z kodem odbioru.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>`;
+}
+
+/**
+ * {{instructions_box}} — Step-by-step Starlink setup instructions.
+ * Used in: Order Picked Up
+ */
+export function renderInstructionsBox(): string {
+  const steps = [
+    { num: "1", text: "Rozpakuj zestaw i sprawdź kompletność <em>(antena, router, kabel, zasilacz)</em>" },
+    { num: "2", text: "Postaw antenę na zewnątrz z widokiem na <strong>otwarte niebo</strong> — bez drzew i budynków" },
+    { num: "3", text: "Podłącz zasilanie i poczekaj <strong>2–5 minut</strong> na połączenie z satelitami" },
+    { num: "4", text: 'Połącz się z siecią WiFi <strong>"STARLINK"</strong> — hasło znajdziesz na karcie w zestawie' },
+    { num: "5", text: "Gotowe! Korzystaj z internetu satelitarnego 🛰️" },
+  ];
+
+  const stepsHtml = steps.map((s, i) => {
+    const border = i < steps.length - 1 ? `border-bottom:1px solid #e2e8f0;` : "";
+    return `<tr>
+      <td style="padding:12px 0;${border}">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="vertical-align:top;padding-right:14px">
+            <span style="display:inline-block;width:28px;height:28px;line-height:28px;text-align:center;border-radius:50%;background-color:${BRAND.gold};color:#fff;font-size:13px;font-weight:700">${s.num}</span>
+          </td>
+          <td style="font-size:14px;color:#334155;line-height:1.55">${s.text}</td>
+        </tr></table>
+      </td>
+    </tr>`;
+  }).join("");
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin:20px 0">
+    <tr><td style="padding:20px 24px">
+      <p style="margin:0 0 16px;font-size:15px;font-weight:700;color:${BRAND.dark}">📡 Instrukcja uruchomienia Starlink Mini</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${stepsHtml}
+      </table>
+    </td></tr>
+  </table>`;
+}
+
+// ═══════════════════════════════════════════════════════════
 //  INDIVIDUAL EMAIL CONTENT BUILDERS
 // ═══════════════════════════════════════════════════════════
 
@@ -186,16 +326,14 @@ export interface OrderVars {
 
 /** 1. Order Received — tuż po płatności */
 export function buildOrderReceivedHtml(v: OrderVars): string {
+  const vars: Record<string, string> = { ...v } as unknown as Record<string, string>;
   const content = [
-    heading("Otrzymaliśmy Twoją rezerwację!", "📡"),
-    subtitle(`Dziękujemy za zaufanie, ${v.customer_name}`),
-    paragraph(`Twoja rezerwacja <strong>${v.order_number}</strong> została zarejestrowana w naszym systemie.`),
-    paragraph(`<strong>Co dalej?</strong> Nasz zespół weryfikuje dostępność sprzętu na wybrane przez Ciebie daty. W ciągu najbliższych godzin otrzymasz kolejną wiadomość z potwierdzeniem wynajmu oraz szczegółami dotyczącymi odbioru i zwrotu.`),
-    infoBox("📋 Podsumowanie rezerwacji", [
-      ["Numer zamówienia:", v.order_number],
-      ["Okres wynajmu:", `${v.start_date} – ${v.end_date}`],
-      ["Łączna kwota:", v.total_amount],
-    ]),
+    heading("Dziękujemy za złożenie zamówienia!", "📡"),
+    subtitle(`Cześć ${v.customer_name}, mamy Twoje zamówienie`),
+    paragraph(`Twoja rezerwacja <strong>${v.order_number}</strong> została zarejestrowana w naszym systemie. Płatność została potwierdzona.`),
+    renderSummaryBox(vars),
+    paragraph(`<strong>Co dalej?</strong> Nasz zespół weryfikuje dostępność sprzętu na wybrane przez Ciebie daty. Uwzględniamy również 2-dniowy bufor logistyczny na przygotowanie i wysyłkę.`),
+    paragraph(`W ciągu najbliższych godzin otrzymasz kolejną wiadomość z <strong>oficjalnym potwierdzeniem rezerwacji</strong> oraz umową najmu w formacie PDF.`),
     v.info_box_content ? alertBox(v.info_box_content, "info") : "",
     paragraph(`Jeśli masz pytania, śmiało odpowiedz na tego maila lub napisz na <a href="mailto:wynajem@starkit.pl" style="color:${BRAND.dark}">wynajem@starkit.pl</a>.`),
     signOff(),
@@ -205,37 +343,22 @@ export function buildOrderReceivedHtml(v: OrderVars): string {
 
 /** 2. Order Confirmed — po zmianie statusu na reserved, z PDF */
 export function buildOrderConfirmedHtml(v: OrderVars): string {
+  const vars: Record<string, string> = { ...v } as unknown as Record<string, string>;
   const content = [
-    heading("Rezerwacja potwierdzona!", "🎉"),
+    heading("Mamy to! Twoja rezerwacja jest potwierdzona", "🎉"),
     subtitle(`Wszystko gotowe, ${v.customer_name}`),
-    paragraph(`Twoja rezerwacja <strong>${v.order_number}</strong> została oficjalnie potwierdzona. Sprzęt Starlink Mini jest zarezerwowany i czeka na Ciebie.`),
-    infoBox("📋 Szczegóły wynajmu", [
-      ["Numer zamówienia:", v.order_number],
-      ["Okres wynajmu:", `${v.start_date} – ${v.end_date}`],
-      ...(v.rental_days ? [["Liczba dni:", `${v.rental_days} dni`] as [string, string]] : []),
-    ]),
-    v.inpost_point_id
-      ? infoBox("📦 Punkt odbioru i zwrotu", [
-          ["Paczkomat InPost:", v.inpost_point_id],
-          ...(v.inpost_point_address ? [["Adres:", v.inpost_point_address] as [string, string]] : []),
-        ])
-      : "",
-    v.rental_price && v.deposit
-      ? infoBox("💰 Podsumowanie finansowe", [
-          ["Opłata za najem:", `${v.rental_price}`],
-          ["Kaucja zwrotna:", `${v.deposit}`],
-          ["Łącznie zapłacono:", `<strong>${v.total_amount}</strong>`],
-        ])
-      : "",
-    alertBox(`📄 <strong>Umowa najmu:</strong> W załączniku znajdziesz umowę najmu w formacie PDF. Prosimy o zapoznanie się z regulaminem przed odbiorem sprzętu.`, "blue"),
+    paragraph(`Świetna wiadomość! Twoja rezerwacja <strong>${v.order_number}</strong> została oficjalnie potwierdzona. Sprzęt jest zarezerwowany i czeka na Ciebie.`),
+    renderReservationDetailsBox(vars),
+    renderPdfBox(),
+    renderFinancialBox(vars),
     v.info_box_content ? alertBox(v.info_box_content, "info") : "",
-    paragraph(`<strong>Co dalej?</strong>`),
-    `<ul style="margin:0 0 16px;padding-left:20px;color:#334155;font-size:15px;line-height:1.8">
-      <li>Przygotuj dokument tożsamości na wypadek weryfikacji</li>
-      <li>Sprzęt odbierzesz w dniu <strong>${v.start_date}</strong></li>
-      <li>Zwrot do końca dnia <strong>${v.end_date}</strong></li>
-      <li>Kod odbioru otrzymasz SMS-em od InPost</li>
-    </ul>`,
+    paragraph(`<strong>Ważne informacje:</strong>`),
+    `<ul style="margin:0 0 16px;padding-left:20px;color:#334155;font-size:14px;line-height:1.8">
+<li>Sprzęt odbierzesz w dniu <strong>${v.start_date}</strong></li>
+<li>Zwrot do końca dnia <strong>${v.end_date}</strong></li>
+<li>Kod odbioru otrzymasz SMS-em od InPost</li>
+<li>W razie pytań — odpowiedz na tego maila</li>
+</ul>`,
     paragraph(`Dziękujemy za wybór Starkit i życzymy udanego wynajmu!`),
     signOff(),
   ].join("\n");
@@ -244,44 +367,16 @@ export function buildOrderConfirmedHtml(v: OrderVars): string {
 
 /** 3. Order Picked Up — sprzęt wysłany */
 export function buildOrderPickedUpHtml(v: OrderVars): string {
+  const vars: Record<string, string> = { ...v } as unknown as Record<string, string>;
   const content = [
-    heading("Sprzęt w drodze!", "🚀"),
-    subtitle(`Twój Starlink Mini jedzie do Ciebie, ${v.customer_name}`),
-    paragraph(`Zamówienie <strong>${v.order_number}</strong> zostało właśnie wysłane! Sprzęt Starlink Mini jest w drodze do wybranego przez Ciebie paczkomatu InPost.`),
-    alertBox(`📦 Otrzymasz osobne powiadomienie SMS od InPost, gdy paczka będzie gotowa do odbioru.`, "blue"),
-    infoBox("📋 Przypomnienie", [
-      ["Numer zamówienia:", v.order_number],
-      ["Okres wynajmu:", `${v.start_date} – ${v.end_date}`],
-    ]),
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin:20px 0">
-      <tr><td style="padding:20px 24px">
-        <p style="margin:0 0 14px;font-size:15px;font-weight:600;color:${BRAND.dark}">📡 Instrukcja uruchomienia Starlink Mini</p>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          <tr>
-            <td style="padding:10px 0;font-size:14px;color:#334155;line-height:1.5;border-bottom:1px solid #e2e8f0">
-              <strong style="color:${BRAND.gold}">1.</strong>&nbsp; Rozpakuj zestaw i sprawdź kompletność (antena, router, kabel, zasilacz)
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:10px 0;font-size:14px;color:#334155;line-height:1.5;border-bottom:1px solid #e2e8f0">
-              <strong style="color:${BRAND.gold}">2.</strong>&nbsp; Postaw antenę na zewnątrz z widokiem na otwarte niebo
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:10px 0;font-size:14px;color:#334155;line-height:1.5;border-bottom:1px solid #e2e8f0">
-              <strong style="color:${BRAND.gold}">3.</strong>&nbsp; Podłącz zasilanie i poczekaj 2–5 minut na połączenie z satelitami
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:10px 0;font-size:14px;color:#334155;line-height:1.5">
-              <strong style="color:${BRAND.gold}">4.</strong>&nbsp; Połącz się z siecią WiFi <strong>"STARLINK"</strong> — hasło znajdziesz na karcie w zestawie
-            </td>
-          </tr>
-        </table>
-      </td></tr>
-    </table>`,
+    heading("Sprzęt jest już w drodze!", "🚀"),
+    subtitle(`Zamówienie ${v.order_number} zostało wysłane, ${v.customer_name}`),
+    paragraph(`Twój zestaw Starlink Mini został nadany i wkrótce będzie gotowy do odbioru. Poniżej znajdziesz dane punktu odbioru oraz instrukcję uruchomienia.`),
+    renderPickupBox(vars),
+    renderInstructionsBox(),
     v.info_box_content ? alertBox(v.info_box_content, "info") : "",
-    paragraph(`W razie pytań pisz na <a href="mailto:wynajem@starkit.pl" style="color:${BRAND.dark}">wynajem@starkit.pl</a> — odpowiadamy szybko!`),
+    paragraph(`<strong>Okres wynajmu:</strong> ${v.start_date} – ${v.end_date}`),
+    paragraph(`Jeśli napotkasz jakiekolwiek problemy z uruchomieniem, odpowiedz na tego maila — pomożemy!`),
     signOff(),
   ].join("\n");
   return withStarkitTemplate(content, `Sprzęt w drodze! Instrukcja obsługi ${v.order_number}`);
@@ -290,18 +385,13 @@ export function buildOrderPickedUpHtml(v: OrderVars): string {
 /** 4. Order Returned — potwierdzenie zwrotu */
 export function buildOrderReturnedHtml(v: OrderVars): string {
   const content = [
-    heading("Dziękujemy za zwrot!", "✅"),
-    subtitle(`Sprzęt wrócił do nas, ${v.customer_name}`),
-    paragraph(`Potwierdzamy odbiór zwróconego zestawu Starlink Mini z zamówienia <strong>${v.order_number}</strong>.`),
-    infoBox("📋 Podsumowanie", [
-      ["Numer zamówienia:", v.order_number],
-      ["Okres wynajmu:", `${v.start_date} – ${v.end_date}`],
-      ...(v.total_amount ? [["Łączna kwota:", v.total_amount] as [string, string]] : []),
-    ]),
-    v.info_box_content ? alertBox(v.info_box_content, "success") : "",
-    paragraph(`Dziękujemy za skorzystanie z usług Starkit! Mamy nadzieję, że internet Starlink spełnił Twoje oczekiwania.`),
-    paragraph(`Jeśli będziesz potrzebować internetu satelitarnego w przyszłości — jesteśmy do dyspozycji! 🛰️`),
-    paragraph(`Będziemy wdzięczni za Twoją opinię — pomaga nam to stawać się lepszymi. Odpowiedz na tego maila i powiedz, jak Ci się korzystało!`),
+    heading("Dziękujemy za zwrot sprzętu", "✅"),
+    subtitle(`Zamówienie ${v.order_number}, ${v.customer_name}`),
+    paragraph(`Potwierdzamy odbiór zwróconego zestawu Starlink Mini z zamówienia <strong>${v.order_number}</strong>. Sprzęt został sprawdzony i przyjęty.`),
+    alertBox(`� <strong>Zwrot kaucji:</strong> Kaucja zostanie przetworzona ręcznie przez nasz zespół. Środki powinny pojawić się na Twoim koncie w ciągu <strong>3–5 dni roboczych</strong>. Jeśli po tym czasie nie widzisz zwrotu, napisz do nas.`, "success"),
+    v.info_box_content ? alertBox(v.info_box_content, "info") : "",
+    paragraph(`Dziękujemy za skorzystanie z Starkit! Mamy nadzieję, że internet Starlink spełnił Twoje oczekiwania. 🛰️`),
+    paragraph(`Będziemy wdzięczni za Twoją opinię — <strong>odpowiedz na tego maila</strong> i powiedz, jak Ci się korzystało!`),
     signOff(),
   ].join("\n");
   return withStarkitTemplate(content, `Potwierdzenie zwrotu sprzętu ${v.order_number}`);
@@ -310,17 +400,13 @@ export function buildOrderReturnedHtml(v: OrderVars): string {
 /** 5. Order Cancelled — anulowanie */
 export function buildOrderCancelledHtml(v: OrderVars): string {
   const content = [
-    heading("Zamówienie anulowane", "ℹ️"),
-    subtitle(`Informacja o zamówieniu ${v.order_number}`),
-    paragraph(`Cześć ${v.customer_name},`),
-    paragraph(`Informujemy, że Twoje zamówienie <strong>${v.order_number}</strong> zostało anulowane.`),
-    infoBox("📋 Szczegóły anulowanego zamówienia", [
-      ["Numer zamówienia:", v.order_number],
-      ["Planowany okres:", `${v.start_date} – ${v.end_date}`],
-      ...(v.total_amount ? [["Kwota:", v.total_amount] as [string, string]] : []),
-    ]),
-    v.info_box_content ? alertBox(v.info_box_content, "warning") : "",
-    paragraph(`Jeśli masz pytania dotyczące anulowania lub chcesz złożyć nowe zamówienie, skontaktuj się z nami: <a href="mailto:wynajem@starkit.pl" style="color:${BRAND.dark}">wynajem@starkit.pl</a>`),
+    heading("Zamówienie anulowane"),
+    subtitle(`Zamówienie ${v.order_number}, ${v.customer_name}`),
+    paragraph(`Twoje zamówienie <strong>${v.order_number}</strong> zostało anulowane.`),
+    alertBox(`Jeśli dokonałeś płatności, zwrot środków nastąpi w ciągu <strong>5–10 dni roboczych</strong> na konto, z którego dokonano płatności.`, "warning"),
+    v.info_box_content ? alertBox(v.info_box_content, "info") : "",
+    paragraph(`Jeśli masz pytania dotyczące anulowania lub chcesz złożyć nowe zamówienie, skontaktuj się z nami:`),
+    paragraph(`📧 <a href="mailto:wynajem@starkit.pl" style="color:${BRAND.dark};font-weight:600">wynajem@starkit.pl</a><br/>🌐 <a href="https://www.starkit.pl" style="color:${BRAND.dark};font-weight:600">www.starkit.pl</a>`),
     signOff(),
   ].join("\n");
   return withStarkitTemplate(content, `Informacja o anulowaniu zamówienia ${v.order_number}`);
