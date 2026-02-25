@@ -186,6 +186,8 @@ export default function OfficeOrderDetailsPage() {
   const [messengerContent, setMessengerContent] = useState("");
   const [messengerSending, setMessengerSending] = useState(false);
   const [messengerError, setMessengerError] = useState<string | null>(null);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Email countdown state
   const [emailCountdown, setEmailCountdown] = useState<number | null>(null);
@@ -367,17 +369,49 @@ export default function OfficeOrderDetailsPage() {
     },
   ];
 
+  async function fetchPreview(tplId: string, content: string) {
+    const cust = normalizeOne(order?.customers);
+    const total = order ? (Number(order.total_rental_price) + Number(order.total_deposit)).toFixed(2) : "0.00";
+    try {
+      const res = await fetch("/api/office/preview-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId: tplId,
+          content,
+          customerName: cust?.full_name || "Kliencie",
+          orderNumber: order?.order_number || orderId || "",
+          startDate: order?.start_date || "—",
+          endDate: order?.end_date || "—",
+          totalAmount: `${total} zł`,
+        }),
+      });
+      if (res.ok) {
+        const html = await res.text();
+        setPreviewHtml(html);
+      }
+    } catch { /* silent */ }
+  }
+
+  function debouncedPreview(tplId: string, content: string) {
+    if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+    previewTimerRef.current = setTimeout(() => void fetchPreview(tplId, content), 400);
+  }
+
   function openMessenger() {
     const tpl = MESSENGER_TEMPLATES[3]; // default: general
     const cust = normalizeOne(order?.customers);
     const resolvedSubject = (tpl.defaultSubject)
       .replace(/\{\{order_id\}\}/g, order?.order_number || orderId || "")
       .replace(/\{\{name\}\}/g, cust?.full_name || "Kliencie");
+    const content = tpl.defaultContent(cust, order);
     setMessengerTemplate(tpl.id);
     setMessengerSubject(resolvedSubject);
-    setMessengerContent(tpl.defaultContent(cust, order));
+    setMessengerContent(content);
     setMessengerError(null);
+    setPreviewHtml("");
     setShowMessenger(true);
+    void fetchPreview(tpl.id, content);
   }
 
   function handleTemplateChange(tplId: string) {
@@ -386,10 +420,17 @@ export default function OfficeOrderDetailsPage() {
     const resolvedSubject = (tpl.defaultSubject)
       .replace(/\{\{order_id\}\}/g, order?.order_number || orderId || "")
       .replace(/\{\{name\}\}/g, cust?.full_name || "Kliencie");
+    const content = tpl.defaultContent(cust, order);
     setMessengerTemplate(tpl.id);
     setMessengerSubject(resolvedSubject);
-    setMessengerContent(tpl.defaultContent(cust, order));
+    setMessengerContent(content);
     setMessengerError(null);
+    void fetchPreview(tpl.id, content);
+  }
+
+  function handleContentChange(value: string) {
+    setMessengerContent(value);
+    debouncedPreview(messengerTemplate, value);
   }
 
   async function sendCustomEmail() {
@@ -416,6 +457,7 @@ export default function OfficeOrderDetailsPage() {
       }
       setShowMessenger(false);
       setMessengerContent("");
+      setPreviewHtml("");
       await loadEmailLogs();
     } catch (e) {
       setMessengerError(e instanceof Error ? e.message : "Nieznany błąd");
@@ -949,113 +991,154 @@ export default function OfficeOrderDetailsPage() {
         </div>
       )}
 
-      {/* Messenger modal */}
+      {/* Messenger modal — Split-View Editor */}
       {showMessenger && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           onClick={() => { if (!messengerSending) setShowMessenger(false); }}
         >
           <div
-            className="w-full max-w-2xl rounded-xl bg-white shadow-2xl flex flex-col max-h-[85vh]"
+            className="w-full max-w-6xl rounded-2xl bg-white shadow-2xl flex flex-col"
+            style={{ height: "min(90vh, 820px)" }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">Wyślij wiadomość do klienta</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Do: {normalizeOne(order?.customers)?.email || "—"}
-                </p>
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-3.5 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#1a1a2e]">
+                  <Send className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Wyślij wiadomość</h3>
+                  <p className="text-xs text-slate-500">
+                    Do: <span className="font-medium text-slate-700">{normalizeOne(order?.customers)?.email || "—"}</span>
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowMessenger(false)}
                 disabled={messengerSending}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {/* Template selector */}
-              <div>
-                <Label className="text-xs font-medium text-slate-700">Wybierz szablon</Label>
-                <Select value={messengerTemplate} onValueChange={handleTemplateChange}>
-                  <SelectTrigger className="mt-1 h-10 border-slate-200 bg-slate-50 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MESSENGER_TEMPLATES.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Split-view body */}
+            <div className="flex-1 flex min-h-0">
+              {/* LEFT — Controls */}
+              <div className="w-1/2 border-r border-slate-200 flex flex-col min-h-0">
+                <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                  {/* Template selector */}
+                  <div>
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 block">Szablon</Label>
+                    <Select value={messengerTemplate} onValueChange={handleTemplateChange}>
+                      <SelectTrigger className="h-10 border-slate-200 bg-slate-50/80 text-sm font-medium">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MESSENGER_TEMPLATES.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              {/* Subject */}
-              <div>
-                <Label className="text-xs font-medium text-slate-700">Temat wiadomości</Label>
-                <Input
-                  value={messengerSubject}
-                  onChange={(e) => setMessengerSubject(e.target.value)}
-                  className="mt-1 h-10 border-slate-200 bg-slate-50 text-sm"
-                  placeholder="Temat e-maila…"
-                />
-              </div>
+                  {/* Subject */}
+                  <div>
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 block">Temat</Label>
+                    <Input
+                      value={messengerSubject}
+                      onChange={(e) => setMessengerSubject(e.target.value)}
+                      className="h-10 border-slate-200 bg-slate-50/80 text-sm font-medium"
+                      placeholder="Temat e-maila…"
+                    />
+                  </div>
 
-              {/* Content editor */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <Label className="text-xs font-medium text-slate-700">Treść wiadomości</Label>
-                  <span className="text-[10px] text-slate-400">
-                    Tagi: {"{{name}}"}, {"{{order_id}}"} zostaną zamienione automatycznie
-                  </span>
+                  {/* Content editor */}
+                  <div className="flex-1 flex flex-col">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Treść</Label>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {"{{name}}"} {"{{order_id}}"} — auto-zamiana
+                      </span>
+                    </div>
+                    <textarea
+                      value={messengerContent}
+                      onChange={(e) => handleContentChange(e.target.value)}
+                      className="flex-1 min-h-[280px] w-full rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-800 leading-relaxed resize-none focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 font-mono"
+                      placeholder="Wpisz treść wiadomości…"
+                    />
+                  </div>
+
+                  {messengerError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 font-medium">
+                      {messengerError}
+                    </div>
+                  )}
                 </div>
-                <textarea
-                  value={messengerContent}
-                  onChange={(e) => setMessengerContent(e.target.value)}
-                  rows={12}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 leading-relaxed resize-y focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  placeholder="Wpisz treść wiadomości…"
-                />
               </div>
 
-              {messengerError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
-                  {messengerError}
+              {/* RIGHT — Live Preview */}
+              <div className="w-1/2 flex flex-col min-h-0 bg-slate-50/50">
+                <div className="px-5 py-3 border-b border-slate-100 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Podgląd na żywo</span>
+                  </div>
                 </div>
-              )}
+                <div className="flex-1 p-4 min-h-0">
+                  {previewHtml ? (
+                    <iframe
+                      srcDoc={previewHtml}
+                      className="w-full h-full rounded-lg border border-slate-200 bg-white shadow-inner"
+                      sandbox="allow-same-origin"
+                      title="Podgląd e-maila"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-sm text-slate-400">
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      Generowanie podglądu…
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-6 py-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowMessenger(false)}
-                disabled={messengerSending}
-              >
-                Anuluj
-              </Button>
-              <Button
-                size="sm"
-                onClick={sendCustomEmail}
-                disabled={messengerSending || !messengerContent.trim()}
-                className="gap-1.5 bg-[#1a1a2e] text-white hover:bg-[#2a2a4e]"
-              >
-                {messengerSending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Wysyłanie…
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4" />
-                    Wyślij e-mail
-                  </>
-                )}
-              </Button>
+            <div className="flex items-center justify-between border-t border-slate-200 px-6 py-3.5 shrink-0">
+              <p className="text-[11px] text-slate-400">
+                E-mail zostanie wysłany z brandingiem Starkit
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMessenger(false)}
+                  disabled={messengerSending}
+                  className="h-9"
+                >
+                  Anuluj
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={sendCustomEmail}
+                  disabled={messengerSending || !messengerContent.trim()}
+                  className="h-9 gap-1.5 bg-[#1a1a2e] text-white hover:bg-[#2a2a4e] font-medium"
+                >
+                  {messengerSending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Wysyłanie…
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Wyślij e-mail
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

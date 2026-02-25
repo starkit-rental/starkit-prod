@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
       status: sendError ? "failed" : "sent",
       error_message: sendError?.message || null,
       resend_id: sendData?.id || null,
-      body: finalContent || null,
+      body: html || null,
     };
 
     const { error: logError } = await supabase.from("email_logs").insert(logPayload);

@@ -40,7 +40,7 @@ export function withStarkitTemplate(bodyContent: string, previewText?: string): 
 <title>Starkit</title>
 ${previewText ? `<div style="display:none;max-height:0;overflow:hidden">${previewText}</div>` : ""}
 </head>
-<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:${BRAND.font};-webkit-font-smoothing:antialiased">
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:${BRAND.font};-webkit-font-smoothing:antialiased;mso-line-height-rule:exactly">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9">
 <tr><td align="center" style="padding:32px 16px">
 
@@ -53,7 +53,8 @@ ${previewText ? `<div style="display:none;max-height:0;overflow:hidden">${previe
 <!-- Logo -->
 <tr><td align="center" style="padding:32px 40px 16px">
   <a href="${baseUrl}" style="text-decoration:none">
-    <img src="${baseUrl}/logo.png" width="150" alt="Starkit" style="display:block;border:0;width:150px;max-width:150px;height:auto"/>
+    <!--[if mso]><img src="${baseUrl}/logo.png" width="150" height="50" alt="Starkit" style="display:block;border:0"/><![endif]-->
+    <!--[if !mso]><!--><img src="${baseUrl}/logo.png" width="150" alt="Starkit" style="display:block;border:0;width:150px;max-width:150px;height:auto"/><!--<![endif]-->
   </a>
 </td></tr>
 

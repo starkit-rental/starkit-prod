@@ -84,7 +84,7 @@ export async function POST(req: Request) {
 
     let customerId: string;
     const customerPayload: Record<string, string> = { email: customerEmail };
-    if (customerName) customerPayload.name = customerName;
+    if (customerName) customerPayload.full_name = customerName;
     if (customerPhone) customerPayload.phone = customerPhone;
     if (companyName) customerPayload.company_name = companyName;
     if (nipValue) customerPayload.nip = nipValue;
