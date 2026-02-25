@@ -1,369 +1,411 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Save, Loader2, Mail, Eye, EyeOff, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Save, Loader2, Mail, Eye, RotateCcw, Send, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useToast } from "@/hooks/use-toast";
 
-type EmailTemplate = {
-  key: string;
-  value: string;
-  updated_at: string | null;
+/* ───────────────── Template definitions ───────────────── */
+
+type TemplateDefinition = {
+  id: string;
+  label: string;
+  description: string;
+  subjectKey: string;
+  bodyKey: string;
+  defaultSubject: string;
+  defaultBody: string;
+  availableVars: string[];
 };
 
-const EMAIL_TEMPLATE_KEYS = [
+const TEMPLATES: TemplateDefinition[] = [
   {
-    key: "email_subject_order_received",
-    label: "Temat: Potwierdzenie otrzymania zamówienia",
-    description: "Email wysyłany natychmiast po opłaceniu zamówienia (bez PDF).",
-    type: "subject" as const,
-    placeholder: "Otrzymaliśmy Twoją rezerwację Starlink Mini - {orderId}",
+    id: "order_received",
+    label: "Potwierdzenie zamówienia",
+    description: "Wysyłany natychmiast po opłaceniu — bez PDF.",
+    subjectKey: "email_subject_order_received",
+    bodyKey: "email_body_order_received",
+    defaultSubject: "Otrzymaliśmy Twoją rezerwację Starlink Mini — {{order_number}}",
+    defaultBody: "Cześć {{customer_name}},\n\nDziękujemy za złożenie rezerwacji {{order_number}}.\n\nOkres wynajmu: {{start_date}} – {{end_date}}\nŁączna kwota: {{total_amount}}\n\nNasz zespół weryfikuje dostępność sprzętu. Otrzymasz kolejną wiadomość z potwierdzeniem.\n\nPozdrawiamy,\nZespół Starkit",
+    availableVars: ["customer_name", "order_number", "start_date", "end_date", "total_amount"],
   },
   {
-    key: "email_body_order_received",
-    label: "Treść: Potwierdzenie otrzymania zamówienia",
-    description: "Główna treść emaila wysyłanego po płatności. Dostępne zmienne: {customerName}, {orderId}, {startDate}, {endDate}, {totalAmount}",
-    type: "body" as const,
-    placeholder: "Cześć {customerName},\n\nDziękujemy za złożenie rezerwacji...",
+    id: "order_confirmed",
+    label: "Potwierdzenie rezerwacji",
+    description: "Po zmianie statusu na 'reserved' — z umową PDF w załączniku.",
+    subjectKey: "email_subject_order_confirmed",
+    bodyKey: "email_body_order_confirmed",
+    defaultSubject: "Potwierdzenie rezerwacji SK-{{order_number}}",
+    defaultBody: "Cześć {{customer_name}},\n\nTwoja rezerwacja {{order_number}} została oficjalnie potwierdzona!\n\nOkres wynajmu: {{start_date}} – {{end_date}} ({{rental_days}} dni)\nOpłata: {{rental_price}}\nKaucja: {{deposit}}\nŁącznie: {{total_amount}}\n\nPunkt InPost: {{inpost_point_id}}\n{{inpost_point_address}}\n\nW załączniku znajdziesz umowę najmu w formacie PDF.\n\nPozdrawiamy,\nZespół Starkit",
+    availableVars: ["customer_name", "order_number", "start_date", "end_date", "rental_days", "rental_price", "deposit", "total_amount", "inpost_point_id", "inpost_point_address"],
   },
   {
-    key: "email_subject_order_confirmed",
-    label: "Temat: Potwierdzenie rezerwacji (z umową PDF)",
-    description: "Email wysyłany po zmianie statusu na 'confirmed', z załączoną umową PDF.",
-    type: "subject" as const,
-    placeholder: "Rezerwacja potwierdzona! Starlink Mini - {orderId}",
+    id: "order_picked_up",
+    label: "Wysyłka / Instrukcja",
+    description: "Po zmianie statusu na 'picked_up' — sprzęt w drodze.",
+    subjectKey: "email_subject_order_picked_up",
+    bodyKey: "email_body_order_picked_up",
+    defaultSubject: "Sprzęt w drodze! SK-{{order_number}}",
+    defaultBody: "Cześć {{customer_name}},\n\nZamówienie {{order_number}} zostało wysłane!\n\nOtrzymasz SMS od InPost, gdy paczka będzie gotowa do odbioru.\n\nOkres wynajmu: {{start_date}} – {{end_date}}\n\nPozdrawiamy,\nZespół Starkit",
+    availableVars: ["customer_name", "order_number", "start_date", "end_date", "total_amount"],
   },
   {
-    key: "email_body_order_confirmed",
-    label: "Treść: Potwierdzenie rezerwacji (z umową PDF)",
-    description: "Główna treść emaila z potwierdzeniem. Zmienne: {customerName}, {orderId}, {startDate}, {endDate}, {rentalDays}, {inpostPointId}, {inpostPointAddress}, {rentalPrice}, {deposit}, {totalAmount}",
-    type: "body" as const,
-    placeholder: "Cześć {customerName},\n\nTwoja rezerwacja została potwierdzona!...",
+    id: "order_returned",
+    label: "Potwierdzenie zwrotu",
+    description: "Po zmianie statusu na 'returned'.",
+    subjectKey: "email_subject_order_returned",
+    bodyKey: "email_body_order_returned",
+    defaultSubject: "Potwierdzenie zwrotu sprzętu SK-{{order_number}}",
+    defaultBody: "Cześć {{customer_name}},\n\nPotwierdzamy odbiór zwróconego sprzętu z zamówienia {{order_number}}.\n\nKaucja zostanie zwrócona w ciągu 48h.\n\nDziękujemy za skorzystanie z Starkit!\nZespół Starkit",
+    availableVars: ["customer_name", "order_number", "start_date", "end_date", "total_amount"],
   },
   {
-    key: "email_subject_admin_notification",
-    label: "Temat: Powiadomienie admina o nowym zamówieniu",
-    description: "Temat emaila wysyłanego do admina przy nowym zamówieniu.",
-    type: "subject" as const,
-    placeholder: "Nowa kasa! Zamówienie #{orderId} od {customerName}",
+    id: "order_cancelled",
+    label: "Anulowanie zamówienia",
+    description: "Po zmianie statusu na 'cancelled'.",
+    subjectKey: "email_subject_order_cancelled",
+    bodyKey: "email_body_order_cancelled",
+    defaultSubject: "Informacja o anulowaniu zamówienia SK-{{order_number}}",
+    defaultBody: "Cześć {{customer_name}},\n\nTwoje zamówienie {{order_number}} zostało anulowane.\n\nJeśli dokonałeś płatności, zwrot nastąpi w ciągu 5–10 dni roboczych.\n\nJeśli masz pytania, skontaktuj się z nami: wynajem@starkit.pl\n\nPozdrawiamy,\nZespół Starkit",
+    availableVars: ["customer_name", "order_number", "start_date", "end_date", "total_amount"],
   },
-  {
-    key: "email_footer_text",
-    label: "Stopka e-mail",
-    description: "Tekst wyświetlany na dole każdego emaila do klienta.",
-    type: "body" as const,
-    placeholder: "Starkit - Wynajem Starlink Mini\nwww.starkit.pl | wynajem@starkit.pl",
-  },
-] as const;
+];
+
+/* ───────────────── Component ───────────────── */
 
 export default function EmailTemplatesPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<Record<string, EmailTemplate>>({});
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [expandedPreview, setExpandedPreview] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [selectedId, setSelectedId] = useState(TEMPLATES[0].id);
+
+  // DB values (original saved state)
+  const [savedSubjects, setSavedSubjects] = useState<Record<string, string>>({});
+  const [savedBodies, setSavedBodies] = useState<Record<string, string>>({});
+
+  // Working drafts
+  const [draftSubjects, setDraftSubjects] = useState<Record<string, string>>({});
+  const [draftBodies, setDraftBodies] = useState<Record<string, string>>({});
+
+  // Preview
+  const [previewHtml, setPreviewHtml] = useState("");
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const selected = TEMPLATES.find((t) => t.id === selectedId) ?? TEMPLATES[0];
+  const draftSubject = draftSubjects[selected.subjectKey] ?? "";
+  const draftBody = draftBodies[selected.bodyKey] ?? "";
+  const savedSubject = savedSubjects[selected.subjectKey] ?? "";
+  const savedBody = savedBodies[selected.bodyKey] ?? "";
+  const hasChanges = draftSubject !== savedSubject || draftBody !== savedBody;
 
   useEffect(() => {
-    loadTemplates();
+    void loadTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fetch preview when selected template or draft body changes
+  useEffect(() => {
+    debouncedPreview(draftBody);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, draftBody]);
 
   async function loadTemplates() {
     setLoading(true);
-
-    const keys = EMAIL_TEMPLATE_KEYS.map((t) => t.key);
+    const allKeys = TEMPLATES.flatMap((t) => [t.subjectKey, t.bodyKey]);
     const { data, error } = await supabase
       .from("site_settings")
-      .select("key,value,updated_at")
-      .in("key", keys);
+      .select("key,value")
+      .in("key", allKeys);
 
     if (error) {
-      toast({
-        title: "Błąd",
-        description: "Nie udało się załadować szablonów: " + error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Błąd", description: error.message, variant: "destructive" });
       setLoading(false);
       return;
     }
 
-    const map: Record<string, EmailTemplate> = {};
-    const draftMap: Record<string, string> = {};
-    for (const row of data ?? []) {
-      map[row.key] = row as EmailTemplate;
-      draftMap[row.key] = row.value;
+    const map: Record<string, string> = {};
+    for (const row of data ?? []) map[row.key] = row.value;
+
+    const subj: Record<string, string> = {};
+    const body: Record<string, string> = {};
+    for (const tpl of TEMPLATES) {
+      subj[tpl.subjectKey] = map[tpl.subjectKey] ?? "";
+      body[tpl.bodyKey] = map[tpl.bodyKey] ?? "";
     }
 
-    setTemplates(map);
-    setDrafts(draftMap);
+    setSavedSubjects(subj);
+    setSavedBodies(body);
+    setDraftSubjects(subj);
+    setDraftBodies(body);
     setLoading(false);
   }
 
-  function updateDraft(key: string, value: string) {
-    setDrafts((prev) => ({ ...prev, [key]: value }));
+  function updateSubject(value: string) {
+    setDraftSubjects((prev) => ({ ...prev, [selected.subjectKey]: value }));
   }
 
-  function hasChanges(key: string): boolean {
-    const original = templates[key]?.value ?? "";
-    const draft = drafts[key] ?? "";
-    return original !== draft;
+  function updateBody(value: string) {
+    setDraftBodies((prev) => ({ ...prev, [selected.bodyKey]: value }));
   }
 
-  function resetDraft(key: string) {
-    setDrafts((prev) => ({ ...prev, [key]: templates[key]?.value ?? "" }));
+  function resetDraft() {
+    setDraftSubjects((prev) => ({ ...prev, [selected.subjectKey]: savedSubjects[selected.subjectKey] ?? "" }));
+    setDraftBodies((prev) => ({ ...prev, [selected.bodyKey]: savedBodies[selected.bodyKey] ?? "" }));
   }
 
-  async function saveTemplate(key: string) {
-    const value = drafts[key];
-    if (value === undefined) return;
-
-    setSaving(key);
-
-    // Upsert: update if exists, insert if not
-    const existing = templates[key];
-    let error;
-
-    if (existing) {
-      const result = await supabase
-        .from("site_settings")
-        .update({ value, updated_at: new Date().toISOString() })
-        .eq("key", key);
-      error = result.error;
-    } else {
-      const result = await supabase
-        .from("site_settings")
-        .insert({ key, value, updated_at: new Date().toISOString() });
-      error = result.error;
-    }
-
-    if (error) {
-      toast({
-        title: "Błąd",
-        description: "Nie udało się zapisać szablonu: " + error.message,
-        variant: "destructive",
+  async function fetchPreview(bodyText: string) {
+    try {
+      const res = await fetch("/api/office/preview-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rawBody: bodyText || selected.defaultBody }),
       });
-    } else {
-      setTemplates((prev) => ({
-        ...prev,
-        [key]: { key, value, updated_at: new Date().toISOString() },
-      }));
-      toast({
-        title: "Zapisano",
-        description: `Szablon "${EMAIL_TEMPLATE_KEYS.find((t) => t.key === key)?.label}" zaktualizowany.`,
-      });
-    }
-
-    setSaving(null);
+      if (res.ok) setPreviewHtml(await res.text());
+    } catch { /* silent */ }
   }
 
-  const anyChanges = EMAIL_TEMPLATE_KEYS.some((t) => hasChanges(t.key));
+  function debouncedPreview(bodyText: string) {
+    if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+    previewTimerRef.current = setTimeout(() => void fetchPreview(bodyText), 400);
+  }
 
-  async function saveAll() {
-    const changed = EMAIL_TEMPLATE_KEYS.filter((t) => hasChanges(t.key));
-    for (const t of changed) {
-      await saveTemplate(t.key);
+  async function saveCurrentTemplate() {
+    setSaving(true);
+
+    const pairs: { key: string; value: string }[] = [
+      { key: selected.subjectKey, value: draftSubject },
+      { key: selected.bodyKey, value: draftBody },
+    ];
+
+    for (const { key, value } of pairs) {
+      const existing = savedSubjects[key] !== undefined || savedBodies[key] !== undefined;
+      // Always try upsert
+      const { error } = existing
+        ? await supabase.from("site_settings").update({ value, updated_at: new Date().toISOString() }).eq("key", key)
+        : await supabase.from("site_settings").insert({ key, value, updated_at: new Date().toISOString() });
+
+      if (error) {
+        // Fallback: try the other operation
+        const fallback = existing
+          ? await supabase.from("site_settings").insert({ key, value, updated_at: new Date().toISOString() })
+          : await supabase.from("site_settings").update({ value, updated_at: new Date().toISOString() }).eq("key", key);
+        if (fallback.error) {
+          toast({ title: "Błąd", description: fallback.error.message, variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+      }
     }
+
+    setSavedSubjects((prev) => ({ ...prev, [selected.subjectKey]: draftSubject }));
+    setSavedBodies((prev) => ({ ...prev, [selected.bodyKey]: draftBody }));
+    toast({ title: "Zapisano", description: `Szablon "${selected.label}" zaktualizowany.` });
+    setSaving(false);
+  }
+
+  function useDefault() {
+    setDraftSubjects((prev) => ({ ...prev, [selected.subjectKey]: selected.defaultSubject }));
+    setDraftBodies((prev) => ({ ...prev, [selected.bodyKey]: selected.defaultBody }));
+  }
+
+  function isCustomized(tpl: TemplateDefinition): boolean {
+    const s = savedSubjects[tpl.subjectKey];
+    const b = savedBodies[tpl.bodyKey];
+    return (!!s && s.length > 0) || (!!b && b.length > 0);
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-0 h-[calc(100vh-80px)]">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-200 shrink-0">
         <div className="flex items-center gap-3">
           <Link
             href="/office/settings"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+            <h1 className="text-lg font-semibold tracking-tight text-slate-900">
               Szablony e-mail
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Edytuj tematy i treści e-maili wysyłanych do klientów i admina
+            <p className="text-xs text-slate-500">
+              Edytuj automatyczne wiadomości wysyłane do klientów
             </p>
           </div>
         </div>
-
-        <Button
-          onClick={saveAll}
-          disabled={!anyChanges || saving !== null}
-          className="gap-2"
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
+        <div className="flex items-center gap-2">
+          {hasChanges && (
+            <Button variant="ghost" size="sm" onClick={resetDraft} className="h-9 gap-1.5 text-xs text-slate-500">
+              <RotateCcw className="h-3.5 w-3.5" />
+              Cofnij zmiany
+            </Button>
           )}
-          Zapisz wszystkie
-        </Button>
+          <Button
+            size="sm"
+            onClick={saveCurrentTemplate}
+            disabled={!hasChanges || saving}
+            className="h-9 gap-1.5 bg-[#1a1a2e] text-white hover:bg-[#2a2a4e] font-medium"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Zapisz szablon
+          </Button>
+        </div>
       </div>
 
-      {/* Info */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="p-4">
-          <p className="text-sm text-blue-900">
-            <strong>Zmienne szablonów</strong> — używaj nawiasów klamrowych, np.{" "}
-            <code className="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-mono">
-              {"{customerName}"}
-            </code>{" "}
-            aby wstawiać dynamiczne dane zamówienia. Zmienne zostaną automatycznie podmienione
-            podczas wysyłki.
-          </p>
-        </CardContent>
-      </Card>
-
       {loading ? (
-        <div className="py-12 text-center text-sm text-slate-500">Ładowanie szablonów…</div>
+        <div className="flex-1 flex items-center justify-center text-sm text-slate-500">
+          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          Ładowanie szablonów…
+        </div>
       ) : (
-        <div className="space-y-4">
-          {EMAIL_TEMPLATE_KEYS.map((tpl) => {
-            const draft = drafts[tpl.key] ?? "";
-            const changed = hasChanges(tpl.key);
-            const isSaving = saving === tpl.key;
-            const isPreview = expandedPreview === tpl.key;
+        <div className="flex-1 flex min-h-0">
+          {/* Sidebar — Template list */}
+          <div className="w-64 shrink-0 border-r border-slate-200 bg-slate-50/50 overflow-y-auto">
+            <div className="p-3 space-y-1">
+              {TEMPLATES.map((tpl) => {
+                const active = tpl.id === selectedId;
+                const customized = isCustomized(tpl);
+                return (
+                  <button
+                    key={tpl.id}
+                    onClick={() => setSelectedId(tpl.id)}
+                    className={`w-full text-left rounded-lg px-3 py-2.5 transition-colors ${
+                      active
+                        ? "bg-white border border-slate-200 shadow-sm"
+                        : "hover:bg-white/60 border border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Mail className={`h-3.5 w-3.5 shrink-0 ${active ? "text-[#D4A843]" : "text-slate-400"}`} />
+                      <span className={`text-xs font-medium truncate ${active ? "text-slate-900" : "text-slate-600"}`}>
+                        {tpl.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 ml-5.5">
+                      {customized && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Dostosowany
+                        </span>
+                      )}
+                      {!customized && (
+                        <span className="text-[10px] text-slate-400">Domyślny</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-            return (
-              <Card
-                key={tpl.key}
-                className={`bg-white rounded-xl border shadow-sm transition-colors ${
-                  changed ? "border-amber-300" : "border-slate-200"
-                }`}
-              >
-                <CardHeader className="border-b border-slate-100 pb-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-2">
-                      <Mail className="h-4 w-4 mt-0.5 text-slate-400" />
-                      <div>
-                        <CardTitle className="text-sm font-semibold text-slate-900">
-                          {tpl.label}
-                        </CardTitle>
-                        <p className="mt-0.5 text-xs text-slate-500">{tpl.description}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {tpl.type === "body" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 gap-1 text-xs text-slate-500"
-                          onClick={() =>
-                            setExpandedPreview((prev) => (prev === tpl.key ? null : tpl.key))
-                          }
-                        >
-                          {isPreview ? (
-                            <EyeOff className="h-3.5 w-3.5" />
-                          ) : (
-                            <Eye className="h-3.5 w-3.5" />
-                          )}
-                          {isPreview ? "Ukryj" : "Podgląd"}
-                        </Button>
-                      )}
-                      {changed && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 gap-1 text-xs text-slate-500"
-                          onClick={() => resetDraft(tpl.key)}
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                          Cofnij
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        className="h-8 gap-1 text-xs"
-                        disabled={!changed || isSaving}
-                        onClick={() => saveTemplate(tpl.key)}
-                      >
-                        {isSaving ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Save className="h-3.5 w-3.5" />
-                        )}
-                        Zapisz
-                      </Button>
-                    </div>
+          {/* Main area — Split view */}
+          <div className="flex-1 flex min-h-0">
+            {/* LEFT — Editor */}
+            <div className="w-1/2 border-r border-slate-200 flex flex-col min-h-0">
+              <div className="px-5 py-3 border-b border-slate-100 shrink-0">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-900">{selected.label}</h2>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{selected.description}</p>
                   </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  {tpl.type === "subject" ? (
-                    <Input
-                      value={draft}
-                      onChange={(e) => updateDraft(tpl.key, e.target.value)}
-                      placeholder={tpl.placeholder}
-                      className="h-10 bg-slate-50 border-slate-200 text-sm placeholder:text-slate-400 focus-visible:bg-white"
-                    />
-                  ) : (
-                    <div className="space-y-3">
-                      <textarea
-                        value={draft}
-                        onChange={(e) => updateDraft(tpl.key, e.target.value)}
-                        placeholder={tpl.placeholder}
-                        className="w-full min-h-[140px] rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-y"
-                      />
-                      {isPreview && draft && (
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                            Podgląd
-                          </p>
-                          <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-                            {draft
-                              .replace(/\{customerName\}/g, "Jan Kowalski")
-                              .replace(/\{orderId\}/g, "SK-2026-001")
-                              .replace(/\{startDate\}/g, "15.03.2026")
-                              .replace(/\{endDate\}/g, "22.03.2026")
-                              .replace(/\{totalAmount\}/g, "1 060 zł")
-                              .replace(/\{rentalPrice\}/g, "560 zł")
-                              .replace(/\{deposit\}/g, "500 zł")
-                              .replace(/\{rentalDays\}/g, "7")
-                              .replace(/\{inpostPointId\}/g, "KRA010")
-                              .replace(/\{inpostPointAddress\}/g, "ul. Floriańska 1, 31-019 Kraków")}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <Button variant="ghost" size="sm" onClick={useDefault} className="h-7 text-[11px] text-slate-500">
+                    Wstaw domyślny
+                  </Button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {/* Subject */}
+                <div>
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 block">Temat</Label>
+                  <Input
+                    value={draftSubject}
+                    onChange={(e) => updateSubject(e.target.value)}
+                    placeholder={selected.defaultSubject}
+                    className="h-10 border-slate-200 bg-slate-50/80 text-sm font-medium"
+                  />
+                </div>
 
-                  {changed && (
-                    <div className="mt-2 text-xs text-amber-600 font-medium">
-                      Niezapisane zmiany
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+                {/* Body */}
+                <div className="flex-1 flex flex-col">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 block">Treść</Label>
+                  <textarea
+                    value={draftBody}
+                    onChange={(e) => updateBody(e.target.value)}
+                    placeholder={selected.defaultBody}
+                    className="flex-1 min-h-[300px] w-full rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-800 leading-relaxed resize-none focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 font-mono"
+                  />
+                </div>
+
+                {/* Variable chips */}
+                <div>
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 block">Dostępne zmienne</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selected.availableVars.map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => {
+                          updateBody(draftBody + `{{${v}}}`);
+                        }}
+                        className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-[11px] font-mono text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer border border-slate-200"
+                      >
+                        {`{{${v}}}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {hasChanges && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 font-medium">
+                    Niezapisane zmiany — kliknij &quot;Zapisz szablon&quot; aby zastosować
+                  </div>
+                )}
+
+                {!draftBody && !draftSubject && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                    <strong>Pusto?</strong> Jeśli oba pola są puste, system użyje domyślnego szablonu wbudowanego w kod.
+                    Kliknij &quot;Wstaw domyślny&quot; aby zobaczyć i edytować aktualną treść.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT — Live Preview */}
+            <div className="w-1/2 flex flex-col min-h-0 bg-slate-50/50">
+              <div className="px-5 py-3 border-b border-slate-100 shrink-0">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-3.5 w-3.5 text-slate-400" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Podgląd na żywo</span>
+                  <span className="text-[10px] text-slate-400 ml-auto">Zmienne zamienione na przykładowe dane</span>
+                </div>
+              </div>
+              <div className="flex-1 p-4 min-h-0">
+                {previewHtml ? (
+                  <iframe
+                    srcDoc={previewHtml}
+                    className="w-full h-full rounded-lg border border-slate-200 bg-white shadow-inner"
+                    sandbox="allow-same-origin"
+                    title="Podgląd szablonu e-mail"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-sm text-slate-400">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Generowanie podglądu…
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
-
-      {/* Key reference */}
-      <Card className="bg-slate-50 rounded-xl border border-slate-200">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold text-slate-900">
-            Dostępne klucze w bazie (site_settings)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 text-xs text-slate-600">
-          {EMAIL_TEMPLATE_KEYS.map((t) => (
-            <div key={t.key} className="flex items-center gap-2">
-              <code className="rounded bg-slate-200 px-1.5 py-0.5 font-mono text-[11px] text-slate-700">
-                {t.key}
-              </code>
-              <span className="text-slate-400">—</span>
-              <span>{t.label}</span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
     </div>
   );
 }
