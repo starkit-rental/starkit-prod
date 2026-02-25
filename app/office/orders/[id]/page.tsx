@@ -179,6 +179,14 @@ export default function OfficeOrderDetailsPage() {
   // Modal podglądu treści maila
   const [previewLog, setPreviewLog] = useState<EmailLogRow | null>(null);
 
+  // Custom email messenger modal
+  const [showMessenger, setShowMessenger] = useState(false);
+  const [messengerTemplate, setMessengerTemplate] = useState("general");
+  const [messengerSubject, setMessengerSubject] = useState("");
+  const [messengerContent, setMessengerContent] = useState("");
+  const [messengerSending, setMessengerSending] = useState(false);
+  const [messengerError, setMessengerError] = useState<string | null>(null);
+
   // Email countdown state
   const [emailCountdown, setEmailCountdown] = useState<number | null>(null);
   const [emailSending, setEmailSending] = useState(false);
@@ -324,6 +332,95 @@ export default function OfficeOrderDetailsPage() {
       setEmailLogs([]);
     } finally {
       setLoadingLogs(false);
+    }
+  }
+
+  // ── Messenger logic ──
+  const MESSENGER_TEMPLATES: { id: string; label: string; defaultSubject: string; defaultContent: (c: CustomerRow | null, o: OrderRow | null) => string }[] = [
+    {
+      id: "order_confirmed",
+      label: "Potwierdzenie rezerwacji",
+      defaultSubject: "Potwierdzenie rezerwacji SK-{{order_id}}",
+      defaultContent: (c, o) =>
+        `Cześć ${c?.full_name || "Kliencie"},\n\nTwoja rezerwacja ${o?.order_number || ""} została potwierdzona.\nOkres wynajmu: ${o?.start_date || ""} – ${o?.end_date || ""}\n\nPozdrawiamy,\nZespół Starkit`,
+    },
+    {
+      id: "order_picked_up",
+      label: "Instrukcja / Wysyłka",
+      defaultSubject: "Sprzęt w drodze! SK-{{order_id}}",
+      defaultContent: (c, o) =>
+        `Cześć ${c?.full_name || "Kliencie"},\n\nZamówienie ${o?.order_number || ""} zostało wysłane.\nOtrzymasz SMS od InPost, gdy paczka będzie gotowa do odbioru.\n\nPozdrawiamy,\nZespół Starkit`,
+    },
+    {
+      id: "order_returned",
+      label: "Potwierdzenie zwrotu",
+      defaultSubject: "Potwierdzenie zwrotu SK-{{order_id}}",
+      defaultContent: (c, o) =>
+        `Cześć ${c?.full_name || "Kliencie"},\n\nPotwierdzamy odbiór zwróconego sprzętu z zamówienia ${o?.order_number || ""}.\nKaucja zostanie zwrócona w ciągu 48h.\n\nDziękujemy za skorzystanie z Starkit!\nZespół Starkit`,
+    },
+    {
+      id: "general",
+      label: "Szablon ogólny",
+      defaultSubject: "Wiadomość od Starkit — SK-{{order_id}}",
+      defaultContent: (c) =>
+        `Cześć ${c?.full_name || "Kliencie"},\n\n\n\nPozdrawiamy,\nZespół Starkit`,
+    },
+  ];
+
+  function openMessenger() {
+    const tpl = MESSENGER_TEMPLATES[3]; // default: general
+    const cust = normalizeOne(order?.customers);
+    const resolvedSubject = (tpl.defaultSubject)
+      .replace(/\{\{order_id\}\}/g, order?.order_number || orderId || "")
+      .replace(/\{\{name\}\}/g, cust?.full_name || "Kliencie");
+    setMessengerTemplate(tpl.id);
+    setMessengerSubject(resolvedSubject);
+    setMessengerContent(tpl.defaultContent(cust, order));
+    setMessengerError(null);
+    setShowMessenger(true);
+  }
+
+  function handleTemplateChange(tplId: string) {
+    const tpl = MESSENGER_TEMPLATES.find((t) => t.id === tplId) ?? MESSENGER_TEMPLATES[3];
+    const cust = normalizeOne(order?.customers);
+    const resolvedSubject = (tpl.defaultSubject)
+      .replace(/\{\{order_id\}\}/g, order?.order_number || orderId || "")
+      .replace(/\{\{name\}\}/g, cust?.full_name || "Kliencie");
+    setMessengerTemplate(tpl.id);
+    setMessengerSubject(resolvedSubject);
+    setMessengerContent(tpl.defaultContent(cust, order));
+    setMessengerError(null);
+  }
+
+  async function sendCustomEmail() {
+    if (!orderId || !messengerContent.trim()) return;
+    setMessengerSending(true);
+    setMessengerError(null);
+
+    try {
+      const res = await fetch("/api/office/send-custom-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          templateId: messengerTemplate,
+          finalContent: messengerContent,
+          customSubject: messengerSubject,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setMessengerError(json?.error || "Błąd wysyłki");
+        setMessengerSending(false);
+        return;
+      }
+      setShowMessenger(false);
+      setMessengerContent("");
+      await loadEmailLogs();
+    } catch (e) {
+      setMessengerError(e instanceof Error ? e.message : "Nieznany błąd");
+    } finally {
+      setMessengerSending(false);
     }
   }
 
@@ -708,10 +805,20 @@ export default function OfficeOrderDetailsPage() {
           <div className="lg:col-span-12">
             <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  <Mail className="h-4 w-4" />
-                  Historia Komunikacji
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <Mail className="h-4 w-4" />
+                    Historia Komunikacji
+                  </CardTitle>
+                  <Button
+                    size="sm"
+                    onClick={openMessenger}
+                    className="h-8 gap-1.5 bg-[#1a1a2e] text-white hover:bg-[#2a2a4e] text-xs font-medium"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    Wyślij wiadomość
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="p-6">
                 {loadingLogs ? (
@@ -836,6 +943,118 @@ export default function OfficeOrderDetailsPage() {
                 onClick={() => setStatusDialog(null)}
               >
                 Anuluj
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Messenger modal */}
+      {showMessenger && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => { if (!messengerSending) setShowMessenger(false); }}
+        >
+          <div
+            className="w-full max-w-2xl rounded-xl bg-white shadow-2xl flex flex-col max-h-[85vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Wyślij wiadomość do klienta</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Do: {normalizeOne(order?.customers)?.email || "—"}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowMessenger(false)}
+                disabled={messengerSending}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Template selector */}
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Wybierz szablon</Label>
+                <Select value={messengerTemplate} onValueChange={handleTemplateChange}>
+                  <SelectTrigger className="mt-1 h-10 border-slate-200 bg-slate-50 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MESSENGER_TEMPLATES.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Subject */}
+              <div>
+                <Label className="text-xs font-medium text-slate-700">Temat wiadomości</Label>
+                <Input
+                  value={messengerSubject}
+                  onChange={(e) => setMessengerSubject(e.target.value)}
+                  className="mt-1 h-10 border-slate-200 bg-slate-50 text-sm"
+                  placeholder="Temat e-maila…"
+                />
+              </div>
+
+              {/* Content editor */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-xs font-medium text-slate-700">Treść wiadomości</Label>
+                  <span className="text-[10px] text-slate-400">
+                    Tagi: {"{{name}}"}, {"{{order_id}}"} zostaną zamienione automatycznie
+                  </span>
+                </div>
+                <textarea
+                  value={messengerContent}
+                  onChange={(e) => setMessengerContent(e.target.value)}
+                  rows={12}
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 leading-relaxed resize-y focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                  placeholder="Wpisz treść wiadomości…"
+                />
+              </div>
+
+              {messengerError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+                  {messengerError}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-6 py-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMessenger(false)}
+                disabled={messengerSending}
+              >
+                Anuluj
+              </Button>
+              <Button
+                size="sm"
+                onClick={sendCustomEmail}
+                disabled={messengerSending || !messengerContent.trim()}
+                className="gap-1.5 bg-[#1a1a2e] text-white hover:bg-[#2a2a4e]"
+              >
+                {messengerSending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Wysyłanie…
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    Wyślij e-mail
+                  </>
+                )}
               </Button>
             </div>
           </div>

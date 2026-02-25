@@ -53,7 +53,7 @@ ${previewText ? `<div style="display:none;max-height:0;overflow:hidden">${previe
 <!-- Logo -->
 <tr><td align="center" style="padding:32px 40px 16px">
   <a href="${baseUrl}" style="text-decoration:none">
-    <img src="${baseUrl}/logo.png" width="140" height="46" alt="Starkit" style="display:block;border:0"/>
+    <img src="${baseUrl}/logo.png" width="150" alt="Starkit" style="display:block;border:0;width:150px;max-width:150px;height:auto"/>
   </a>
 </td></tr>
 
@@ -316,7 +316,21 @@ export function buildOrderCancelledHtml(v: OrderVars): string {
   return withStarkitTemplate(content, `Informacja o anulowaniu zamówienia ${v.order_number}`);
 }
 
-/** 6. Admin Notification — powiadomienie dla admina */
+/** 6. General Purpose — szablon z dynamiczną treścią */
+export function buildGeneralPurposeHtml(v: OrderVars & { custom_content?: string }): string {
+  const bodyHtml = v.custom_content
+    ? `<div style="font-family:${BRAND.font};font-size:15px;color:#334155;line-height:1.65;white-space:pre-wrap">${v.custom_content}</div>`
+    : paragraph("(Brak treści)");
+
+  const content = [
+    paragraph(`Cześć ${v.customer_name},`),
+    bodyHtml,
+    signOff(),
+  ].join("\n");
+  return withStarkitTemplate(content);
+}
+
+/** 7. Admin Notification — powiadomienie dla admina */
 export function buildAdminNotificationHtml(v: OrderVars): string {
   const orderUrl = v.order_url || `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl"}/office/orders/${v.order_number}`;
 
@@ -356,15 +370,17 @@ export type EmailTemplateType =
   | "order_picked_up"
   | "order_returned"
   | "order_cancelled"
-  | "admin_notification";
+  | "admin_notification"
+  | "general";
 
-const BUILDERS: Record<EmailTemplateType, (v: OrderVars) => string> = {
+const BUILDERS: Record<EmailTemplateType, (v: OrderVars & { custom_content?: string }) => string> = {
   order_received: buildOrderReceivedHtml,
   order_confirmed: buildOrderConfirmedHtml,
   order_picked_up: buildOrderPickedUpHtml,
   order_returned: buildOrderReturnedHtml,
   order_cancelled: buildOrderCancelledHtml,
   admin_notification: buildAdminNotificationHtml,
+  general: buildGeneralPurposeHtml,
 };
 
 export const EMAIL_SUBJECTS: Record<EmailTemplateType, string> = {
@@ -374,6 +390,7 @@ export const EMAIL_SUBJECTS: Record<EmailTemplateType, string> = {
   order_returned: "Potwierdzenie zwrotu sprzętu SK-{{id}}",
   order_cancelled: "Informacja o anulowaniu zamówienia SK-{{id}}",
   admin_notification: "Nowe zamówienie SK-{{id}} od {{name}} 💸",
+  general: "Wiadomość od Starkit — SK-{{id}}",
 };
 
 /**
