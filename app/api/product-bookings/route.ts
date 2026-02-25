@@ -10,6 +10,8 @@ function assertEnv(value: string | undefined, name: string): string {
   return value;
 }
 
+const BLOCKING_PAYMENT_STATUSES = ["pending", "paid", "manual", "completed"];
+
 export async function POST(req: Request) {
   try {
     const supabaseUrl = assertEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL");
@@ -27,7 +29,7 @@ export async function POST(req: Request) {
       auth: { persistSession: false },
     });
 
-    // 1. Get stock item IDs for this product
+    // 1. Get all stock items for this product
     const { data: stockItems, error: stockError } = await supabase
       .from("stock_items")
       .select("id")
@@ -37,13 +39,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: stockError.message }, { status: 500 });
     }
 
-    if (!stockItems?.length) {
-      return NextResponse.json({ bookings: [] });
+    const totalStockItems = stockItems?.length ?? 0;
+
+    if (totalStockItems === 0) {
+      return NextResponse.json({ bookings: [], totalStockItems: 0 });
     }
 
-    const stockItemIds = stockItems.map((s: any) => String(s.id));
+    const stockItemIds = stockItems!.map((s: any) => String(s.id));
 
-    // 2. Get order_items that reference these stock items
+    // 2. Get order_items for these stock items
     const { data: orderItems, error: oiError } = await supabase
       .from("order_items")
       .select("order_id, stock_item_id")
@@ -54,28 +58,50 @@ export async function POST(req: Request) {
     }
 
     if (!orderItems?.length) {
-      return NextResponse.json({ bookings: [] });
+      return NextResponse.json({ bookings: [], totalStockItems });
     }
 
-    const orderIds = [...new Set(orderItems.map((oi: any) => String(oi.order_id)))];
+    // Build map: orderId → stockItemId
+    const orderToStockItem = new Map<string, string>();
+    for (const oi of orderItems as any[]) {
+      orderToStockItem.set(String(oi.order_id), String(oi.stock_item_id));
+    }
 
-    // 3. Get orders with blocking statuses
+    const orderIds = [...orderToStockItem.keys()];
+
+    // 3. Get active orders
     const { data: orders, error: ordersError } = await supabase
       .from("orders")
-      .select("id, start_date, end_date, payment_status")
+      .select("id, start_date, end_date, payment_status, order_status")
       .in("id", orderIds)
-      .in("payment_status", ["pending", "paid", "manual", "completed"]);
+      .in("payment_status", BLOCKING_PAYMENT_STATUSES);
 
     if (ordersError) {
       return NextResponse.json({ error: ordersError.message }, { status: 500 });
     }
 
-    const bookings = (orders ?? []).map((o: any) => ({
-      start_date: o.start_date,
-      end_date: o.end_date,
-    }));
+    // Read buffer_days from site_settings (default 2)
+    const { data: bufferRow } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "buffer_days")
+      .maybeSingle();
+    const bufferDays = Math.max(0, parseInt(bufferRow?.value ?? "2", 10) || 2);
 
-    return NextResponse.json({ bookings });
+    // 4. Build per-stock-item bookings with buffer included
+    const bookings = (orders ?? [])
+      .filter((o: any) => o.start_date && o.end_date)
+      .map((o: any) => {
+        const stockItemId = orderToStockItem.get(String(o.id)) ?? null;
+        return {
+          stock_item_id: stockItemId,
+          start_date: o.start_date,
+          end_date: o.end_date,
+          buffer_days: bufferDays,
+        };
+      });
+
+    return NextResponse.json({ bookings, totalStockItems, bufferDays });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

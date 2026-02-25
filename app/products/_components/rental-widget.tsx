@@ -50,8 +50,10 @@ type PricingTier = {
 };
 
 type Booking = {
+  stock_item_id: string | null;
   start_date: string;
   end_date: string;
+  buffer_days: number;
 };
 
 function decimalToNumber(value: unknown): number {
@@ -74,6 +76,8 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
   const [productError, setProductError] = useState<string | null>(null);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [totalStockItems, setTotalStockItems] = useState(1);
+  const [bufferDays, setBufferDays] = useState(2);
   const [loadingBookings, setLoadingBookings] = useState(true);
 
   const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
@@ -132,7 +136,11 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
           body: JSON.stringify({ productId: product!.id }),
         });
         const json = await res.json();
-        if (active) setBookings(json?.bookings ?? []);
+        if (active) {
+          setBookings(json?.bookings ?? []);
+          setTotalStockItems(json?.totalStockItems ?? 1);
+          setBufferDays(json?.bufferDays ?? 2);
+        }
       } catch {
         // silent — calendar just won't show blocked dates
       }
@@ -166,40 +174,61 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
   }, [product]);
 
   // ── Compute booked & buffer dates ──
+  // A day is FULLY BLOCKED only when ALL stock items are occupied (with buffer)
+  // A day is a BUFFER day when at least one item has it as a buffer (but not all are booked)
   const { bookedDates, bufferDates, allBlockedKeys } = useMemo(() => {
-    const bookedKeys = new Set<string>();
-    const bufferKeys = new Set<string>();
+    // Per-date count of how many stock items are blocked (booked range + buffer)
+    const blockedItemCount = new Map<string, Set<string>>();
+    const bookedItemCount = new Map<string, Set<string>>(); // only core booked days (no buffer)
+
+    function addToMap(map: Map<string, Set<string>>, dateKey: string, itemId: string) {
+      if (!map.has(dateKey)) map.set(dateKey, new Set());
+      map.get(dateKey)!.add(itemId);
+    }
 
     for (const b of bookings) {
+      const itemId = b.stock_item_id ?? `__unknown_${Math.random()}`;
+      const buf = b.buffer_days ?? bufferDays;
       const start = startOfDay(new Date(b.start_date));
       const end = startOfDay(new Date(b.end_date));
 
-      // Booked days
+      // Core booked days
       try {
         const days = eachDayOfInterval({ start, end });
-        days.forEach((d) => bookedKeys.add(format(d, "yyyy-MM-dd")));
-      } catch {
-        // skip invalid ranges
-      }
+        for (const d of days) {
+          const key = format(d, "yyyy-MM-dd");
+          addToMap(bookedItemCount, key, itemId);
+          addToMap(blockedItemCount, key, itemId);
+        }
+      } catch { /* skip */ }
 
-      // Buffer days (±2)
-      for (let i = 1; i <= 2; i++) {
+      // Buffer days for this item
+      for (let i = 1; i <= buf; i++) {
         const beforeKey = format(addDays(start, -i), "yyyy-MM-dd");
         const afterKey = format(addDays(end, i), "yyyy-MM-dd");
-        if (!bookedKeys.has(beforeKey)) bufferKeys.add(beforeKey);
-        if (!bookedKeys.has(afterKey)) bufferKeys.add(afterKey);
+        addToMap(blockedItemCount, beforeKey, itemId);
+        addToMap(blockedItemCount, afterKey, itemId);
       }
     }
 
-    // Remove buffer keys that overlap booked (booked takes priority)
-    for (const k of bookedKeys) bufferKeys.delete(k);
+    // A date is fully booked when ALL stock items are in the booked range
+    const bookedKeys = new Set<string>();
+    for (const [key, items] of bookedItemCount) {
+      if (items.size >= totalStockItems) bookedKeys.add(key);
+    }
+
+    // A date is a buffer day when all items are blocked (booked+buffer) but not all core-booked
+    const bufferKeys = new Set<string>();
+    for (const [key, items] of blockedItemCount) {
+      if (items.size >= totalStockItems && !bookedKeys.has(key)) bufferKeys.add(key);
+    }
 
     const bookedDateObjs = Array.from(bookedKeys).map((s) => startOfDay(new Date(s)));
     const bufferDateObjs = Array.from(bufferKeys).map((s) => startOfDay(new Date(s)));
     const allKeys = new Set([...bookedKeys, ...bufferKeys]);
 
     return { bookedDates: bookedDateObjs, bufferDates: bufferDateObjs, allBlockedKeys: allKeys };
-  }, [bookings]);
+  }, [bookings, totalStockItems, bufferDays]);
 
   // ── Check if selected range overlaps blocked dates ──
   const rangeOverlapsBlocked = useMemo(() => {

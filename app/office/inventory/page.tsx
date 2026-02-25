@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Save, Trash2, Package, Hash } from "lucide-react";
+import { Plus, Save, Trash2, Package, Hash, Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,29 @@ export default function OfficeInventoryPage() {
     base_price_day: "",
     deposit_amount: "",
   });
+
+  const [bufferDays, setBufferDays] = useState("2");
+  const [savingBuffer, setSavingBuffer] = useState(false);
+  const [bufferSaved, setBufferSaved] = useState(false);
+
+  async function loadBufferDays() {
+    const { data } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "buffer_days")
+      .maybeSingle();
+    setBufferDays(data?.value ?? "2");
+  }
+
+  async function saveBufferDays() {
+    setSavingBuffer(true);
+    setBufferSaved(false);
+    const val = String(Math.max(0, parseInt(bufferDays, 10) || 0));
+    await supabase.from("site_settings").upsert({ key: "buffer_days", value: val }, { onConflict: "key" });
+    setSavingBuffer(false);
+    setBufferSaved(true);
+    setTimeout(() => setBufferSaved(false), 3000);
+  }
 
   async function load() {
     setLoading(true);
@@ -92,6 +115,7 @@ export default function OfficeInventoryPage() {
 
   useEffect(() => {
     void load();
+    void loadBufferDays();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -185,6 +209,39 @@ export default function OfficeInventoryPage() {
       </div>
 
       {error && <div className="text-sm text-destructive">{error}</div>}
+
+      {/* Buffer days setting */}
+      <div className="rounded-lg border p-4 bg-amber-50 border-amber-200">
+        <div className="mb-3 flex items-center gap-2">
+          <Shield className="h-4 w-4 text-amber-600" />
+          <div className="text-sm font-semibold text-amber-900">Bufor logistyczny (dni blokady przed i po rezerwacji)</div>
+        </div>
+        <p className="text-xs text-amber-700 mb-3">
+          Liczba dni zablokowanych przed datą startu i po dacie zwrotu każdej rezerwacji. Dotyczy każdego egzemplarza osobno. Domyślnie: 2 dni.
+        </p>
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-amber-700 font-medium">Dni buforu (przed i po)</label>
+            <Input
+              type="number"
+              min="0"
+              max="14"
+              value={bufferDays}
+              onChange={(e) => setBufferDays(e.target.value)}
+              className="w-24 bg-white border-amber-300"
+            />
+          </div>
+          <Button
+            onClick={saveBufferDays}
+            disabled={savingBuffer}
+            size="sm"
+            className="mt-5 bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            <Save className="h-4 w-4 mr-1" />
+            {savingBuffer ? "Zapisywanie…" : bufferSaved ? "Zapisano ✓" : "Zapisz"}
+          </Button>
+        </div>
+      </div>
 
       <div className="rounded-lg border p-4">
         <div className="mb-3 flex items-center justify-between">

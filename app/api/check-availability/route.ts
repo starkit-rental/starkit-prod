@@ -31,12 +31,19 @@ export async function POST(req: Request) {
       auth: { persistSession: false },
     });
 
+    const { data: bufferRow } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "buffer_days")
+      .maybeSingle();
+    const bufferDays = Math.max(0, parseInt(bufferRow?.value ?? "2", 10) || 2);
+
     const result = await checkAvailability({
       supabase,
       productId: body.productId,
       startDate: body.startDate,
       endDate: body.endDate,
-      bufferDays: 2,
+      bufferDays,
     });
 
     return NextResponse.json(result, { status: 200 });
