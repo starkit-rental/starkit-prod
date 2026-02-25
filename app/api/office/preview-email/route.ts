@@ -1,25 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   withStarkitTemplate,
-  buildGeneralPurposeHtml,
-  buildOrderConfirmedHtml,
-  buildOrderPickedUpHtml,
-  buildOrderReturnedHtml,
-  type OrderVars,
+  renderAlertBox,
+  renderCtaButton,
 } from "@/lib/email-template";
 
 const BRAND_FONT =
   '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif';
-
-const TEMPLATE_BUILDERS: Record<
-  string,
-  (v: OrderVars & { custom_content?: string }) => string
-> = {
-  order_confirmed: buildOrderConfirmedHtml,
-  order_picked_up: buildOrderPickedUpHtml,
-  order_returned: buildOrderReturnedHtml,
-  general: buildGeneralPurposeHtml,
-};
 
 // Sample data for settings-page preview
 const SAMPLE_VARS: Record<string, string> = {
@@ -37,6 +24,7 @@ const SAMPLE_VARS: Record<string, string> = {
   customer_phone: "+48 600 123 456",
   company_name: "Kowalski Sp. z o.o.",
   nip: "1234567890",
+  order_link: "https://www.starkit.pl/office/orders/example-id",
 };
 
 function resolveSampleVars(text: string): string {
@@ -58,6 +46,9 @@ export async function POST(req: NextRequest) {
       templateId,
       content,
       rawBody,
+      infoBoxContent,
+      ctaText,
+      ctaLink,
       customerName,
       orderNumber,
       startDate,
@@ -67,6 +58,9 @@ export async function POST(req: NextRequest) {
       templateId?: string;
       content?: string;
       rawBody?: string;
+      infoBoxContent?: string;
+      ctaText?: string;
+      ctaLink?: string;
       customerName?: string;
       orderNumber?: string;
       startDate?: string;
@@ -76,15 +70,32 @@ export async function POST(req: NextRequest) {
 
     let html: string;
 
-    // Mode 1: Raw body from settings page — resolve sample vars, wrap in Starkit
+    // Mode 1: Raw body from settings page — Blank Canvas mode
     if (rawBody !== undefined) {
-      const resolved = resolveSampleVars(rawBody);
+      let resolved = resolveSampleVars(rawBody);
+
+      // Handle {{info_box}} tag: replace in-place or append after body
+      const infoBoxHtml = infoBoxContent?.trim()
+        ? renderAlertBox(resolveSampleVars(infoBoxContent.trim()), "info")
+        : "";
+
+      if (resolved.includes("{{info_box}}")) {
+        resolved = resolved.replace(/\{\{info_box\}\}/g, infoBoxHtml);
+      } else if (infoBoxHtml) {
+        resolved += "\n" + infoBoxHtml;
+      }
+
+      // Render CTA button if both fields present
+      if (ctaText?.trim() && ctaLink?.trim()) {
+        resolved += "\n" + renderCtaButton(ctaText.trim(), resolveSampleVars(ctaLink.trim()));
+      }
+
       const isHtml = /<[a-z][\s\S]*>/i.test(resolved);
-      html = isHtml
-        ? withStarkitTemplate(resolved)
-        : withStarkitTemplate(
-            `<div style="font-family:${BRAND_FONT};font-size:15px;color:#334155;line-height:1.65;white-space:pre-wrap">${resolved}</div>`
-          );
+      const bodyHtml = isHtml
+        ? resolved
+        : `<div style="font-family:${BRAND_FONT};font-size:15px;color:#334155;line-height:1.65;white-space:pre-wrap">${resolved}</div>`;
+
+      html = withStarkitTemplate(bodyHtml);
 
       return new NextResponse(html, {
         status: 200,
@@ -92,28 +103,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Mode 2: Template builder mode (messenger modal)
-    const vars: OrderVars & { custom_content?: string } = {
-      customer_name: customerName || "Kliencie",
-      order_number: orderNumber || "SK-0000",
-      start_date: startDate || "—",
-      end_date: endDate || "—",
-      total_amount: totalAmount || "0.00 zł",
-      custom_content: content || "",
-    };
-
-    if (templateId === "general" || !templateId) {
-      html = buildGeneralPurposeHtml(vars);
-    } else {
-      const builder = TEMPLATE_BUILDERS[templateId];
-      if (builder) {
-        html = builder(vars);
-      } else {
-        html = withStarkitTemplate(
-          `<div style="font-family:${BRAND_FONT};font-size:15px;color:#334155;line-height:1.65;white-space:pre-wrap">${content || ""}</div>`
-        );
-      }
-    }
+    // Mode 2: Messenger modal — Blank Canvas: wrap admin content in template
+    const bodyContent = content || "";
+    const isContentHtml = /<[a-z][\s\S]*>/i.test(bodyContent);
+    const innerHtml = isContentHtml
+      ? bodyContent
+      : `<div style="font-family:${BRAND_FONT};font-size:15px;color:#334155;line-height:1.65;white-space:pre-wrap">${bodyContent}</div>`;
+    html = withStarkitTemplate(innerHtml);
 
     return new NextResponse(html, {
       status: 200,

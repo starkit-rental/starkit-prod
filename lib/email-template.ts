@@ -126,6 +126,10 @@ function infoBox(title: string, rows: [string, string][]): string {
   </table>`;
 }
 
+export function renderAlertBox(text: string, variant: "info" | "warning" | "success" | "blue" = "info"): string {
+  return alertBox(text, variant);
+}
+
 function alertBox(text: string, variant: "info" | "warning" | "success" | "blue" = "info"): string {
   const styles: Record<string, { bg: string; border: string; color: string }> = {
     info: { bg: "#fffbeb", border: "#fbbf24", color: "#92400e" },
@@ -143,6 +147,10 @@ function alertBox(text: string, variant: "info" | "warning" | "success" | "blue"
 
 function signOff(): string {
   return `<p style="margin:24px 0 0;font-size:15px;color:#334155;line-height:1.65">Pozdrawiamy,<br/><strong>Zespół Starkit</strong></p>`;
+}
+
+export function renderCtaButton(text: string, href: string): string {
+  return ctaButton(text, href);
 }
 
 function ctaButton(text: string, href: string): string {
@@ -173,6 +181,7 @@ export interface OrderVars {
   company_name?: string;
   nip?: string;
   order_url?: string;
+  info_box_content?: string;
 }
 
 /** 1. Order Received — tuż po płatności */
@@ -187,7 +196,7 @@ export function buildOrderReceivedHtml(v: OrderVars): string {
       ["Okres wynajmu:", `${v.start_date} – ${v.end_date}`],
       ["Łączna kwota:", v.total_amount],
     ]),
-    alertBox(`💡 <strong>Ważne:</strong> Płatność została zaksięgowana. Kaucja zwrotna zostanie zwrócona na Twoje konto w ciągu 48h od zwrotu sprzętu w nienaruszonym stanie.`, "info"),
+    v.info_box_content ? alertBox(v.info_box_content, "info") : "",
     paragraph(`Jeśli masz pytania, śmiało odpowiedz na tego maila lub napisz na <a href="mailto:wynajem@starkit.pl" style="color:${BRAND.dark}">wynajem@starkit.pl</a>.`),
     signOff(),
   ].join("\n");
@@ -219,7 +228,7 @@ export function buildOrderConfirmedHtml(v: OrderVars): string {
         ])
       : "",
     alertBox(`📄 <strong>Umowa najmu:</strong> W załączniku znajdziesz umowę najmu w formacie PDF. Prosimy o zapoznanie się z regulaminem przed odbiorem sprzętu.`, "blue"),
-    alertBox(`💳 <strong>Zwrot kaucji:</strong> Kaucja zostanie automatycznie zwrócona na Twoje konto w ciągu 48h od zwrotu i weryfikacji sprzętu.`, "info"),
+    v.info_box_content ? alertBox(v.info_box_content, "info") : "",
     paragraph(`<strong>Co dalej?</strong>`),
     `<ul style="margin:0 0 16px;padding-left:20px;color:#334155;font-size:15px;line-height:1.8">
       <li>Przygotuj dokument tożsamości na wypadek weryfikacji</li>
@@ -271,7 +280,7 @@ export function buildOrderPickedUpHtml(v: OrderVars): string {
         </table>
       </td></tr>
     </table>`,
-    alertBox(`💡 <strong>Wskazówka:</strong> Najlepsza jakość sygnału jest przy otwartym widoku na niebo, bez przeszkód (drzew, budynków). Antena automatycznie ustawi się w optymalnym kierunku.`, "info"),
+    v.info_box_content ? alertBox(v.info_box_content, "info") : "",
     paragraph(`W razie pytań pisz na <a href="mailto:wynajem@starkit.pl" style="color:${BRAND.dark}">wynajem@starkit.pl</a> — odpowiadamy szybko!`),
     signOff(),
   ].join("\n");
@@ -289,7 +298,7 @@ export function buildOrderReturnedHtml(v: OrderVars): string {
       ["Okres wynajmu:", `${v.start_date} – ${v.end_date}`],
       ...(v.total_amount ? [["Łączna kwota:", v.total_amount] as [string, string]] : []),
     ]),
-    alertBox(`💳 <strong>Rozliczenie kaucji:</strong> Nasz zespół sprawdzi kompletność i stan sprzętu. Jeśli wszystko będzie w porządku, kaucja zostanie zwrócona na Twoje konto w ciągu <strong>48 godzin</strong>.`, "success"),
+    v.info_box_content ? alertBox(v.info_box_content, "success") : "",
     paragraph(`Dziękujemy za skorzystanie z usług Starkit! Mamy nadzieję, że internet Starlink spełnił Twoje oczekiwania.`),
     paragraph(`Jeśli będziesz potrzebować internetu satelitarnego w przyszłości — jesteśmy do dyspozycji! 🛰️`),
     paragraph(`Będziemy wdzięczni za Twoją opinię — pomaga nam to stawać się lepszymi. Odpowiedz na tego maila i powiedz, jak Ci się korzystało!`),
@@ -310,7 +319,7 @@ export function buildOrderCancelledHtml(v: OrderVars): string {
       ["Planowany okres:", `${v.start_date} – ${v.end_date}`],
       ...(v.total_amount ? [["Kwota:", v.total_amount] as [string, string]] : []),
     ]),
-    alertBox(`💳 <strong>Zwrot środków:</strong> Jeśli dokonałeś płatności, zwrot nastąpi automatycznie w ciągu <strong>5–10 dni roboczych</strong> na kartę, którą dokonano płatności.`, "warning"),
+    v.info_box_content ? alertBox(v.info_box_content, "warning") : "",
     paragraph(`Jeśli masz pytania dotyczące anulowania lub chcesz złożyć nowe zamówienie, skontaktuj się z nami: <a href="mailto:wynajem@starkit.pl" style="color:${BRAND.dark}">wynajem@starkit.pl</a>`),
     signOff(),
   ].join("\n");

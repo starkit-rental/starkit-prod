@@ -5,27 +5,36 @@ import ContractTemplate from "@/lib/pdf/ContractTemplate";
 import { getResendClient } from "@/lib/resend";
 import {
   withStarkitTemplate,
-  buildOrderReceivedHtml,
-  buildOrderConfirmedHtml,
-  buildOrderPickedUpHtml,
-  buildOrderReturnedHtml,
-  buildOrderCancelledHtml,
+  renderAlertBox,
+  renderCtaButton,
   buildAdminNotificationHtml,
   type OrderVars,
 } from "@/lib/email-template";
 
 function createEmailSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error("Missing Supabase env vars");
-  return createClient(url, key, { auth: { persistSession: false } });
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+  if (!serviceKey) {
+    console.error("[email] CRITICAL: SUPABASE_SERVICE_ROLE_KEY is not set! Falling back to anon key — RLS will block email_logs inserts.");
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!anonKey) throw new Error("Missing both SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    return createClient(url, anonKey, { auth: { persistSession: false } });
+  }
+  return createClient(url, serviceKey, { auth: { persistSession: false } });
 }
 
 function createEmailSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error("Missing Supabase env vars");
-  return createClient(url, key, { auth: { persistSession: false } });
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+  if (!serviceKey) {
+    console.error("[email] CRITICAL: SUPABASE_SERVICE_ROLE_KEY is not set! email_logs inserts WILL FAIL due to RLS.");
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!anonKey) throw new Error("Missing both SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    return createClient(url, anonKey, { auth: { persistSession: false } });
+  }
+  return createClient(url, serviceKey, { auth: { persistSession: false } });
 }
 
 // Base URL for email assets (logos, images)
@@ -52,23 +61,21 @@ function resolveTemplateVars(
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`);
 }
 
-// Helper: pobierz szablon i temat z site_settings, zwróć null jeśli brak
-async function fetchEmailTemplate(
-  supabase: ReturnType<typeof createEmailSupabaseClient>,
-  bodyKey: string,
-  subjectKey: string
-): Promise<{ body: string; subject: string } | null> {
-  const { data, error } = await supabase
-    .from("site_settings")
-    .select("key,value")
-    .in("key", [bodyKey, subjectKey]);
-  if (error || !data || data.length === 0) return null;
-  const map: Record<string, string> = {};
-  for (const row of data) map[row.key] = row.value;
-  const body = map[bodyKey];
-  const subject = map[subjectKey];
-  if (!body && !subject) return null;
-  return { body: body ?? "", subject: subject ?? "" };
+// Helper: fetch multiple site_settings keys at once
+async function fetchSettings(keys: string[]): Promise<Record<string, string>> {
+  try {
+    const supabase = createEmailSupabaseClient();
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("key,value")
+      .in("key", keys);
+    if (error || !data) return {};
+    const map: Record<string, string> = {};
+    for (const row of data) map[row.key] = (row.value ?? "").trim();
+    return map;
+  } catch {
+    return {};
+  }
 }
 
 // Helper to calculate rental days
@@ -81,6 +88,9 @@ function calculateRentalDays(startDate: string, endDate: string): number {
 }
 
 async function logEmail(data: EmailLogData) {
+  const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  console.log(`[email] logEmail called (type=${data.type}, status=${data.status}, orderId=${data.orderId}, serviceKey=${hasServiceKey})`);
+
   try {
     const supabase = createEmailSupabaseAdmin();
     const basePayload: Record<string, unknown> = {
@@ -97,16 +107,21 @@ async function logEmail(data: EmailLogData) {
     const { error } = await supabase.from("email_logs").insert({ ...basePayload, body: data.body ?? null });
 
     if (error) {
-      // If body column doesn't exist, retry without it
+      console.error(`[email] SUPABASE LOG ERROR:`, JSON.stringify({ code: error.code, message: error.message, details: error.details, hint: (error as any).hint }));
+
+      // If body column doesn't exist (42703), retry without it
       if (error.code === "42703" || error.message?.includes("body")) {
+        console.log(`[email] Retrying insert without body column...`);
         const { error: error2 } = await supabase.from("email_logs").insert(basePayload);
         if (error2) {
-          console.error(`[email] logEmail INSERT failed (no-body retry, type=${data.type}):`, error2.code, error2.message);
+          console.error(`[email] SUPABASE LOG ERROR (retry):`, JSON.stringify({ code: error2.code, message: error2.message, details: error2.details, hint: (error2 as any).hint }));
         } else {
-          console.log(`[email] logEmail OK without body (type=${data.type}, status=${data.status}, orderId=${data.orderId})`);
+          console.log(`[email] logEmail OK without body (type=${data.type}, orderId=${data.orderId})`);
         }
-      } else {
-        console.error(`[email] logEmail INSERT failed (type=${data.type}, orderId=${data.orderId}):`, error.code, error.message, error.details);
+      }
+      // If RLS policy violation (42501) — this means service role key is NOT being used
+      if (error.code === "42501") {
+        console.error(`[email] RLS POLICY VIOLATION — this means SUPABASE_SERVICE_ROLE_KEY is not set or not working. Check Vercel env vars!`);
       }
     } else {
       console.log(`[email] logEmail OK (type=${data.type}, status=${data.status}, orderId=${data.orderId})`);
@@ -151,36 +166,74 @@ interface AdminEmailParams extends StatusEmailParams {
 //  HELPER: resolve DB template or use built-in HTML
 // ═══════════════════════════════════════════════════════════
 
+const BRAND_FONT = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif';
+
+/**
+ * Blank Canvas resolver: the CMS body is the SOLE source of content.
+ * The template only provides branding wrapper (logo, layout, footer).
+ *
+ * Features:
+ * - Resolves {{vars}} in body text
+ * - Handles {{info_box}} tag — if present in body, replaces it; otherwise appends after body
+ * - Renders CTA button from site_settings if configured
+ * - Empty body → empty canvas (only logo + footer)
+ */
 async function resolveEmailContent(
-  bodyKey: string,
-  subjectKey: string,
+  templateType: string,
   vars: Record<string, string>,
   fallbackSubject: string,
-  fallbackHtml: string
+  fallbackBody: string
 ): Promise<{ subject: string; html: string }> {
-  const supabase = createEmailSupabaseClient();
-  const dbTemplate = await fetchEmailTemplate(supabase, bodyKey, subjectKey);
+  const bodyKey = `email_body_${templateType}`;
+  const subjectKey = `email_subject_${templateType}`;
+  const infoBoxKey = `email_info_box_${templateType}`;
+  const ctaTextKey = `email_cta_text_${templateType}`;
+  const ctaLinkKey = `email_cta_link_${templateType}`;
 
-  if (dbTemplate?.body && dbTemplate.body.trim().length > 0) {
-    const subject = dbTemplate.subject
-      ? resolveTemplateVars(dbTemplate.subject, vars)
-      : resolveTemplateVars(fallbackSubject, vars);
-    const resolvedBody = resolveTemplateVars(dbTemplate.body, vars);
-    const isHtml = /<[a-z][\s\S]*>/i.test(resolvedBody);
-    const html = isHtml
-      ? withStarkitTemplate(resolvedBody)
-      : withStarkitTemplate(`<div style="font-family:sans-serif;white-space:pre-wrap">${resolvedBody}</div>`);
-    return { subject, html };
+  // Fetch all settings in one query
+  const settings = await fetchSettings([bodyKey, subjectKey, infoBoxKey, ctaTextKey, ctaLinkKey]);
+
+  // Subject: DB value → fallback
+  const rawSubject = settings[subjectKey] || fallbackSubject;
+  const subject = resolveTemplateVars(rawSubject, vars);
+
+  // Body: DB value → fallback default
+  const rawBody = settings[bodyKey] || fallbackBody;
+  let resolvedBody = resolveTemplateVars(rawBody, vars);
+
+  // Info box: resolve {{info_box}} tag or append after body
+  const infoBoxText = settings[infoBoxKey] || "";
+  const infoBoxHtml = infoBoxText ? renderAlertBox(resolveTemplateVars(infoBoxText, vars), "info") : "";
+
+  if (resolvedBody.includes("{{info_box}}")) {
+    resolvedBody = resolvedBody.replace(/\{\{info_box\}\}/g, infoBoxHtml);
+  } else if (infoBoxHtml) {
+    resolvedBody += "\n" + infoBoxHtml;
   }
 
-  return { subject: resolveTemplateVars(fallbackSubject, vars), html: fallbackHtml };
+  // CTA button: render if both text and link are set
+  const ctaText = settings[ctaTextKey] || "";
+  const ctaLink = resolveTemplateVars(settings[ctaLinkKey] || "", vars);
+  const ctaHtml = ctaText && ctaLink ? renderCtaButton(ctaText, ctaLink) : "";
+  if (ctaHtml) {
+    resolvedBody += "\n" + ctaHtml;
+  }
+
+  // Wrap in branded template
+  const isHtml = /<[a-z][\s\S]*>/i.test(resolvedBody);
+  const bodyHtml = isHtml
+    ? resolvedBody
+    : `<div style="font-family:${BRAND_FONT};font-size:15px;color:#334155;line-height:1.65;white-space:pre-wrap">${resolvedBody}</div>`;
+  const html = withStarkitTemplate(bodyHtml);
+
+  return { subject, html };
 }
 
 // ═══════════════════════════════════════════════════════════
 //  HELPER: send + log
 // ═══════════════════════════════════════════════════════════
 
-async function sendAndLog(opts: {
+export async function sendAndLog(opts: {
   to: string;
   subject: string;
   html: string;
@@ -215,7 +268,7 @@ async function sendAndLog(opts: {
 export async function sendOrderReceivedEmail(params: StatusEmailParams) {
   const displayId = params.orderNumber || params.orderId;
 
-  const vars: OrderVars = {
+  const vars: Record<string, string> = {
     customer_name: params.customerName,
     order_number: displayId,
     start_date: params.startDate,
@@ -223,12 +276,13 @@ export async function sendOrderReceivedEmail(params: StatusEmailParams) {
     total_amount: `${params.totalAmount} zł`,
   };
 
+  const fallbackBody = `Cześć {{customer_name}},\n\nDziękujemy za złożenie rezerwacji {{order_number}}.\n\nOkres wynajmu: {{start_date}} – {{end_date}}\nŁączna kwota: {{total_amount}}\n\nNasz zespół weryfikuje dostępność sprzętu. Otrzymasz kolejną wiadomość z potwierdzeniem.\n\nPozdrawiamy,\nZespół Starkit`;
+
   const { subject, html } = await resolveEmailContent(
-    "email_body_order_received",
-    "email_subject_order_received",
-    vars as unknown as Record<string, string>,
+    "order_received",
+    vars,
     `Otrzymaliśmy Twoją rezerwację Starlink Mini — ${displayId}`,
-    buildOrderReceivedHtml(vars)
+    fallbackBody
   );
 
   try {
@@ -256,7 +310,7 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
     .single();
   const contractContent = contractRow?.value || "Treść regulaminu niedostępna.";
 
-  const vars: OrderVars = {
+  const vars: Record<string, string> = {
     customer_name: params.customerName,
     order_number: displayId,
     start_date: params.startDate,
@@ -269,12 +323,13 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
     inpost_point_address: params.inpostPointAddress,
   };
 
+  const fallbackBody = `Cześć {{customer_name}},\n\nTwoja rezerwacja {{order_number}} została oficjalnie potwierdzona!\n\nOkres wynajmu: {{start_date}} – {{end_date}} ({{rental_days}} dni)\nOpłata: {{rental_price}}\nKaucja: {{deposit}}\nŁącznie: {{total_amount}}\n\nPunkt InPost: {{inpost_point_id}}\n{{inpost_point_address}}\n\nW załączniku znajdziesz umowę najmu w formacie PDF.\n\nPozdrawiamy,\nZespół Starkit`;
+
   const { subject, html } = await resolveEmailContent(
-    "email_body_order_confirmed",
-    "email_subject_order_confirmed",
-    vars as unknown as Record<string, string>,
+    "order_confirmed",
+    vars,
     `Potwierdzenie rezerwacji SK-${displayId}`,
-    buildOrderConfirmedHtml(vars)
+    fallbackBody
   );
 
   // Generate PDF
@@ -326,7 +381,8 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
 
 export async function sendOrderPickedUpEmail(params: StatusEmailParams) {
   const displayId = params.orderNumber || params.orderId;
-  const vars: OrderVars = {
+
+  const vars: Record<string, string> = {
     customer_name: params.customerName,
     order_number: displayId,
     start_date: params.startDate,
@@ -334,12 +390,13 @@ export async function sendOrderPickedUpEmail(params: StatusEmailParams) {
     total_amount: `${params.totalAmount} zł`,
   };
 
+  const fallbackBody = `Cześć {{customer_name}},\n\nZamówienie {{order_number}} zostało wysłane!\n\nOtrzymasz SMS od InPost, gdy paczka będzie gotowa do odbioru.\n\nOkres wynajmu: {{start_date}} – {{end_date}}\n\nPozdrawiamy,\nZespół Starkit`;
+
   const { subject, html } = await resolveEmailContent(
-    "email_body_order_picked_up",
-    "email_subject_order_picked_up",
-    vars as unknown as Record<string, string>,
+    "order_picked_up",
+    vars,
     `Sprzęt w drodze! Instrukcja obsługi SK-${displayId}`,
-    buildOrderPickedUpHtml(vars)
+    fallbackBody
   );
 
   try {
@@ -356,7 +413,8 @@ export async function sendOrderPickedUpEmail(params: StatusEmailParams) {
 
 export async function sendOrderReturnedEmail(params: StatusEmailParams) {
   const displayId = params.orderNumber || params.orderId;
-  const vars: OrderVars = {
+
+  const vars: Record<string, string> = {
     customer_name: params.customerName,
     order_number: displayId,
     start_date: params.startDate,
@@ -364,12 +422,13 @@ export async function sendOrderReturnedEmail(params: StatusEmailParams) {
     total_amount: `${params.totalAmount} zł`,
   };
 
+  const fallbackBody = `Cześć {{customer_name}},\n\nPotwierdzamy odbiór zwróconego sprzętu z zamówienia {{order_number}}.\n\nKaucja zostanie zwrócona w ciągu 48h.\n\nDziękujemy za skorzystanie z Starkit!\nZespół Starkit`;
+
   const { subject, html } = await resolveEmailContent(
-    "email_body_order_returned",
-    "email_subject_order_returned",
-    vars as unknown as Record<string, string>,
+    "order_returned",
+    vars,
     `Potwierdzenie zwrotu sprzętu SK-${displayId}`,
-    buildOrderReturnedHtml(vars)
+    fallbackBody
   );
 
   try {
@@ -386,7 +445,8 @@ export async function sendOrderReturnedEmail(params: StatusEmailParams) {
 
 export async function sendOrderCancelledEmail(params: StatusEmailParams) {
   const displayId = params.orderNumber || params.orderId;
-  const vars: OrderVars = {
+
+  const vars: Record<string, string> = {
     customer_name: params.customerName,
     order_number: displayId,
     start_date: params.startDate,
@@ -394,12 +454,13 @@ export async function sendOrderCancelledEmail(params: StatusEmailParams) {
     total_amount: `${params.totalAmount} zł`,
   };
 
+  const fallbackBody = `Cześć {{customer_name}},\n\nTwoje zamówienie {{order_number}} zostało anulowane.\n\nJeśli dokonałeś płatności, zwrot nastąpi w ciągu 5–10 dni roboczych.\n\nJeśli masz pytania, skontaktuj się z nami: wynajem@starkit.pl\n\nPozdrawiamy,\nZespół Starkit`;
+
   const { subject, html } = await resolveEmailContent(
-    "email_body_order_cancelled",
-    "email_subject_order_cancelled",
-    vars as unknown as Record<string, string>,
+    "order_cancelled",
+    vars,
     `Informacja o anulowaniu zamówienia SK-${displayId}`,
-    buildOrderCancelledHtml(vars)
+    fallbackBody
   );
 
   try {
