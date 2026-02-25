@@ -87,14 +87,30 @@ function calculateRentalDays(startDate: string, endDate: string): number {
   return diffDays || 1;
 }
 
+// UUID v4 regex — used to validate order_id before FK insert
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function logEmail(data: EmailLogData) {
   const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-  console.log(`[email] logEmail called (type=${data.type}, status=${data.status}, orderId=${data.orderId}, serviceKey=${hasServiceKey})`);
+  const isValidUuid = UUID_RE.test(data.orderId);
+
+  console.log(`[email:log] ▶ type=${data.type} status=${data.status} orderId=${data.orderId} isUuid=${isValidUuid} serviceKey=${hasServiceKey}`);
+
+  if (!hasServiceKey) {
+    console.error(`[email:log] ██ CRITICAL ██ SUPABASE_SERVICE_ROLE_KEY is NOT SET — email_logs insert WILL FAIL due to RLS. Fix Vercel env vars!`);
+  }
 
   try {
     const supabase = createEmailSupabaseAdmin();
+
+    // If orderId is not a valid UUID, set to null to avoid FK violation (23503)
+    const safeOrderId = isValidUuid ? data.orderId : null;
+    if (!isValidUuid && data.orderId) {
+      console.warn(`[email:log] orderId "${data.orderId}" is NOT a valid UUID — setting order_id=NULL to avoid FK violation`);
+    }
+
     const basePayload: Record<string, unknown> = {
-      order_id: data.orderId,
+      order_id: safeOrderId,
       recipient: data.recipient,
       subject: data.subject,
       type: data.type,
@@ -103,31 +119,64 @@ async function logEmail(data: EmailLogData) {
       resend_id: data.resendId || null,
     };
 
-    // Try with body first (newer schema), fall back without it (original schema)
+    // Attempt 1: Insert with body column
     const { error } = await supabase.from("email_logs").insert({ ...basePayload, body: data.body ?? null });
 
-    if (error) {
-      console.error(`[email] SUPABASE LOG ERROR:`, JSON.stringify({ code: error.code, message: error.message, details: error.details, hint: (error as any).hint }));
+    if (!error) {
+      console.log(`[email:log] ✓ INSERT OK (type=${data.type}, orderId=${safeOrderId})`);
+      return;
+    }
 
-      // If body column doesn't exist (42703), retry without it
-      if (error.code === "42703" || error.message?.includes("body")) {
-        console.log(`[email] Retrying insert without body column...`);
-        const { error: error2 } = await supabase.from("email_logs").insert(basePayload);
-        if (error2) {
-          console.error(`[email] SUPABASE LOG ERROR (retry):`, JSON.stringify({ code: error2.code, message: error2.message, details: error2.details, hint: (error2 as any).hint }));
-        } else {
-          console.log(`[email] logEmail OK without body (type=${data.type}, orderId=${data.orderId})`);
-        }
+    const errInfo = { code: error.code, message: error.message, details: error.details, hint: (error as any).hint };
+    console.error(`[email:log] ✗ INSERT FAILED (attempt 1):`, JSON.stringify(errInfo));
+
+    // Attempt 2: If body column doesn't exist (42703), retry without it
+    if (error.code === "42703" || error.message?.includes("body")) {
+      console.log(`[email:log] Retrying without body column...`);
+      const { error: err2 } = await supabase.from("email_logs").insert(basePayload);
+      if (!err2) {
+        console.log(`[email:log] ✓ INSERT OK without body (type=${data.type}, orderId=${safeOrderId})`);
+        return;
       }
-      // If RLS policy violation (42501) — this means service role key is NOT being used
-      if (error.code === "42501") {
-        console.error(`[email] RLS POLICY VIOLATION — this means SUPABASE_SERVICE_ROLE_KEY is not set or not working. Check Vercel env vars!`);
+      console.error(`[email:log] ✗ INSERT FAILED (attempt 2, no body):`, JSON.stringify({ code: err2.code, message: err2.message, details: err2.details }));
+    }
+
+    // Attempt 3: If FK violation (23503) — order_id might reference non-existent order, try with NULL
+    if (error.code === "23503" || error.message?.includes("foreign key") || error.message?.includes("violates")) {
+      console.warn(`[email:log] FK violation — orderId ${safeOrderId} not found in orders table. Retrying with order_id=NULL...`);
+      const nullPayload = { ...basePayload, order_id: null, body: data.body ?? null };
+      const { error: err3 } = await supabase.from("email_logs").insert(nullPayload);
+      if (!err3) {
+        console.log(`[email:log] ✓ INSERT OK with order_id=NULL (type=${data.type})`);
+        return;
       }
+      console.error(`[email:log] ✗ INSERT FAILED (attempt 3, null order_id):`, JSON.stringify({ code: err3.code, message: err3.message }));
+    }
+
+    // Attempt 4: Nuclear — strip everything optional, bare minimum insert
+    if (error.code === "42501") {
+      console.error(`[email:log] ██ RLS POLICY VIOLATION (42501) ██ service_role key is not bypassing RLS. Run in Supabase SQL Editor:`);
+      console.error(`[email:log]   ALTER TABLE email_logs DISABLE ROW LEVEL SECURITY;`);
+      console.error(`[email:log]   -- OR: CREATE POLICY "service_role_all" ON email_logs FOR ALL TO service_role USING (true) WITH CHECK (true);`);
+    }
+
+    // Final fallback: try absolute minimum payload (no body, no order_id)
+    console.log(`[email:log] Final fallback: bare minimum insert...`);
+    const { error: errFinal } = await supabase.from("email_logs").insert({
+      order_id: null,
+      recipient: data.recipient,
+      subject: `[LOG FALLBACK] ${data.subject}`,
+      type: data.type,
+      status: data.status,
+      error_message: `Original orderId: ${data.orderId}. Log insert error: ${error.code} ${error.message}`,
+    });
+    if (!errFinal) {
+      console.log(`[email:log] ✓ FALLBACK INSERT OK (degraded, no order_id/body)`);
     } else {
-      console.log(`[email] logEmail OK (type=${data.type}, status=${data.status}, orderId=${data.orderId})`);
+      console.error(`[email:log] ██ ALL INSERT ATTEMPTS FAILED ██`, JSON.stringify({ code: errFinal.code, message: errFinal.message }));
     }
   } catch (e) {
-    console.error(`[email] logEmail EXCEPTION:`, e instanceof Error ? e.message : e);
+    console.error(`[email:log] ██ EXCEPTION ██`, e instanceof Error ? `${e.name}: ${e.message}` : e);
   }
 }
 
