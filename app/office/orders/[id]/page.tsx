@@ -707,10 +707,10 @@ export default function OfficeOrderDetailsPage() {
 
           {/* Communication History */}
           <div className="lg:col-span-12">
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardHeader className="border-b border-slate-100 pb-4">
-                <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
-                  <Mail className="h-5 w-5 text-slate-400" />
+            <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <Mail className="h-4 w-4" />
                   Historia Komunikacji
                 </CardTitle>
               </CardHeader>

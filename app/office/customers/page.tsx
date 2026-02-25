@@ -11,8 +11,12 @@ import {
   ShoppingCart,
   TrendingUp,
   ArrowUpDown,
+  Trash2,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -60,33 +64,63 @@ export default function OfficeCustomersPage() {
   const [sortField, setSortField] = useState<SortField>("last_order_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<CustomerStat | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function loadCustomers() {
+    setLoading(true);
+    setError(null);
+
+    const { data, error: fetchError } = await supabase
+      .from("customer_stats")
+      .select("*");
+
+    if (fetchError) {
+      setError(fetchError.message);
+      setCustomers([]);
+      setLoading(false);
+      return;
+    }
+
+    setCustomers((data ?? []) as CustomerStat[]);
+    setLoading(false);
+  }
+
   useEffect(() => {
-    let active = true;
+    void loadCustomers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    async function load() {
-      setLoading(true);
-      setError(null);
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from("customer_stats")
-        .select("*");
+    try {
+      const res = await fetch("/api/office/delete-customer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId: deleteTarget.id }),
+      });
+      const json = await res.json();
 
-      if (!active) return;
-
-      if (fetchError) {
-        setError(fetchError.message);
-        setCustomers([]);
-        setLoading(false);
+      if (!res.ok) {
+        setDeleteError(json?.error || "Błąd usuwania klienta");
+        setDeleting(false);
         return;
       }
 
-      setCustomers((data ?? []) as CustomerStat[]);
-      setLoading(false);
+      setDeleteTarget(null);
+      setDeleteError(null);
+      await loadCustomers();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Nieznany błąd");
+    } finally {
+      setDeleting(false);
     }
-
-    void load();
-    return () => { active = false; };
-  }, [supabase]);
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -263,6 +297,7 @@ export default function OfficeCustomersPage() {
                       onToggle={toggleSort}
                       align="left"
                     />
+                    <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Akcje</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -327,6 +362,20 @@ export default function OfficeCustomersPage() {
                       <td className="px-6 py-4 text-slate-700 text-xs">
                         {dateShort(c.last_order_at)}
                       </td>
+                      <td className="px-6 py-4 text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => {
+                            setDeleteError(null);
+                            setDeleteTarget(c);
+                          }}
+                          aria-label="Usuń klienta"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -335,6 +384,98 @@ export default function OfficeCustomersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => { if (!deleting) { setDeleteTarget(null); setDeleteError(null); } }}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {deleteTarget.total_orders > 0 ? (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">Nie można usunąć klienta</h3>
+                    <p className="text-xs text-slate-500">Klient ma przypisane zamówienia</p>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-700 mb-2">
+                  <strong>{deleteTarget.full_name || deleteTarget.email || "—"}</strong> ma{" "}
+                  <strong>{deleteTarget.total_orders}</strong> zamówień w systemie.
+                </p>
+                <p className="text-xs text-slate-500 mb-5">
+                  Aby usunąć klienta, musisz najpierw usunąć lub przenieść wszystkie jego zamówienia.
+                </p>
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setDeleteTarget(null); setDeleteError(null); }}
+                  >
+                    Zamknij
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+                    <Trash2 className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">Usuń klienta</h3>
+                    <p className="text-xs text-slate-500">Ta operacja jest nieodwracalna</p>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-700 mb-5">
+                  Czy na pewno chcesz usunąć klienta{" "}
+                  <strong>{deleteTarget.full_name || deleteTarget.email || "—"}</strong>?
+                </p>
+                {deleteError && (
+                  <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                    {deleteError}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setDeleteTarget(null); setDeleteError(null); }}
+                    disabled={deleting}
+                  >
+                    Anuluj
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? (
+                      <>
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        Usuwanie…
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="mr-1 h-4 w-4" />
+                        Usuń klienta
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
