@@ -251,6 +251,13 @@ const styles = StyleSheet.create({
     color: GRAY,
     textAlign: "center",
   },
+  signatureName: {
+    fontSize: 9,
+    fontWeight: 400,
+    color: DARK,
+    textAlign: "center",
+    marginTop: 2,
+  },
 });
 
 export const ContractTemplate: React.FC<ContractTemplateProps> = ({
@@ -298,7 +305,7 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
             <Image style={styles.logo} src={resolvedLogoUrl} />
             <View>
               <Text style={styles.title}>UMOWA NAJMU</Text>
-              <Text style={styles.headerMeta}>Starkit Sp. z o.o. | wynajem@starkit.pl</Text>
+              <Text style={styles.headerMeta}>Zakład Graficzny Maciej Godek | wynajem@starkit.pl</Text>
             </View>
           </View>
           <View style={styles.headerRight}>
@@ -318,7 +325,7 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
               <Text style={styles.partyLabel}>Wynajmuj\u0105cy</Text>
               <View style={styles.row}>
                 <Text style={styles.label}>Firma:</Text>
-                <Text style={styles.value}>Starkit Sp. z o.o.</Text>
+                <Text style={styles.value}>Zakład Graficzny Maciej Godek</Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Email:</Text>
@@ -489,10 +496,12 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
         <View style={styles.signaturesRow}>
           <View style={styles.signatureBox}>
             <View style={styles.signatureLine} />
+            <Text style={styles.signatureName}>Maciej Godek</Text>
             <Text style={styles.signatureLabel}>Wynajmuj\u0105cy</Text>
           </View>
           <View style={styles.signatureBox}>
             <View style={styles.signatureLine} />
+            <Text style={styles.signatureName}>{customerName}</Text>
             <Text style={styles.signatureLabel}>Najemca</Text>
           </View>
         </View>
@@ -500,7 +509,7 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
         {/* ── Footer ── */}
         <View style={styles.footer} fixed>
           <Text style={styles.footerText}>
-            Starkit Sp. z o.o. | Dokument wygenerowany automatycznie | www.starkit.pl
+            Zakład Graficzny Maciej Godek | Dokument wygenerowany automatycznie | www.starkit.pl
           </Text>
           <View style={styles.footerRight}>
             <Text style={styles.footerText}>{orderNumber}</Text>

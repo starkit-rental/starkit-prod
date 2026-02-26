@@ -191,14 +191,17 @@ function renderAstNode(node: AstNode, key: string): React.ReactElement | string 
 
   // Lists
   if (tag === "ul" || tag === "ol") {
+    // Count actual <li> elements for proper numbering
+    let listItemCounter = 0;
     return (
       <View key={key} style={{ marginBottom: 3, marginTop: 1 }}>
         {(node.children ?? []).map((child, i) => {
           if (child.type === "element" && child.tag === "li") {
-            const bullet = tag === "ol" ? `${i + 1}.` : "\u2022";
+            listItemCounter++;
+            const bullet = tag === "ol" ? `${listItemCounter}.` : "\u2022";
             const liChildren = (child.children ?? []).map((c, j) => renderAstNode(c, `${key}-li-${i}-${j}`)).filter(Boolean);
             return (
-              <View key={`${key}-li-${i}`} style={{ flexDirection: "row", marginBottom: 1.5, paddingLeft: 4 }}>
+              <View key={`${key}-li-${i}`} wrap={false} style={{ flexDirection: "row", marginBottom: 1.5, paddingLeft: 4 }}>
                 <Text style={{ fontSize: BASE_FONT_SIZE, width: tag === "ol" ? 14 : 8, color: "#64748b" }}>
                   {bullet}
                 </Text>
