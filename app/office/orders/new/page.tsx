@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
+import { calculatePrice, type PricingTier } from "@/lib/rental-engine";
 
 // ═══════════════════════════════════════════════════════════
 //  TYPES
@@ -124,6 +125,8 @@ export default function NewOrderPage() {
   const [endDate, setEndDate] = useState(format(addDays(new Date(), 3), "yyyy-MM-dd"));
   const [dailyRate, setDailyRate] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
+  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
+  const [autoIncrementMultiplier, setAutoIncrementMultiplier] = useState(1.0);
 
   // ── Order state ──
   const [submitting, setSubmitting] = useState(false);
@@ -213,25 +216,56 @@ export default function NewOrderPage() {
   }, [startDate, endDate]);
 
   // Auto-fill pricing when product selected
-  function handleSelectProduct(productId: string) {
+  async function handleSelectProduct(productId: string) {
     setSelectedProductId(productId);
     const p = products.find((pr) => pr.id === productId);
     if (p) {
       if (p.basePriceDay) setDailyRate(String(p.basePriceDay));
       if (p.depositAmount) setDepositAmount(String(p.depositAmount));
     }
+
+    // Fetch pricing tiers for this product
+    try {
+      const res = await fetch(`/api/pricing-tiers?productId=${productId}`);
+      const json = await res.json();
+      setPricingTiers(json?.tiers ?? []);
+      setAutoIncrementMultiplier(json?.autoIncrementMultiplier ?? 1.0);
+    } catch (err) {
+      console.error("Failed to fetch pricing tiers:", err);
+      setPricingTiers([]);
+      setAutoIncrementMultiplier(1.0);
+    }
   }
 
-  // ── Pricing calculation ──
+  // ── Pricing calculation with tiered pricing ──
   const pricing = useMemo(() => {
-    const days = diffDays(startDate, endDate);
     const rate = parseFloat(dailyRate || "0");
     const dep = parseFloat(depositAmount || "0");
-    if (days <= 0 || rate <= 0) return null;
-    const rentalTotal = days * rate;
-    const total = rentalTotal + dep;
-    return { days, dailyRate: rate, rentalTotal, deposit: dep, total };
-  }, [startDate, endDate, dailyRate, depositAmount]);
+    if (!startDate || !endDate || rate <= 0) return null;
+
+    try {
+      const result = calculatePrice({
+        startDate,
+        endDate,
+        dailyRateCents: Math.round(rate * 100),
+        depositCents: Math.round(dep * 100),
+        pricingTiers: pricingTiers.length > 0 ? pricingTiers : undefined,
+        autoIncrementMultiplier,
+      });
+
+      return {
+        days: result.days,
+        dailyRate: result.dailyRateCentsApplied / 100,
+        rentalTotal: result.rentalSubtotalCents / 100,
+        deposit: result.depositCents / 100,
+        total: result.totalCents / 100,
+        discountApplied: result.discountApplied,
+      };
+    } catch (err) {
+      console.error("Pricing calculation error:", err);
+      return null;
+    }
+  }, [startDate, endDate, dailyRate, depositAmount, pricingTiers, autoIncrementMultiplier]);
 
   // ── Availability warning ──
   const selectedProduct = products.find((p) => p.id === selectedProductId);

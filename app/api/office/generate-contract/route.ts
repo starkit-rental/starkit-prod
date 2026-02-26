@@ -3,6 +3,7 @@ import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@supabase/supabase-js";
 import ContractTemplate from "@/lib/pdf/ContractTemplate";
+import { calculatePrice, type PricingTier } from "@/lib/rental-engine";
 
 function createSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -70,14 +71,97 @@ export async function POST(req: NextRequest) {
       .single();
     const contractContent = contractRow?.value || "Treść regulaminu niedostępna.";
 
-    // Build display values
+    // Get product info to fetch pricing tiers
+    const orderItems = Array.isArray(order.order_items) ? order.order_items : [];
+    let productId: string | null = null;
+    let basePriceDay = 0;
+    let depositAmount = 0;
+
+    if (orderItems.length > 0) {
+      const firstItem = orderItems[0];
+      const stockItem = Array.isArray(firstItem?.stock_items) ? firstItem.stock_items[0] : firstItem?.stock_items;
+      const product = Array.isArray(stockItem?.products) ? stockItem.products[0] : stockItem?.products;
+      if (product) {
+        productId = product.id;
+        // Fetch full product details for base pricing
+        const { data: productData } = await supabase
+          .from("products")
+          .select("base_price_day, deposit_amount, auto_increment_multiplier")
+          .eq("id", productId)
+          .maybeSingle();
+        if (productData) {
+          basePriceDay = Number(productData.base_price_day ?? 0);
+          depositAmount = Number(productData.deposit_amount ?? 0);
+        }
+      }
+    }
+
+    // Fetch pricing tiers if we have a product
+    let pricingTiers: PricingTier[] = [];
+    let autoIncrementMultiplier = 1.0;
+    if (productId) {
+      const { data: tiersData } = await supabase
+        .from("pricing_tiers")
+        .select("tier_days, multiplier, label")
+        .eq("product_id", productId)
+        .order("tier_days", { ascending: true });
+      
+      if (tiersData && tiersData.length > 0) {
+        pricingTiers = tiersData.map((t: any) => ({
+          tier_days: t.tier_days,
+          multiplier: t.multiplier,
+          label: t.label,
+        }));
+      }
+
+      const { data: productData } = await supabase
+        .from("products")
+        .select("auto_increment_multiplier")
+        .eq("id", productId)
+        .maybeSingle();
+      if (productData) {
+        autoIncrementMultiplier = productData.auto_increment_multiplier ?? 1.0;
+      }
+    }
+
+    // Recalculate pricing with tiers (don't trust stored values)
     const displayNumber = formatOrderNumber(order.order_number, orderId);
-    const rentalDays = calculateRentalDays(order.start_date, order.end_date);
-    const rental = Number(String(order.total_rental_price ?? 0));
-    const dep = Number(String(order.total_deposit ?? 0));
-    const rentalSafe = Number.isFinite(rental) ? rental : 0;
-    const depositSafe = Number.isFinite(dep) ? dep : 0;
-    const total = rentalSafe + depositSafe;
+    let rentalSafe = 0;
+    let depositSafe = 0;
+    let total = 0;
+    let rentalDays = calculateRentalDays(order.start_date, order.end_date);
+
+    if (basePriceDay > 0) {
+      try {
+        const pricingResult = calculatePrice({
+          startDate: order.start_date,
+          endDate: order.end_date,
+          dailyRateCents: Math.round(basePriceDay * 100),
+          depositCents: Math.round(depositAmount * 100),
+          pricingTiers: pricingTiers.length > 0 ? pricingTiers : undefined,
+          autoIncrementMultiplier,
+        });
+        rentalSafe = pricingResult.rentalSubtotalCents / 100;
+        depositSafe = pricingResult.depositCents / 100;
+        total = pricingResult.totalCents / 100;
+        rentalDays = pricingResult.days;
+      } catch (err) {
+        console.error("[generate-contract] Pricing calculation failed, falling back to stored values:", err);
+        // Fallback to stored values if calculation fails
+        const rental = Number(String(order.total_rental_price ?? 0));
+        const dep = Number(String(order.total_deposit ?? 0));
+        rentalSafe = Number.isFinite(rental) ? rental : 0;
+        depositSafe = Number.isFinite(dep) ? dep : 0;
+        total = rentalSafe + depositSafe;
+      }
+    } else {
+      // No product pricing found, use stored values
+      const rental = Number(String(order.total_rental_price ?? 0));
+      const dep = Number(String(order.total_deposit ?? 0));
+      rentalSafe = Number.isFinite(rental) ? rental : 0;
+      depositSafe = Number.isFinite(dep) ? dep : 0;
+      total = rentalSafe + depositSafe;
+    }
 
     const customerName = (customer as any).full_name || (customer as any).company_name || (customer as any).email || "—";
     const customerEmail = (customer as any).email || "—";
@@ -114,7 +198,7 @@ export async function POST(req: NextRequest) {
     });
     const pdfBuffer = await renderToBuffer(pdfElement as any);
 
-    console.log(`[generate-contract] PDF generated for ${displayNumber} (${pdfBuffer.length} bytes)`);
+    console.log(`[generate-contract] PDF generated for ${displayNumber} (${pdfBuffer.length} bytes, ${pricingTiers.length} tiers applied)`);
 
     // Upload to Supabase Storage — /contracts/{orderId}/{filename}
     const filename = `Umowa_Najmu_Starkit_${displayNumber.replace(/[^a-zA-Z0-9-]/g, "_")}.pdf`;
