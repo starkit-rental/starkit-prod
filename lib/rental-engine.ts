@@ -240,14 +240,14 @@ export function calculatePrice(input: CalculatePriceInput): CalculatePriceResult
     }
 
     if (matchedTier) {
-      dailyRateCentsApplied = Math.round(dailyRateCents * matchedTier.multiplier);
-      
-      // If days exceed the highest tier, apply auto_increment_multiplier for extra days
+      // Multiplier is the TOTAL price for this tier (not per-day)
+      // e.g., 3 days with multiplier=3 and base=5zł → 5*3 = 15zł total
       const highestTier = sortedTiers[sortedTiers.length - 1];
-      if (days > highestTier.tier_days && autoIncrementMultiplier !== 1.0) {
-        const baseDays = highestTier.tier_days;
-        const extraDays = days - baseDays;
-        const baseCost = Math.round(dailyRateCents * highestTier.multiplier * baseDays);
+      
+      // If rental days exceed the highest tier, add extra days with autoIncrementMultiplier
+      if (days > highestTier.tier_days) {
+        const baseCost = Math.round(dailyRateCents * highestTier.multiplier);
+        const extraDays = days - highestTier.tier_days;
         const extraCost = Math.round(dailyRateCents * autoIncrementMultiplier * extraDays);
         const rentalSubtotalCents = baseCost + extraCost;
         const totalCents = rentalSubtotalCents + depositCents;
@@ -261,6 +261,19 @@ export function calculatePrice(input: CalculatePriceInput): CalculatePriceResult
           discountApplied: true,
         };
       }
+      
+      // Days within tier range - use tier multiplier
+      const rentalSubtotalCents = Math.round(dailyRateCents * matchedTier.multiplier);
+      const totalCents = rentalSubtotalCents + depositCents;
+      
+      return {
+        days,
+        dailyRateCentsApplied: Math.round(rentalSubtotalCents / days),
+        rentalSubtotalCents,
+        depositCents,
+        totalCents,
+        discountApplied: true,
+      };
     } else {
       // No tier matched, use base price
       dailyRateCentsApplied = dailyRateCents;

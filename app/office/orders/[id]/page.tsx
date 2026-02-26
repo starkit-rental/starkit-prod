@@ -30,6 +30,9 @@ import {
   X,
   XCircle,
   Zap,
+  FileText,
+  Download,
+  ExternalLink,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -841,6 +844,9 @@ export default function OfficeOrderDetailsPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* PDF Contract */}
+            <ContractPdfCard orderId={orderId!} supabase={supabase} />
           </div>
 
           {/* Communication History */}
@@ -1768,6 +1774,165 @@ function EditOrderPanel({
           )}
           {saving ? "Zapisywanie…" : "Zapisz zmiany"}
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─────────────────── Contract PDF Card ─────────────────── */
+
+function ContractPdfCard({
+  orderId,
+  supabase,
+}: {
+  orderId: string;
+  supabase: ReturnType<typeof createSupabaseBrowserClient>;
+}) {
+  const [generating, setGenerating] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfFilename, setPdfFilename] = useState<string | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Check if PDF already exists in storage
+  useEffect(() => {
+    async function checkExistingPdf() {
+      try {
+        const { data: files } = await supabase.storage
+          .from("contracts")
+          .list(`contracts/${orderId}`);
+
+        if (files && files.length > 0) {
+          const pdfFile = files.find((f) => f.name.endsWith(".pdf"));
+          if (pdfFile) {
+            const path = `contracts/${orderId}/${pdfFile.name}`;
+            const { data: signedUrl } = await supabase.storage
+              .from("contracts")
+              .createSignedUrl(path, 60 * 60 * 24); // 24h
+            if (signedUrl?.signedUrl) {
+              setPdfUrl(signedUrl.signedUrl);
+              setPdfFilename(pdfFile.name);
+            }
+          }
+        }
+      } catch {
+        // Storage bucket may not exist yet — that's fine
+      } finally {
+        setChecking(false);
+      }
+    }
+    void checkExistingPdf();
+  }, [orderId, supabase]);
+
+  async function handleGenerate() {
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/office/generate-contract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Błąd generowania PDF");
+
+      if (json.url) {
+        setPdfUrl(json.url);
+        setPdfFilename(json.filename);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Nieznany błąd");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  return (
+    <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <FileText className="h-4 w-4" />
+          Umowa PDF
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {checking ? (
+          <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Sprawdzanie…
+          </div>
+        ) : pdfUrl ? (
+          <>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <div className="flex items-center gap-2 text-sm text-emerald-700">
+                <FileText className="h-4 w-4 shrink-0" />
+                <span className="truncate font-medium">{pdfFilename || "Umowa.pdf"}</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 gap-1.5 h-8 text-xs"
+                onClick={() => window.open(pdfUrl, "_blank")}
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Podgląd
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 gap-1.5 h-8 text-xs"
+                asChild
+              >
+                <a href={pdfUrl} download={pdfFilename || "Umowa.pdf"}>
+                  <Download className="h-3.5 w-3.5" />
+                  Pobierz
+                </a>
+              </Button>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full gap-1.5 h-8 text-xs text-slate-500"
+              onClick={handleGenerate}
+              disabled={generating}
+            >
+              {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+              Generuj ponownie
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="text-xs text-slate-500">
+              Brak wygenerowanej umowy. Kliknij, aby wygenerować PDF z aktualnym regulaminem.
+            </p>
+            <Button
+              size="sm"
+              className="w-full gap-1.5 h-9 bg-[#1a1a2e] hover:bg-[#2a2a4e] text-white text-xs"
+              onClick={handleGenerate}
+              disabled={generating}
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Generowanie…
+                </>
+              ) : (
+                <>
+                  <FileText className="h-3.5 w-3.5" />
+                  Generuj umowę PDF
+                </>
+              )}
+            </Button>
+          </>
+        )}
+
+        {error && (
+          <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+            {error}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

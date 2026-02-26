@@ -71,14 +71,22 @@ export async function POST(req: Request) {
 
     // Update autoIncrementMultiplier in products table
     if (autoIncrementMultiplier !== undefined) {
-      await supabase
+      const { error: updateErr } = await supabase
         .from("products")
         .update({ auto_increment_multiplier: autoIncrementMultiplier })
         .eq("id", productId);
+      if (updateErr) {
+        console.error("[pricing-tiers POST] update multiplier failed:", updateErr);
+        return NextResponse.json({ error: updateErr.message }, { status: 500 });
+      }
     }
 
     // Delete existing tiers for this product
-    await supabase.from("pricing_tiers").delete().eq("product_id", productId);
+    const { error: deleteErr } = await supabase.from("pricing_tiers").delete().eq("product_id", productId);
+    if (deleteErr) {
+      console.error("[pricing-tiers POST] delete tiers failed:", deleteErr);
+      return NextResponse.json({ error: deleteErr.message }, { status: 500 });
+    }
 
     // Insert new tiers
     const tiersToInsert = tiers.map((tier, idx) => ({
@@ -100,6 +108,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ tiers: data });
   } catch (e) {
+    console.error("[pricing-tiers POST] unhandled error:", e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 }

@@ -73,6 +73,20 @@ export async function POST(req: NextRequest) {
 
     // Get product info to fetch pricing tiers
     const orderItems = Array.isArray(order.order_items) ? order.order_items : [];
+
+    // Build items list for §2
+    const pdfOrderItems = orderItems
+      .map((it: any) => {
+        const stock = Array.isArray(it?.stock_items) ? it.stock_items[0] : it?.stock_items;
+        const product = Array.isArray(stock?.products) ? stock.products[0] : stock?.products;
+        if (!product) return null;
+        return {
+          name: String(product.name ?? "—"),
+          serialNumber: stock?.serial_number ? String(stock.serial_number) : undefined,
+        };
+      })
+      .filter(Boolean) as { name: string; serialNumber?: string }[];
+
     let productId: string | null = null;
     let basePriceDay = 0;
     let depositAmount = 0;
@@ -195,6 +209,7 @@ export async function POST(req: NextRequest) {
       inpostPointAddress: order.inpost_point_address || "",
       contractContent,
       rentalDays,
+      orderItems: pdfOrderItems,
     });
     const pdfBuffer = await renderToBuffer(pdfElement as any);
 

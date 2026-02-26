@@ -283,12 +283,17 @@ export function HtmlContent({
 }
 
 /**
- * Split parsed HTML content into roughly equal halves for multi-column layout.
- * Returns [leftHtml, rightHtml] substrings.
+ * Strip HTML tags to get approximate text length for balancing columns.
  */
-export function splitHtmlForColumns(html: string): [string, string] {
-  // Split by top-level block elements
-  const blockRegex = /(<(?:p|h[1-6]|ul|ol|li|div|blockquote)[^>]*>[\s\S]*?<\/(?:p|h[1-6]|ul|ol|li|div|blockquote)>|<(?:br|hr)\s*\/?>)/gi;
+function stripHtmlTags(html: string): string {
+  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+}
+
+/**
+ * Extract top-level HTML blocks from an HTML string.
+ */
+function extractBlocks(html: string): string[] {
+  const blockRegex = /(<(?:p|h[1-6]|ul|ol|div|blockquote|table)[^>]*>[\s\S]*?<\/(?:p|h[1-6]|ul|ol|div|blockquote|table)>|<(?:br|hr)\s*\/?>)/gi;
   const blocks: string[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -307,11 +312,126 @@ export function splitHtmlForColumns(html: string): [string, string] {
     if (rest) blocks.push(rest);
   }
 
-  if (blocks.length <= 1) return [html, ""];
+  return blocks;
+}
 
-  const midpoint = Math.ceil(blocks.length / 2);
-  const left = blocks.slice(0, midpoint).join("\n");
-  const right = blocks.slice(midpoint).join("\n");
+/**
+ * Estimate the rendered height (in PDF points) of an HTML block.
+ *
+ * A4 usable column width = (595 - 80 padding - 16 gap) / 2 = ~249pt
+ * Font size = 7.5pt, line height = 1.45 => line height = ~10.9pt
+ * Chars per line at 7.5pt Roboto in 249pt column ≈ 60 chars
+ * Lists get extra indentation so slightly fewer chars per line.
+ */
+function estimateBlockHeight(blockHtml: string): number {
+  const text = stripHtmlTags(blockHtml);
+  if (!text) return 0;
 
-  return [left, right];
+  const isHeading = /^<h[1-6]/i.test(blockHtml.trim());
+  const isList = /^<[uo]l/i.test(blockHtml.trim());
+
+  const FONT_SIZE = 7.5;
+  const LINE_HEIGHT_RATIO = 1.45;
+  const LINE_H = FONT_SIZE * LINE_HEIGHT_RATIO; // ~10.9pt
+  const CHARS_PER_LINE = isList ? 52 : 60; // lists are narrower due to bullet indent
+  const BLOCK_MARGIN = 3; // marginBottom
+
+  if (isHeading) {
+    return FONT_SIZE * 1.2 * LINE_HEIGHT_RATIO + BLOCK_MARGIN + 6; // heading top margin
+  }
+
+  if (isList) {
+    // Each li item: estimate its own wrapped lines
+    const liTexts = blockHtml.match(/<li[^>]*>([\s\S]*?)<\/li>/gi) ?? [];
+    let total = 0;
+    for (const li of liTexts) {
+      const liText = stripHtmlTags(li);
+      const lines = Math.max(1, Math.ceil(liText.length / CHARS_PER_LINE));
+      total += lines * LINE_H + 1.5; // 1.5 marginBottom per li
+    }
+    return total + BLOCK_MARGIN + 1; // list marginTop
+  }
+
+  // Paragraph
+  const lines = Math.max(1, Math.ceil(text.length / CHARS_PER_LINE));
+  return lines * LINE_H + BLOCK_MARGIN;
+}
+
+/**
+ * Split HTML into pages of two columns each.
+ * Uses estimated block height to decide when a column is full.
+ * Returns array of [leftHtml, rightHtml] tuples — one per page.
+ */
+export function splitHtmlIntoPageColumns(html: string, _unused?: number): [string, string][] {
+  const blocks = extractBlocks(html);
+  if (blocks.length === 0) return [["", ""]];
+
+  // A4 height 841.89pt, padding top 35 + bottom 55 = 90pt, footer ~28pt
+  // First page: minus section title ~20pt + margin 8pt
+  const PAGE_HEIGHT = 841.89 - 90 - 28; // ~724pt usable
+  const FIRST_PAGE_COL_HEIGHT = PAGE_HEIGHT - 28; // minus section title
+  const OTHER_PAGE_COL_HEIGHT = PAGE_HEIGHT;
+
+  const pages: [string, string][] = [];
+  let leftBlocks: string[] = [];
+  let rightBlocks: string[] = [];
+  let leftHeight = 0;
+  let rightHeight = 0;
+  let isFirstPage = true;
+  let fillingLeft = true;
+
+  const getColHeight = () => isFirstPage ? FIRST_PAGE_COL_HEIGHT : OTHER_PAGE_COL_HEIGHT;
+
+  const flushPage = () => {
+    pages.push([leftBlocks.join("\n"), rightBlocks.join("\n")]);
+    leftBlocks = [];
+    rightBlocks = [];
+    leftHeight = 0;
+    rightHeight = 0;
+    isFirstPage = false;
+    fillingLeft = true;
+  };
+
+  for (const block of blocks) {
+    const h = estimateBlockHeight(block);
+    const colHeight = getColHeight();
+
+    if (fillingLeft) {
+      if (leftHeight + h > colHeight && leftBlocks.length > 0) {
+        // Left column full, switch to right
+        fillingLeft = false;
+        rightBlocks.push(block);
+        rightHeight += h;
+      } else {
+        leftBlocks.push(block);
+        leftHeight += h;
+      }
+    } else {
+      if (rightHeight + h > colHeight && rightBlocks.length > 0) {
+        // Right column full, emit page and start new
+        flushPage();
+        leftBlocks.push(block);
+        leftHeight += h;
+      } else {
+        rightBlocks.push(block);
+        rightHeight += h;
+      }
+    }
+  }
+
+  // Emit last page
+  if (leftBlocks.length > 0 || rightBlocks.length > 0) {
+    pages.push([leftBlocks.join("\n"), rightBlocks.join("\n")]);
+  }
+
+  return pages.length > 0 ? pages : [["", ""]];
+}
+
+/**
+ * @deprecated Use splitHtmlIntoPageColumns instead.
+ * Split parsed HTML content into two balanced columns by text length.
+ */
+export function splitHtmlForColumns(html: string): [string, string] {
+  const pages = splitHtmlIntoPageColumns(html, 99999);
+  return pages[0] ?? ["", ""];
 }

@@ -394,6 +394,34 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
     .single();
   const contractContent = contractRow?.value || "Treść regulaminu niedostępna.";
 
+  // Pobierz produkty z zamówienia dla §2 PDF
+  let pdfOrderItems: { name: string; serialNumber?: string }[] = [];
+  try {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (UUID_RE.test(params.orderId)) {
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("order_items(stock_item_id,stock_items(serial_number,products(name)))")
+        .eq("id", params.orderId)
+        .maybeSingle();
+
+      const items = (orderData?.order_items ?? []) as any[];
+      pdfOrderItems = items
+        .map((it) => {
+          const stock = Array.isArray(it?.stock_items) ? it.stock_items[0] : it?.stock_items;
+          const product = Array.isArray(stock?.products) ? stock.products[0] : stock?.products;
+          if (!product) return null;
+          return {
+            name: String(product.name ?? "—"),
+            serialNumber: stock?.serial_number ? String(stock.serial_number) : undefined,
+          };
+        })
+        .filter(Boolean) as { name: string; serialNumber?: string }[];
+    }
+  } catch (e) {
+    console.warn("[email] Could not fetch order items for PDF §2:", e);
+  }
+
   const vars: Record<string, string> = {
     customer_name: params.customerName,
     order_number: displayId,
@@ -452,6 +480,7 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
         inpostPointAddress={params.inpostPointAddress}
         contractContent={contractContent}
         rentalDays={rentalDays}
+        orderItems={pdfOrderItems.length > 0 ? pdfOrderItems : undefined}
       />
     );
     console.log(`[email] PDF generated for ${displayId} (${pdfBuffer.length} bytes)`);

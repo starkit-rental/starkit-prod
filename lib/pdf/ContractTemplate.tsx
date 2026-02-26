@@ -1,7 +1,7 @@
 import React from "react";
 import path from "path";
 import { Document, Page, Text, View, Image, StyleSheet, Font } from "@react-pdf/renderer";
-import { HtmlContent, splitHtmlForColumns } from "./html-to-pdf";
+import { HtmlContent, splitHtmlIntoPageColumns } from "./html-to-pdf";
 
 // Roboto — pełna obsługa polskich znaków (Latin Extended)
 // Use local TTF files from /public/fonts/ — CDN URLs unreliable in server-side PDF rendering
@@ -47,6 +47,7 @@ export interface ContractTemplateProps {
   contractContent: string;
   rentalDays?: number;
   logoUrl?: string;
+  orderItems?: { name: string; serialNumber?: string }[];
 }
 
 const GOLD = "#D4A843";
@@ -205,12 +206,22 @@ const styles = StyleSheet.create({
     color: DARK,
   },
   // §5 Multi-column legal
+  legalPage: {
+    paddingTop: 35,
+    paddingBottom: 55,
+    paddingHorizontal: 40,
+    fontSize: 7.5,
+    fontFamily: "Roboto",
+    lineHeight: 1.45,
+    color: DARK,
+  },
   legalSection: {
     marginBottom: 8,
   },
   legalColumnsRow: {
     flexDirection: "row",
-    gap: 14,
+    gap: 16,
+    flex: 1,
   },
   legalColumn: {
     flex: 1,
@@ -282,6 +293,7 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
   contractContent,
   rentalDays,
   logoUrl,
+  orderItems,
 }) => {
   const currentDate = new Date().toLocaleDateString("pl-PL", {
     day: "2-digit",
@@ -292,10 +304,6 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
   // Detect if contractContent is HTML (from TipTap editor) or plain text
   const isHtmlContent = /<[a-z][\s\S]*>/i.test(contractContent);
 
-  // Split legal content into 2 columns
-  const [leftLegalHtml, rightLegalHtml] = isHtmlContent
-    ? splitHtmlForColumns(contractContent)
-    : ["", ""];
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
   const resolvedLogoUrl = logoUrl || `${baseUrl}/logo.png`;
@@ -326,7 +334,7 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
           <View style={styles.partiesRow}>
             {/* Wynajmujący */}
             <View style={styles.partyBox}>
-              <Text style={styles.partyLabel}>Wynajmuj\u0105cy</Text>
+              <Text style={styles.partyLabel}>Wynajmujący</Text>
               <View style={styles.row}>
                 <Text style={styles.label}>Firma:</Text>
                 <Text style={styles.value}>Zakład Graficzny Maciej Godek</Text>
@@ -340,7 +348,7 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
             <View style={styles.partyBox}>
               <Text style={styles.partyLabel}>Najemca</Text>
               <View style={styles.row}>
-                <Text style={styles.label}>Imi\u0119 i nazwisko:</Text>
+                <Text style={styles.label}>Imię i nazwisko:</Text>
                 <Text style={styles.value}>{customerName}</Text>
               </View>
               <View style={styles.row}>
@@ -376,11 +384,23 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
         {/* ── §2 Przedmiot najmu ── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{"\u00A7"}2 Przedmiot najmu</Text>
-          <Text style={styles.paragraph}>
-            Wynajmuj\u0105cy oddaje Najemcy w najem zestaw Starlink Mini wraz z niezb\u0119dnym
-            wyposa\u017Ceniem (router, kable, instrukcja obs\u0142ugi) na okres okre\u015Blony
-            w {"\u00A7"}3 niniejszej umowy.
-          </Text>
+          {orderItems && orderItems.length > 0 ? (
+            <View style={styles.tableContainer}>
+              {orderItems.map((item, idx) => (
+                <View key={idx} style={styles.row}>
+                  <Text style={styles.label}>{item.name}</Text>
+                  {item.serialNumber && (
+                    <Text style={styles.value}>SN: {item.serialNumber}</Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.paragraph}>
+              Wynajmujący oddaje Najemcy w najem sprzęt wraz z niezbędnym
+              wyposażeniem na okres określony w {"\u00A7"}3 niniejszej umowy.
+            </Text>
+          )}
         </View>
 
         {/* ── §3 Okres najmu — Compact row ── */}
@@ -389,11 +409,11 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
           <View style={styles.partiesRow}>
             <View style={styles.partyBox}>
               <View style={styles.row}>
-                <Text style={styles.label}>Rozpocz\u0119cie:</Text>
+                <Text style={styles.label}>Rozpoczęcie:</Text>
                 <Text style={styles.value}>{startDate}</Text>
               </View>
               <View style={styles.row}>
-                <Text style={styles.label}>Zako\u0144czenie:</Text>
+                <Text style={styles.label}>Zakończenie:</Text>
                 <Text style={styles.value}>{endDate}</Text>
               </View>
               {rentalDays && (
@@ -423,77 +443,25 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
           <Text style={styles.sectionTitle}>{"\u00A7"}4 Wynagrodzenie i kaucja</Text>
           <View style={styles.tableContainer}>
             <View style={styles.row}>
-              <Text style={styles.label}>Op\u0142ata za najem:</Text>
-              <Text style={styles.value}>{rentalPrice} z\u0142</Text>
+              <Text style={styles.label}>Opłata za najem:</Text>
+              <Text style={styles.value}>{rentalPrice} zł</Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>Kaucja zwrotna:</Text>
-              <Text style={styles.value}>{deposit} z\u0142</Text>
+              <Text style={styles.value}>{deposit} zł</Text>
             </View>
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>\u0141\u0105cznie:</Text>
-              <Text style={styles.totalValue}>{totalAmount} z\u0142</Text>
+              <Text style={styles.totalLabel}>Łącznie:</Text>
+              <Text style={styles.totalValue}>{totalAmount} zł</Text>
             </View>
           </View>
 
           <View style={styles.highlight}>
             <Text style={styles.highlightText}>
-              Kaucja zostanie zwr\u00F3cona na konto Najemcy w ci\u0105gu 48 godzin od momentu zwrotu
-              i weryfikacji sprz\u0119tu pod warunkiem braku uszkodze\u0144 i kompletno\u015Bci zestawu.
+              Kaucja zostanie zwrócona na konto Najemcy w ciągu 48 godzin od momentu zwrotu
+              i weryfikacji sprzętu pod warunkiem braku uszkodzeń i kompletności zestawu.
             </Text>
           </View>
-        </View>
-
-        {/* ── §5 Regulamin — Multi-column fine-print ── */}
-        <View style={styles.legalSection}>
-          <Text style={styles.sectionTitle}>{"\u00A7"}5 Regulamin wynajmu</Text>
-
-          {isHtmlContent ? (
-            <View style={styles.legalColumnsRow}>
-              <HtmlContent html={leftLegalHtml} style={styles.legalColumn} />
-              {rightLegalHtml && (
-                <HtmlContent html={rightLegalHtml} style={styles.legalColumn} />
-              )}
-            </View>
-          ) : (
-            // Fallback for plain text content (legacy)
-            <View style={styles.legalColumnsRow}>
-              {(() => {
-                const paragraphs = contractContent
-                  .split("\n\n")
-                  .map((p) => p.trim())
-                  .filter(Boolean);
-                const mid = Math.ceil(paragraphs.length / 2);
-                const left = paragraphs.slice(0, mid);
-                const right = paragraphs.slice(mid);
-
-                return (
-                  <>
-                    <View style={styles.legalColumn}>
-                      {left.map((p, i) => (
-                        <Text
-                          key={`l-${i}`}
-                          style={{ fontSize: 7.5, lineHeight: 1.45, marginBottom: 3, textAlign: "justify" }}
-                        >
-                          {p}
-                        </Text>
-                      ))}
-                    </View>
-                    <View style={styles.legalColumn}>
-                      {right.map((p, i) => (
-                        <Text
-                          key={`r-${i}`}
-                          style={{ fontSize: 7.5, lineHeight: 1.45, marginBottom: 3, textAlign: "justify" }}
-                        >
-                          {p}
-                        </Text>
-                      ))}
-                    </View>
-                  </>
-                );
-              })()}
-            </View>
-          )}
         </View>
 
         {/* ── Signatures ── */}
@@ -501,7 +469,7 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
           <View style={styles.signatureBox}>
             <View style={styles.signatureLine} />
             <Text style={styles.signatureName}>Maciej Godek</Text>
-            <Text style={styles.signatureLabel}>Wynajmuj\u0105cy</Text>
+            <Text style={styles.signatureLabel}>Wynajmujący</Text>
           </View>
           <View style={styles.signatureBox}>
             <View style={styles.signatureLine} />
@@ -511,6 +479,37 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
         </View>
 
         {/* ── Footer ── */}
+        <View style={styles.footer} fixed>
+          <Text style={styles.footerText}>
+            Zakład Graficzny Maciej Godek | Dokument wygenerowany automatycznie | www.starkit.pl
+          </Text>
+          <View style={styles.footerRight}>
+            <Text style={styles.footerText}>{orderNumber}</Text>
+            <Text style={styles.footerText}>{currentDate}</Text>
+          </View>
+        </View>
+      </Page>
+
+      {/* ── §5 Regulamin — full-width dedicated page ── */}
+      <Page size="A4" style={styles.legalPage}>
+        <View style={{ marginBottom: 8 }}>
+          <Text style={styles.sectionTitle}>{"\u00A7"}5 Regulamin wynajmu</Text>
+        </View>
+
+        {isHtmlContent ? (
+          <HtmlContent html={contractContent} style={{}} />
+        ) : (
+          contractContent
+            .split("\n\n")
+            .map((p) => p.trim())
+            .filter(Boolean)
+            .map((p, i) => (
+              <Text key={i} style={{ fontSize: 7.5, lineHeight: 1.45, marginBottom: 3, textAlign: "justify" }}>
+                {p}
+              </Text>
+            ))
+        )}
+
         <View style={styles.footer} fixed>
           <Text style={styles.footerText}>
             Zakład Graficzny Maciej Godek | Dokument wygenerowany automatycznie | www.starkit.pl

@@ -719,11 +719,6 @@ function CheckoutContent() {
                       {(pricing.depositCents / 100).toFixed(2)} zł
                     </span>
                   </div>
-                  {pricing.discountApplied && (
-                    <div className="text-xs font-medium text-emerald-600">
-                      ✓ Zniżka 10 % (powyżej 7 dni)
-                    </div>
-                  )}
                   <div className="border-t border-slate-200 pt-3">
                     <div className="flex justify-between">
                       <span className="text-base font-bold text-slate-900">

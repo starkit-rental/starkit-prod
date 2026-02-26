@@ -446,11 +446,6 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
                     {(pricing.depositCents / 100).toFixed(2)} zł
                   </span>
                 </div>
-                {pricing.discountApplied && (
-                  <div className="text-xs font-medium text-emerald-600">
-                    ✓ Zniżka 10 % (wynajem powyżej 7 dni)
-                  </div>
-                )}
                 <div className="border-t border-slate-200 pt-2.5">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-slate-900">Razem</span>

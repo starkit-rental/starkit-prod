@@ -1,23 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { format, addDays } from "date-fns";
+import { format, addDays, parseISO } from "date-fns";
 import {
-  AlertTriangle,
   ArrowLeft,
   Calendar,
   Check,
   CreditCard,
-  Download,
-  FileText,
   Loader2,
   Mail,
   Package,
-  Plus,
   Save,
   Search,
-  Send,
   User,
   UserPlus,
   X,
@@ -30,10 +25,8 @@ import { Label } from "@/components/ui/label";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import { calculatePrice, type PricingTier } from "@/lib/rental-engine";
-
-// ═══════════════════════════════════════════════════════════
-//  TYPES
-// ═══════════════════════════════════════════════════════════
+import { AvailabilityCalendar } from "./_components/availability-calendar";
+import { ProductLineItems, type LineItem } from "./_components/product-line-items";
 
 type CustomerResult = {
   id: string;
@@ -47,12 +40,6 @@ type CustomerResult = {
   address_zip: string | null;
 };
 
-type StockItemInfo = {
-  id: string;
-  serialNumber: string | null;
-  available: boolean;
-};
-
 type ProductResult = {
   id: string;
   name: string;
@@ -62,42 +49,19 @@ type ProductResult = {
   totalStock: number;
   availableCount: number;
   availableStockItemIds: string[];
-  stockItems: StockItemInfo[];
 };
 
-type GeneratedDoc = {
-  filename: string;
-  url: string | null;
-  storagePath: string;
-  orderNumber: string;
-  generatedAt: string;
+type OccupiedRange = {
+  start: Date;
+  end: Date;
+  isBuffer?: boolean;
 };
 
-// ═══════════════════════════════════════════════════════════
-//  HELPERS
-// ═══════════════════════════════════════════════════════════
-
-function moneyPln(cents: number): string {
-  return `${(cents / 100).toFixed(2)} zł`;
-}
-
-function diffDays(start: string, end: string): number {
-  const s = new Date(start);
-  const e = new Date(end);
-  const ms = e.getTime() - s.getTime();
-  const d = Math.ceil(ms / (1000 * 60 * 60 * 24));
-  return d > 0 ? d : 0;
-}
-
-// ═══════════════════════════════════════════════════════════
-//  MAIN PAGE
-// ═══════════════════════════════════════════════════════════
-
-export default function NewOrderPage() {
+export default function NewOrderPageV2() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
-  // ── Customer state ──
+  // Customer state
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerResults, setCustomerResults] = useState<CustomerResult[]>([]);
   const [customerLoading, setCustomerLoading] = useState(false);
@@ -115,969 +79,610 @@ export default function NewOrderPage() {
   const [newCity, setNewCity] = useState("");
   const [newZip, setNewZip] = useState("");
 
-  // ── Product state ──
+  // Product state
   const [products, setProducts] = useState<ProductResult[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [productTiers, setProductTiers] = useState<Record<string, { tiers: PricingTier[]; autoIncrementMultiplier: number }>>({});
 
-  // ── Dates & pricing ──
-  const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [endDate, setEndDate] = useState(format(addDays(new Date(), 3), "yyyy-MM-dd"));
-  const [dailyRate, setDailyRate] = useState("");
-  const [depositAmount, setDepositAmount] = useState("");
-  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
-  const [autoIncrementMultiplier, setAutoIncrementMultiplier] = useState(1.0);
+  // Dates
+  const [selectedStart, setSelectedStart] = useState<Date | null>(new Date());
+  const [selectedEnd, setSelectedEnd] = useState<Date | null>(addDays(new Date(), 3));
+  const [occupiedRanges, setOccupiedRanges] = useState<OccupiedRange[]>([]);
 
-  // ── Order state ──
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  // Order state
+  const [orderCreated, setOrderCreated] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
-  const [createdOrderNumber, setCreatedOrderNumber] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  // ── PDF & Email actions ──
-  const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [pdfError, setPdfError] = useState<string | null>(null);
-  const [generatedDocs, setGeneratedDocs] = useState<GeneratedDoc[]>([]);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailResult, setEmailResult] = useState<{ ok: boolean; msg: string } | null>(null);
-
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ── Customer search ──
-  const searchCustomers = useCallback(async (q: string) => {
-    if (q.length < 2) {
-      setCustomerResults([]);
-      return;
-    }
-    setCustomerLoading(true);
-    try {
-      const res = await fetch(`/api/office/customers/search?q=${encodeURIComponent(q)}`);
-      const json = await res.json();
-      setCustomerResults(json.customers ?? []);
-    } catch {
-      setCustomerResults([]);
-    } finally {
-      setCustomerLoading(false);
-    }
-  }, []);
-
-  function handleCustomerQueryChange(value: string) {
-    setCustomerQuery(value);
-    setShowCustomerDropdown(true);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => searchCustomers(value), 300);
-  }
-
-  function selectCustomer(c: CustomerResult) {
-    setSelectedCustomer(c);
-    setCustomerQuery(c.full_name || c.company_name || c.email || "");
-    setShowCustomerDropdown(false);
-    setIsNewCustomer(false);
-  }
-
-  function startNewCustomer() {
-    setIsNewCustomer(true);
-    setSelectedCustomer(null);
-    setShowCustomerDropdown(false);
-    setNewEmail(customerQuery.includes("@") ? customerQuery : "");
-    setNewFullName(!customerQuery.includes("@") ? customerQuery : "");
-  }
-
-  // ── Products fetch ──
+  // Load products with availability
   const loadProducts = useCallback(async () => {
+    if (!selectedStart || !selectedEnd) return;
+
     setProductsLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (startDate) params.set("startDate", startDate);
-      if (endDate) params.set("endDate", endDate);
-      params.set("bufferDays", "2");
-      const res = await fetch(`/api/office/products?${params.toString()}`);
+      const startDate = format(selectedStart, "yyyy-MM-dd");
+      const endDate = format(selectedEnd, "yyyy-MM-dd");
+      const res = await fetch(
+        `/api/office/products?startDate=${startDate}&endDate=${endDate}&bufferDays=2`
+      );
       const json = await res.json();
-      const prods = (json.products ?? []) as ProductResult[];
-      setProducts(prods);
-
-      // Auto-set pricing from selected product
-      if (selectedProductId) {
-        const p = prods.find((pr) => pr.id === selectedProductId);
-        if (p) {
-          if (p.basePriceDay && !dailyRate) setDailyRate(String(p.basePriceDay));
-          if (p.depositAmount && !depositAmount) setDepositAmount(String(p.depositAmount));
-        }
-      }
-    } catch {
-      setProducts([]);
+      setProducts(json.products ?? []);
+    } catch (err) {
+      console.error("Failed to load products:", err);
     } finally {
       setProductsLoading(false);
     }
-  }, [startDate, endDate, selectedProductId, dailyRate, depositAmount]);
+  }, [selectedStart, selectedEnd]);
 
-  useEffect(() => {
-    void loadProducts();
-  }, [startDate, endDate]);
-
-  // Auto-fill pricing when product selected
-  async function handleSelectProduct(productId: string) {
-    setSelectedProductId(productId);
-    const p = products.find((pr) => pr.id === productId);
-    if (p) {
-      if (p.basePriceDay) setDailyRate(String(p.basePriceDay));
-      if (p.depositAmount) setDepositAmount(String(p.depositAmount));
+  // Load occupied ranges for ALL products selected in line items
+  const loadOccupiedRanges = useCallback(async () => {
+    const productIds = lineItems.map((li) => li.productId);
+    if (productIds.length === 0) {
+      setOccupiedRanges([]);
+      return;
     }
 
-    // Fetch pricing tiers for this product
+    try {
+      const allRanges: OccupiedRange[] = [];
+
+      for (const productId of productIds) {
+        const res = await fetch("/api/product-bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId }),
+        });
+        const json = await res.json();
+        const bookings = json.bookings ?? [];
+        const bufferDays = json.bufferDays ?? 2;
+
+        bookings.forEach((b: any) => {
+          const start = parseISO(b.start_date);
+          const end = parseISO(b.end_date);
+          allRanges.push({ start, end, isBuffer: false });
+          allRanges.push({ start: addDays(start, -bufferDays), end: addDays(start, -1), isBuffer: true });
+          allRanges.push({ start: addDays(end, 1), end: addDays(end, bufferDays), isBuffer: true });
+        });
+      }
+
+      setOccupiedRanges(allRanges);
+    } catch (err) {
+      console.error("Failed to load occupied ranges:", err);
+    }
+  }, [lineItems]);
+
+  // Fetch pricing tiers for a product
+  const fetchTiersForProduct = useCallback(async (productId: string) => {
+    if (productTiers[productId]) return productTiers[productId];
+
     try {
       const res = await fetch(`/api/pricing-tiers?productId=${productId}`);
       const json = await res.json();
-      setPricingTiers(json?.tiers ?? []);
-      setAutoIncrementMultiplier(json?.autoIncrementMultiplier ?? 1.0);
-    } catch (err) {
-      console.error("Failed to fetch pricing tiers:", err);
-      setPricingTiers([]);
-      setAutoIncrementMultiplier(1.0);
-    }
-  }
-
-  // ── Pricing calculation with tiered pricing ──
-  const pricing = useMemo(() => {
-    const rate = parseFloat(dailyRate || "0");
-    const dep = parseFloat(depositAmount || "0");
-    if (!startDate || !endDate || rate <= 0) return null;
-
-    try {
-      const result = calculatePrice({
-        startDate,
-        endDate,
-        dailyRateCents: Math.round(rate * 100),
-        depositCents: Math.round(dep * 100),
-        pricingTiers: pricingTiers.length > 0 ? pricingTiers : undefined,
-        autoIncrementMultiplier,
-      });
-
-      return {
-        days: result.days,
-        dailyRate: result.dailyRateCentsApplied / 100,
-        rentalTotal: result.rentalSubtotalCents / 100,
-        deposit: result.depositCents / 100,
-        total: result.totalCents / 100,
-        discountApplied: result.discountApplied,
+      const data = {
+        tiers: (json.tiers ?? []).map((t: any) => ({
+          tier_days: t.tier_days,
+          multiplier: t.multiplier,
+          label: t.label,
+        })),
+        autoIncrementMultiplier: json.autoIncrementMultiplier ?? 1.0,
       };
-    } catch (err) {
-      console.error("Pricing calculation error:", err);
-      return null;
+      setProductTiers((prev) => ({ ...prev, [productId]: data }));
+      return data;
+    } catch {
+      return { tiers: [] as PricingTier[], autoIncrementMultiplier: 1.0 };
     }
-  }, [startDate, endDate, dailyRate, depositAmount, pricingTiers, autoIncrementMultiplier]);
+  }, [productTiers]);
 
-  // ── Availability warning ──
-  const selectedProduct = products.find((p) => p.id === selectedProductId);
-  const hasAvailabilityWarning = selectedProduct && selectedProduct.availableCount === 0;
-  const availabilityText = selectedProduct
-    ? `${selectedProduct.availableCount} z ${selectedProduct.totalStock} dostępnych`
-    : "";
+  // Calculate rental amount from tier pricing
+  const calculateRentalFromTiers = useCallback(
+    (productId: string, days: number, basePriceDay: number) => {
+      const tierData = productTiers[productId];
+      if (!tierData || tierData.tiers.length === 0 || days <= 0) {
+        return basePriceDay * days;
+      }
 
-  // ── Create order ──
-  async function createOrder() {
-    setSubmitting(true);
-    setSubmitError(null);
+      try {
+        const result = calculatePrice({
+          startDate: new Date(),
+          endDate: addDays(new Date(), days),
+          dailyRateCents: Math.round(basePriceDay * 100),
+          depositCents: 0,
+          pricingTiers: tierData.tiers,
+          autoIncrementMultiplier: tierData.autoIncrementMultiplier,
+        });
+        return result.rentalSubtotalCents / 100;
+      } catch {
+        return basePriceDay * days;
+      }
+    },
+    [productTiers]
+  );
 
+  // Recalculate rental amounts when dates change
+  useEffect(() => {
+    if (!selectedStart || !selectedEnd || lineItems.length === 0) return;
+    const days = Math.ceil(
+      (selectedEnd.getTime() - selectedStart.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (days <= 0) return;
+
+    const updatedItems = lineItems.map((item) => {
+      const product = products.find((p) => p.id === item.productId);
+      const basePriceDay = product?.basePriceDay ?? 0;
+      const newRental = calculateRentalFromTiers(item.productId, days, basePriceDay);
+      return { ...item, rentalAmount: newRental };
+    });
+
+    // Only update if values actually changed
+    const changed = updatedItems.some(
+      (item, i) => Math.abs(item.rentalAmount - lineItems[i].rentalAmount) > 0.001
+    );
+    if (changed) setLineItems(updatedItems);
+  }, [selectedStart, selectedEnd, productTiers]); // Only recalc on date/tier changes, NOT on lineItems
+
+  useEffect(() => {
+    void loadProducts();
+  }, [loadProducts]);
+
+  useEffect(() => {
+    void loadOccupiedRanges();
+  }, [loadOccupiedRanges]);
+
+  // Search customers
+  const searchCustomers = useCallback(
+    async (query: string) => {
+      if (!query.trim()) {
+        setCustomerResults([]);
+        return;
+      }
+
+      setCustomerLoading(true);
+      try {
+        const res = await fetch(
+          `/api/office/customers/search?q=${encodeURIComponent(query)}`
+        );
+        const json = await res.json();
+        setCustomerResults(json.customers ?? []);
+      } catch (err) {
+        console.error("Customer search error:", err);
+      } finally {
+        setCustomerLoading(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void searchCustomers(customerQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [customerQuery, searchCustomers]);
+
+  // Calculate total pricing
+  const totalPricing = useMemo(() => {
+    if (!selectedStart || !selectedEnd || lineItems.length === 0) return null;
+
+    let totalRental = 0;
+    let totalDeposit = 0;
+    const days = Math.ceil(
+      (selectedEnd.getTime() - selectedStart.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    lineItems.forEach((item) => {
+      const itemRental = item.rentalAmount * item.quantity;
+      const itemDeposit = item.deposit * item.quantity;
+      totalRental += itemRental;
+      totalDeposit += itemDeposit;
+    });
+
+    return {
+      days,
+      rentalTotal: totalRental,
+      deposit: totalDeposit,
+      total: totalRental + totalDeposit,
+    };
+  }, [selectedStart, selectedEnd, lineItems]);
+
+  // Handle date range selection
+  const handleDateRangeSelect = (start: Date, end: Date) => {
+    setSelectedStart(start);
+    setSelectedEnd(end);
+  };
+
+  // Handle line items change - fetch tiers for new products and auto-calculate
+  const handleLineItemsChange = useCallback(
+    async (newItems: LineItem[]) => {
+      // Check for newly added products
+      for (const item of newItems) {
+        if (!productTiers[item.productId]) {
+          const tierData = await fetchTiersForProduct(item.productId);
+          // Auto-calculate rental for newly added item
+          if (selectedStart && selectedEnd && item.rentalAmount === 0) {
+            const days = Math.ceil(
+              (selectedEnd.getTime() - selectedStart.getTime()) / (1000 * 60 * 60 * 24)
+            );
+            const product = products.find((p) => p.id === item.productId);
+            const basePriceDay = product?.basePriceDay ?? 0;
+            if (tierData.tiers.length > 0 && days > 0) {
+              try {
+                const result = calculatePrice({
+                  startDate: selectedStart,
+                  endDate: selectedEnd,
+                  dailyRateCents: Math.round(basePriceDay * 100),
+                  depositCents: 0,
+                  pricingTiers: tierData.tiers,
+                  autoIncrementMultiplier: tierData.autoIncrementMultiplier,
+                });
+                item.rentalAmount = result.rentalSubtotalCents / 100;
+              } catch {
+                item.rentalAmount = basePriceDay * days;
+              }
+            } else {
+              item.rentalAmount = basePriceDay * days;
+            }
+          }
+        }
+      }
+      setLineItems([...newItems]);
+    },
+    [productTiers, fetchTiersForProduct, selectedStart, selectedEnd, products]
+  );
+
+  // Create order
+  const handleCreateOrder = async () => {
+    if (!selectedCustomer && !isNewCustomer) {
+      alert("Wybierz klienta lub dodaj nowego");
+      return;
+    }
+
+    if (lineItems.length === 0) {
+      alert("Dodaj przynajmniej jeden produkt");
+      return;
+    }
+
+    if (!selectedStart || !selectedEnd) {
+      alert("Wybierz daty wynajmu");
+      return;
+    }
+
+    setSaving(true);
     try {
-      if (!selectedCustomer && !isNewCustomer) throw new Error("Wybierz lub dodaj klienta");
-      if (!selectedProductId) throw new Error("Wybierz produkt");
-      if (!pricing) throw new Error("Uzupełnij daty i cenę");
+      let customerId = selectedCustomer?.id;
 
-      let customerId: string;
-
+      // Create new customer if needed
       if (isNewCustomer) {
-        if (!newEmail) throw new Error("Podaj email klienta");
-        if (!newFullName) throw new Error("Podaj imię i nazwisko klienta");
-
-        // Check if customer exists
-        const { data: existing } = await supabase
+        const { data: newCust, error: custErr } = await supabase
           .from("customers")
-          .select("id")
-          .eq("email", newEmail)
-          .maybeSingle();
-
-        if (existing?.id) {
-          customerId = String(existing.id);
-          await supabase.from("customers").update({
-            full_name: newFullName || null,
-            phone: newPhone || null,
+          .insert({
+            email: newEmail,
+            full_name: newFullName,
+            phone: newPhone,
             company_name: newCompany || null,
             nip: newNip || null,
             address_street: newStreet || null,
             address_city: newCity || null,
             address_zip: newZip || null,
-          }).eq("id", customerId);
-        } else {
-          const { data: created, error: createErr } = await supabase
-            .from("customers")
-            .insert({
-              email: newEmail,
-              full_name: newFullName || null,
-              phone: newPhone || null,
-              company_name: newCompany || null,
-              nip: newNip || null,
-              address_street: newStreet || null,
-              address_city: newCity || null,
-              address_zip: newZip || null,
-            })
-            .select("id")
-            .single();
-          if (createErr) throw new Error(createErr.message);
-          customerId = String((created as any).id);
-        }
-      } else {
-        customerId = selectedCustomer!.id;
-        // Update full_name if it was empty (fix "brak nazwy")
-        if (selectedCustomer && !selectedCustomer.full_name && newFullName) {
-          await supabase.from("customers").update({ full_name: newFullName }).eq("id", customerId);
-        }
+          })
+          .select()
+          .single();
+
+        if (custErr) throw custErr;
+        customerId = newCust.id;
       }
 
-      // Find available stock item
-      const prod = products.find((p) => p.id === selectedProductId);
-      const availableStockItem = prod?.stockItems.find((si) => si.available);
-      if (!availableStockItem) throw new Error("Brak dostępnych egzemplarzy dla wybranego produktu w tym terminie");
+      if (!customerId) throw new Error("No customer ID");
 
       // Create order
-      const { data: createdOrder, error: orderErr } = await supabase
+      const { data: order, error: orderErr } = await supabase
         .from("orders")
         .insert({
           customer_id: customerId,
-          start_date: startDate,
-          end_date: endDate,
-          total_rental_price: pricing.rentalTotal,
-          total_deposit: pricing.deposit,
+          start_date: format(selectedStart, "yyyy-MM-dd"),
+          end_date: format(selectedEnd, "yyyy-MM-dd"),
           payment_status: "manual",
           order_status: "pending",
+          total_rental_price: totalPricing!.rentalTotal,
+          total_deposit: totalPricing!.deposit,
         })
         .select("id,order_number")
         .single();
 
-      if (orderErr) throw new Error(orderErr.message);
+      if (orderErr) throw orderErr;
 
-      const orderId = String((createdOrder as any).id);
-      const orderNum = (createdOrder as any).order_number;
+      // Assign stock items and create order items
+      for (const item of lineItems) {
+        const product = products.find((p) => p.id === item.productId);
+        const availableStockIds = product?.availableStockItemIds ?? [];
 
-      // Create order item
-      const { error: itemErr } = await supabase.from("order_items").insert({
-        order_id: orderId,
-        stock_item_id: availableStockItem.id,
-      });
-      if (itemErr) throw new Error(itemErr.message);
+        for (let i = 0; i < item.quantity; i++) {
+          const stockItemId = availableStockIds[i];
+          if (!stockItemId) continue;
 
-      setCreatedOrderId(orderId);
-      setCreatedOrderNumber(orderNum || null);
+          const { error: itemErr } = await supabase.from("order_items").insert({
+            order_id: order.id,
+            stock_item_id: stockItemId,
+          });
 
-      // Reload products to update availability
-      void loadProducts();
-    } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : "Nieznany błąd");
+          if (itemErr) throw itemErr;
+        }
+      }
+
+      setOrderCreated(true);
+      setCreatedOrderId(order.id);
+      alert("Zamówienie utworzone!");
+    } catch (err) {
+      console.error("Order creation error:", err);
+      alert("Błąd podczas tworzenia zamówienia");
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
-  }
-
-  // ── Generate PDF ──
-  async function handleGeneratePdf() {
-    if (!createdOrderId) return;
-    setGeneratingPdf(true);
-    setPdfError(null);
-    try {
-      const res = await fetch("/api/office/generate-contract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: createdOrderId }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Błąd generowania PDF");
-
-      setGeneratedDocs((prev) => [
-        {
-          filename: json.filename,
-          url: json.url,
-          storagePath: json.storagePath,
-          orderNumber: json.orderNumber,
-          generatedAt: new Date().toISOString(),
-        },
-        ...prev,
-      ]);
-    } catch (e) {
-      setPdfError(e instanceof Error ? e.message : "Błąd");
-    } finally {
-      setGeneratingPdf(false);
-    }
-  }
-
-  // ── Send confirmation email ──
-  async function handleSendEmail() {
-    if (!createdOrderId) return;
-    setSendingEmail(true);
-    setEmailResult(null);
-    try {
-      const cust = selectedCustomer || {
-        email: newEmail,
-        full_name: newFullName,
-        phone: newPhone,
-        company_name: newCompany,
-        nip: newNip,
-      };
-
-      const res = await fetch("/api/office/send-status-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "reserved",
-          orderId: createdOrderId,
-          orderNumber: createdOrderNumber ?? undefined,
-          customerEmail: cust.email || newEmail,
-          customerName: cust.full_name || newFullName || cust.email || newEmail,
-          customerPhone: cust.phone || newPhone || undefined,
-          companyName: (cust as any).company_name || newCompany || undefined,
-          nip: (cust as any).nip || newNip || undefined,
-          startDate,
-          endDate,
-          inpostPointId: "",
-          inpostPointAddress: "",
-          rentalPrice: pricing ? pricing.rentalTotal.toFixed(2) : "0.00",
-          deposit: pricing ? pricing.deposit.toFixed(2) : "0.00",
-          totalAmount: pricing ? pricing.total.toFixed(2) : "0.00",
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Błąd wysyłki");
-      setEmailResult({ ok: true, msg: "E-mail z potwierdzeniem wysłany pomyślnie." });
-    } catch (e) {
-      setEmailResult({ ok: false, msg: e instanceof Error ? e.message : "Błąd wysyłki" });
-    } finally {
-      setSendingEmail(false);
-    }
-  }
-
-  const orderCreated = !!createdOrderId;
+  };
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push("/office/dashboard")}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-              Nowe zamówienie
-            </h1>
-            <p className="mt-0.5 text-sm text-slate-500">
-              {orderCreated
-                ? `Zamówienie utworzone — ${createdOrderNumber || createdOrderId?.slice(0, 8)}`
-                : "Utwórz ręczne zamówienie i wygeneruj umowę"}
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <div className="mx-auto max-w-7xl p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/office/orders")}
+              className="h-9 px-3"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Powrót
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Nowe zamówienie</h1>
+              <p className="text-sm text-slate-500">
+                Utwórz ręczne zamówienie i wygeneruj umowę
+              </p>
+            </div>
           </div>
+          {orderCreated && createdOrderId && (
+            <Button
+              onClick={() => router.push(`/office/orders/${createdOrderId}`)}
+              className="bg-[#D4A843] hover:bg-[#D4A843]/90"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Zobacz zamówienie
+            </Button>
+          )}
         </div>
 
-        {orderCreated && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/office/orders/${createdOrderId}`)}
-            className="gap-2"
-          >
-            Otwórz zamówienie
-          </Button>
-        )}
-      </div>
-
-      {/* ── Success banner ── */}
-      {orderCreated && (
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
-          <Check className="h-5 w-5 shrink-0 text-emerald-600" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-emerald-900">
-              Zamówienie zapisane pomyślnie
-            </p>
-            <p className="text-xs text-emerald-700">
-              Możesz teraz wygenerować PDF umowy i wysłać e-mail z potwierdzeniem.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ── 2-Column Layout ── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* ═══════════════ LEFT COLUMN — Context ═══════════════ */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
-          {/* ── Customer Selection ── */}
-          <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <User className="h-4 w-4 text-[#D4A843]" />
-                Klient
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5">
-              {!isNewCustomer && !selectedCustomer ? (
-                <div className="space-y-3">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <Input
-                      value={customerQuery}
-                      onChange={(e) => handleCustomerQueryChange(e.target.value)}
-                      onFocus={() => customerQuery.length >= 2 && setShowCustomerDropdown(true)}
-                      placeholder="Szukaj po imieniu, emailu, firmie lub telefonie..."
-                      className="pl-10 h-10 border-slate-200 bg-slate-50"
-                    />
-                    {/* Dropdown */}
-                    {showCustomerDropdown && (
-                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
-                        {customerLoading ? (
-                          <div className="flex items-center gap-2 px-4 py-3 text-sm text-slate-500">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Szukanie...
-                          </div>
-                        ) : customerResults.length > 0 ? (
-                          <>
-                            {customerResults.map((c) => (
-                              <button
-                                key={c.id}
-                                onClick={() => selectCustomer(c)}
-                                className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0"
-                              >
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
-                                  {(c.full_name || c.email || "?")[0].toUpperCase()}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate text-sm font-medium text-slate-900">
-                                    {c.full_name || c.company_name || c.email || "—"}
-                                  </div>
-                                  <div className="truncate text-xs text-slate-500">
-                                    {c.email} {c.phone && `• ${c.phone}`}
-                                  </div>
-                                </div>
-                              </button>
-                            ))}
-                            <button
-                              onClick={startNewCustomer}
-                              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-emerald-50 border-t border-slate-100"
-                            >
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                                <UserPlus className="h-3.5 w-3.5 text-emerald-700" />
-                              </div>
-                              <span className="text-sm font-medium text-emerald-700">
-                                Dodaj nowego klienta
-                              </span>
-                            </button>
-                          </>
-                        ) : customerQuery.length >= 2 ? (
-                          <div className="p-4 space-y-2">
-                            <p className="text-sm text-slate-500">Brak wyników</p>
-                            <button
-                              onClick={startNewCustomer}
-                              className="flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-800"
-                            >
-                              <UserPlus className="h-4 w-4" />
-                              Dodaj nowego klienta
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={startNewCustomer}
-                    className="gap-2 text-xs"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Szybkie dodanie klienta
-                  </Button>
-                </div>
-              ) : selectedCustomer && !isNewCustomer ? (
-                /* Selected customer card */
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
-                        {(selectedCustomer.full_name || selectedCustomer.email || "?")[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {selectedCustomer.full_name || selectedCustomer.company_name || selectedCustomer.email}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {selectedCustomer.email}
-                          {selectedCustomer.phone && ` • ${selectedCustomer.phone}`}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedCustomer(null);
-                        setCustomerQuery("");
-                      }}
-                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                      disabled={orderCreated}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  {/* Fix full_name if missing */}
-                  {!selectedCustomer.full_name && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                      <p className="text-xs font-medium text-amber-800 mb-2">
-                        <AlertTriangle className="inline h-3.5 w-3.5 mr-1" />
-                        Brak imienia i nazwiska — uzupełnij:
-                      </p>
-                      <Input
-                        value={newFullName}
-                        onChange={(e) => setNewFullName(e.target.value)}
-                        placeholder="Imię i nazwisko"
-                        className="h-8 text-sm border-amber-200 bg-white"
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* New customer form */
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
-                      Nowy klient
-                    </p>
-                    <button
-                      onClick={() => {
-                        setIsNewCustomer(false);
-                        setCustomerQuery("");
-                      }}
-                      className="text-xs text-slate-500 hover:text-slate-700"
-                      disabled={orderCreated}
-                    >
-                      Anuluj
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2 sm:col-span-1">
-                      <Label className="text-xs text-slate-500">Imię i nazwisko *</Label>
-                      <Input
-                        value={newFullName}
-                        onChange={(e) => setNewFullName(e.target.value)}
-                        className="mt-1 h-9 text-sm border-slate-200 bg-slate-50"
-                        disabled={orderCreated}
-                      />
-                    </div>
-                    <div className="col-span-2 sm:col-span-1">
-                      <Label className="text-xs text-slate-500">Email *</Label>
-                      <Input
-                        type="email"
-                        value={newEmail}
-                        onChange={(e) => setNewEmail(e.target.value)}
-                        className="mt-1 h-9 text-sm border-slate-200 bg-slate-50"
-                        disabled={orderCreated}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-500">Telefon</Label>
-                      <Input
-                        value={newPhone}
-                        onChange={(e) => setNewPhone(e.target.value)}
-                        className="mt-1 h-9 text-sm border-slate-200 bg-slate-50"
-                        disabled={orderCreated}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-500">Firma</Label>
-                      <Input
-                        value={newCompany}
-                        onChange={(e) => setNewCompany(e.target.value)}
-                        className="mt-1 h-9 text-sm border-slate-200 bg-slate-50"
-                        disabled={orderCreated}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-500">NIP</Label>
-                      <Input
-                        value={newNip}
-                        onChange={(e) => setNewNip(e.target.value)}
-                        className="mt-1 h-9 text-sm border-slate-200 bg-slate-50"
-                        disabled={orderCreated}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-500">Ulica</Label>
-                      <Input
-                        value={newStreet}
-                        onChange={(e) => setNewStreet(e.target.value)}
-                        className="mt-1 h-9 text-sm border-slate-200 bg-slate-50"
-                        disabled={orderCreated}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-500">Miasto</Label>
-                      <Input
-                        value={newCity}
-                        onChange={(e) => setNewCity(e.target.value)}
-                        className="mt-1 h-9 text-sm border-slate-200 bg-slate-50"
-                        disabled={orderCreated}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-500">Kod pocztowy</Label>
-                      <Input
-                        value={newZip}
-                        onChange={(e) => setNewZip(e.target.value)}
-                        className="mt-1 h-9 text-sm border-slate-200 bg-slate-50"
-                        disabled={orderCreated}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* ── Product Grid ── */}
-          <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Package className="h-4 w-4 text-[#D4A843]" />
-                Produkt
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5">
-              {productsLoading ? (
-                <div className="flex items-center gap-2 py-6 text-sm text-slate-500">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Ładowanie produktów...
-                </div>
-              ) : products.length === 0 ? (
-                <p className="py-6 text-sm text-slate-500 text-center">
-                  Brak produktów w systemie.
-                </p>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {products.map((p) => {
-                    const isSelected = selectedProductId === p.id;
-                    const hasStock = p.availableCount > 0;
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() => !orderCreated && handleSelectProduct(p.id)}
-                        disabled={orderCreated}
-                        className={cn(
-                          "flex items-center gap-3 rounded-xl border p-4 text-left transition-all",
-                          isSelected
-                            ? "border-[#D4A843] bg-amber-50 ring-1 ring-[#D4A843]/30 shadow-sm"
-                            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50",
-                          orderCreated && "opacity-60 cursor-default"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-                            isSelected ? "bg-[#D4A843]/20" : "bg-slate-100"
-                          )}
-                        >
-                          <Package
-                            className={cn(
-                              "h-5 w-5",
-                              isSelected ? "text-[#D4A843]" : "text-slate-400"
-                            )}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">
-                            {p.name}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span
-                              className={cn(
-                                "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                                hasStock
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-red-100 text-red-700"
-                              )}
-                            >
-                              {p.availableCount} dostępnych
-                            </span>
-                            {p.basePriceDay && (
-                              <span className="text-xs text-slate-500">
-                                {p.basePriceDay} zł/dzień
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {isSelected && (
-                          <Check className="h-5 w-5 shrink-0 text-[#D4A843]" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {hasAvailabilityWarning && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                  <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
-                  <p className="text-xs text-red-700">
-                    <strong>Uwaga:</strong> Brak dostępnych egzemplarzy w wybranym terminie
-                    (włącznie z +2 dniami buforu logistycznego).
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ═══════════════ RIGHT COLUMN — Logistics & Financials ═══════════════ */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          {/* ── Dates ── */}
-          <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Calendar className="h-4 w-4 text-[#D4A843]" />
-                Okres wynajmu
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-slate-500">Odbiór</Label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="mt-1 h-10 border-slate-200 bg-slate-50 text-sm font-medium"
-                    disabled={orderCreated}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-slate-500">Zwrot</Label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="mt-1 h-10 border-slate-200 bg-slate-50 text-sm font-medium"
-                    disabled={orderCreated}
-                  />
-                </div>
-              </div>
-              {pricing && (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-center">
-                  <span className="text-2xl font-bold text-slate-900">{pricing.days}</span>
-                  <span className="ml-1.5 text-sm text-slate-500">dni</span>
-                </div>
-              )}
-              {selectedProduct && (
-                <p className="text-xs text-slate-500 text-center">
-                  {availabilityText}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* ── Pricing ── */}
-          <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <CreditCard className="h-4 w-4 text-[#D4A843]" />
-                Kalkulacja
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-slate-500">Cena za dzień (zł)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={dailyRate}
-                    onChange={(e) => setDailyRate(e.target.value)}
-                    className="mt-1 h-9 text-sm border-slate-200 bg-slate-50"
-                    disabled={orderCreated}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-slate-500">Kaucja (zł)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    className="mt-1 h-9 text-sm border-slate-200 bg-slate-50"
-                    disabled={orderCreated}
-                  />
-                </div>
-              </div>
-
-              {pricing ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2.5">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Wynajem ({pricing.days} × {pricing.dailyRate.toFixed(2)} zł)</span>
-                    <span className="font-medium text-slate-700">{pricing.rentalTotal.toFixed(2)} zł</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Kaucja zwrotna</span>
-                    <span className="font-medium text-slate-700">{pricing.deposit.toFixed(2)} zł</span>
-                  </div>
-                  <div className="border-t border-slate-200 pt-2.5">
-                    <div className="flex justify-between">
-                      <span className="text-sm font-semibold text-slate-900">Razem</span>
-                      <span className="text-lg font-bold text-slate-900">
-                        {pricing.total.toFixed(2)} zł
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-4 text-center text-sm text-slate-400">
-                  Uzupełnij daty i cenę, aby zobaczyć kalkulację
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* ── Actions ── */}
-          <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-sm font-semibold text-slate-900">
-                Akcje
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5 space-y-3">
-              {submitError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 font-medium">
-                  {submitError}
-                </div>
-              )}
-
-              {!orderCreated ? (
-                <Button
-                  onClick={createOrder}
-                  disabled={submitting || (!selectedCustomer && !isNewCustomer) || !selectedProductId || !pricing}
-                  className="w-full gap-2 bg-[#1a1a2e] hover:bg-[#2a2a4e] font-semibold"
-                  size="lg"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Zapisywanie...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      Zapisz zamówienie
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <>
-                  {/* Generate PDF */}
-                  <Button
-                    onClick={handleGeneratePdf}
-                    disabled={generatingPdf}
-                    variant="outline"
-                    className="w-full gap-2 border-[#D4A843] text-[#D4A843] hover:bg-[#D4A843]/10 font-semibold"
-                    size="lg"
-                  >
-                    {generatingPdf ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Generowanie PDF...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="h-4 w-4" />
-                        Generuj PDF
-                      </>
-                    )}
-                  </Button>
-
-                  {pdfError && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-700">
-                      {pdfError}
-                    </div>
-                  )}
-
-                  {/* Send Email */}
-                  <Button
-                    onClick={handleSendEmail}
-                    disabled={sendingEmail}
-                    variant="outline"
-                    className="w-full gap-2 font-semibold"
-                    size="lg"
-                  >
-                    {sendingEmail ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Wysyłanie...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="h-4 w-4" />
-                        Wyślij e-mail z potwierdzeniem
-                      </>
-                    )}
-                  </Button>
-
-                  {emailResult && (
-                    <div
-                      className={cn(
-                        "rounded-lg px-4 py-2.5 text-xs font-medium",
-                        emailResult.ok
-                          ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : "border border-red-200 bg-red-50 text-red-700"
-                      )}
-                    >
-                      {emailResult.msg}
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* ── Generated Documents ── */}
-          {generatedDocs.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* LEFT COLUMN - Customer */}
+          <div className="lg:col-span-7 space-y-6">
             <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
               <CardHeader className="pb-3 border-b border-slate-100">
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <FileText className="h-4 w-4 text-[#D4A843]" />
-                  Dokumenty ({generatedDocs.length})
+                  <User className="h-4 w-4 text-[#D4A843]" />
+                  Klient
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-slate-100">
-                  {generatedDocs.map((doc, i) => (
-                    <div key={i} className="flex items-center gap-3 px-5 py-3">
-                      <FileText className="h-4 w-4 shrink-0 text-red-500" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">
-                          {doc.filename}
-                        </p>
-                        <p className="text-[10px] text-slate-400">
-                          {new Date(doc.generatedAt).toLocaleString("pl-PL")}
-                        </p>
-                      </div>
-                      {doc.url && (
-                        <a
-                          href={doc.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                        </a>
+              <CardContent className="p-5 space-y-4">
+                {!isNewCustomer ? (
+                  <>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Szukaj po imieniu, emailu, firmie lub telefonie..."
+                        value={customerQuery}
+                        onChange={(e) => {
+                          setCustomerQuery(e.target.value);
+                          setShowCustomerDropdown(true);
+                        }}
+                        onFocus={() => setShowCustomerDropdown(true)}
+                        className="pl-10 h-11 border-slate-200 bg-slate-50"
+                        disabled={orderCreated}
+                      />
+                      {showCustomerDropdown && customerResults.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg max-h-60 overflow-auto">
+                          {customerResults.map((c) => (
+                            <button
+                              key={c.id}
+                              onClick={() => {
+                                setSelectedCustomer(c);
+                                setCustomerQuery(c.full_name || c.email || "");
+                                setShowCustomerDropdown(false);
+                              }}
+                              className="w-full px-4 py-3 text-left hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                            >
+                              <p className="text-sm font-medium text-slate-900">
+                                {c.full_name || "Brak nazwy"}
+                              </p>
+                              <p className="text-xs text-slate-500">{c.email}</p>
+                            </button>
+                          ))}
+                        </div>
                       )}
                     </div>
-                  ))}
-                </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsNewCustomer(true)}
+                      disabled={orderCreated}
+                      className="w-full"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Szybkie dodanie klienta
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-slate-500">Email *</Label>
+                        <Input
+                          type="email"
+                          value={newEmail}
+                          onChange={(e) => setNewEmail(e.target.value)}
+                          className="mt-1 h-9 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">Imię i nazwisko *</Label>
+                        <Input
+                          value={newFullName}
+                          onChange={(e) => setNewFullName(e.target.value)}
+                          className="mt-1 h-9 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">Telefon</Label>
+                        <Input
+                          value={newPhone}
+                          onChange={(e) => setNewPhone(e.target.value)}
+                          className="mt-1 h-9 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">Firma</Label>
+                        <Input
+                          value={newCompany}
+                          onChange={(e) => setNewCompany(e.target.value)}
+                          className="mt-1 h-9 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setIsNewCustomer(false)}
+                      className="w-full"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Anuluj
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
-          )}
+
+            {/* Products */}
+            <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
+              <CardHeader className="pb-3 border-b border-slate-100">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <Package className="h-4 w-4 text-[#D4A843]" />
+                  Produkty
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5">
+                {productsLoading ? (
+                  <div className="flex items-center gap-2 py-6 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Ładowanie produktów...
+                  </div>
+                ) : (
+                  <ProductLineItems
+                    items={lineItems}
+                    products={products.map((p) => ({
+                      id: p.id,
+                      name: p.name,
+                      basePriceDay: p.basePriceDay || 0,
+                      depositAmount: p.depositAmount || 0,
+                      availableCount: p.availableCount,
+                    }))}
+                    onChange={handleLineItemsChange}
+                    disabled={orderCreated}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* RIGHT COLUMN - Calendar & Summary */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Calendar */}
+            <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
+              <CardHeader className="pb-3 border-b border-slate-100">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <Calendar className="h-4 w-4 text-[#D4A843]" />
+                  Okres wynajmu
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5">
+                <AvailabilityCalendar
+                  selectedStart={selectedStart}
+                  selectedEnd={selectedEnd}
+                  onSelectRange={handleDateRangeSelect}
+                  occupiedRanges={occupiedRanges}
+                />
+                {selectedStart && selectedEnd && (
+                  <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">Wybrany okres:</p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {format(selectedStart, "dd MMM yyyy")} →{" "}
+                      {format(selectedEnd, "dd MMM yyyy")}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {totalPricing?.days} dni wynajmu
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Summary */}
+            {totalPricing && (
+              <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                <CardHeader className="pb-3 border-b border-slate-100">
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <CreditCard className="h-4 w-4 text-[#D4A843]" />
+                    Podsumowanie
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">
+                      Wynajem ({totalPricing.days} dni)
+                    </span>
+                    <span className="font-medium text-slate-700">
+                      {totalPricing.rentalTotal.toFixed(2)} zł
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Kaucja zwrotna</span>
+                    <span className="font-medium text-slate-700">
+                      {totalPricing.deposit.toFixed(2)} zł
+                    </span>
+                  </div>
+                  <div className="border-t border-slate-200 pt-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-semibold text-slate-900">Razem</span>
+                      <span className="text-lg font-bold text-slate-900">
+                        {totalPricing.total.toFixed(2)} zł
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Create button */}
+            <Button
+              onClick={handleCreateOrder}
+              disabled={orderCreated || saving || !selectedCustomer && !isNewCustomer || lineItems.length === 0}
+              className="w-full h-12 bg-[#D4A843] hover:bg-[#D4A843]/90 text-white font-semibold"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Tworzenie...
+                </>
+              ) : orderCreated ? (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Zamówienie utworzone
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Utwórz zamówienie
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
