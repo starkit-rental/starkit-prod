@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -9,7 +9,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "productId required" }, { status: 400 });
   }
 
-  const supabase = createSupabaseBrowserClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("pricing_tiers")
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const supabase = createSupabaseBrowserClient();
+  const supabase = await createSupabaseServerClient();
 
   try {
     const body = await req.json();
