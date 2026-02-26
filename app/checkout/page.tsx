@@ -155,15 +155,15 @@ function InpostMapDialog({
       />
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
-          <DialogHeader className="shrink-0 px-6 pt-5 pb-3 border-b border-slate-100">
-            <DialogTitle className="flex items-center gap-2 text-slate-900">
+          <DialogHeader className="shrink-0 px-6 pt-5 pb-3 border-b border-border">
+            <DialogTitle className="flex items-center gap-2 text-foreground">
               <MapPin className="h-5 w-5" />
               Wybierz Paczkomat InPost
             </DialogTitle>
           </DialogHeader>
           <div ref={containerRef} className="flex-1 min-h-0">
             {!scriptLoaded && (
-              <div className="flex items-center justify-center h-full text-slate-500">
+              <div className="flex items-center justify-center h-full text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
                 Ładowanie mapy…
               </div>
@@ -211,30 +211,30 @@ function TermsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[85vh] w-[95vw] max-w-2xl flex-col">
         <DialogHeader className="shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-slate-900">
+          <DialogTitle className="flex items-center gap-2 text-foreground">
             <FileText className="h-5 w-5" />
             Regulamin wynajmu sprzętu
           </DialogTitle>
         </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto pr-4 py-4 text-sm leading-relaxed text-slate-700">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-4 py-4 text-sm leading-relaxed text-foreground">
           {loadingContract ? (
-            <div className="flex items-center justify-center py-8 text-slate-400">
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin mr-2" />
               Ładowanie regulaminu…
             </div>
           ) : contractContent ? (
             <div 
-              className="prose prose-sm max-w-none"
+              className="prose prose-sm dark:prose-invert max-w-none"
               dangerouslySetInnerHTML={{ __html: contractContent }}
             />
           ) : (
-            <p className="text-slate-400 italic">Treść regulaminu niedostępna.</p>
+            <p className="text-muted-foreground italic">Treść regulaminu niedostępna.</p>
           )}
         </div>
-        <div className="flex shrink-0 justify-end pt-3 border-t border-slate-100">
+        <div className="flex shrink-0 justify-end pt-3 border-t border-border">
           <Button
             onClick={() => onOpenChange(false)}
-            className="bg-slate-900 hover:bg-slate-800"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             Zamknij
           </Button>
@@ -390,7 +390,7 @@ function CheckoutContent() {
   /* ── Loading / Error states ── */
   if (loadingProduct) {
     return (
-      <div className="flex items-center justify-center py-24 text-slate-500">
+      <div className="flex items-center justify-center py-24 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin mr-2" />
         Ładowanie zamówienia…
       </div>
@@ -412,19 +412,19 @@ function CheckoutContent() {
 
   /* ── Render ── */
   return (
-    <section className="min-h-screen bg-slate-50 py-8 md:py-12">
+    <section className="min-h-screen bg-background py-8 md:py-12">
       <div className="container max-w-6xl">
         {/* Header */}
         <div className="mb-8">
           <button
             type="button"
             onClick={() => window.history.back()}
-            className="mb-3 flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+            className="mb-3 flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Wróć do koszyka
           </button>
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
+          <h1 className="text-2xl font-bold text-foreground md:text-3xl">
             Dokończ rezerwację
           </h1>
         </div>
@@ -433,12 +433,12 @@ function CheckoutContent() {
           {/* ═══════════════ LEFT COLUMN ═══════════════ */}
           <div className="space-y-6 lg:col-span-7">
             {/* ── Card A: Customer Data ── */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
+            <div className="rounded-2xl border border-border bg-card p-6">
               <div className="mb-5 flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
-                  <User className="h-4 w-4 text-slate-600" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                  <User className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <h2 className="text-base font-semibold text-slate-900">
+                <h2 className="text-base font-semibold text-foreground">
                   Dane klienta
                 </h2>
               </div>
@@ -449,7 +449,7 @@ function CheckoutContent() {
                   <div>
                     <Label
                       htmlFor="firstName"
-                      className="text-xs font-medium text-slate-500"
+                      className="text-xs font-medium text-muted-foreground"
                     >
                       Imię *
                     </Label>
@@ -458,13 +458,13 @@ function CheckoutContent() {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       placeholder="Jan"
-                      className="mt-1.5 border-slate-200 bg-slate-50 focus:bg-white"
+                      className="mt-1.5 border-border bg-muted focus:bg-card"
                     />
                   </div>
                   <div>
                     <Label
                       htmlFor="lastName"
-                      className="text-xs font-medium text-slate-500"
+                      className="text-xs font-medium text-muted-foreground"
                     >
                       Nazwisko *
                     </Label>
@@ -473,7 +473,7 @@ function CheckoutContent() {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       placeholder="Kowalski"
-                      className="mt-1.5 border-slate-200 bg-slate-50 focus:bg-white"
+                      className="mt-1.5 border-border bg-muted focus:bg-card"
                     />
                   </div>
                 </div>
@@ -483,7 +483,7 @@ function CheckoutContent() {
                   <div>
                     <Label
                       htmlFor="email"
-                      className="text-xs font-medium text-slate-500"
+                      className="text-xs font-medium text-muted-foreground"
                     >
                       <Mail className="mr-1 inline h-3.5 w-3.5" />
                       E-mail *
@@ -494,14 +494,14 @@ function CheckoutContent() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="jan@firma.pl"
-                      className="mt-1.5 border-slate-200 bg-slate-50 focus:bg-white"
+                      className="mt-1.5 border-border bg-muted focus:bg-card"
                       autoComplete="email"
                     />
                   </div>
                   <div>
                     <Label
                       htmlFor="phone"
-                      className="text-xs font-medium text-slate-500"
+                      className="text-xs font-medium text-muted-foreground"
                     >
                       <Phone className="mr-1 inline h-3.5 w-3.5" />
                       Telefon *
@@ -512,7 +512,7 @@ function CheckoutContent() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+48 600 000 000"
-                      className="mt-1.5 border-slate-200 bg-slate-50 focus:bg-white"
+                      className="mt-1.5 border-border bg-muted focus:bg-card"
                       autoComplete="tel"
                     />
                   </div>
@@ -527,7 +527,7 @@ function CheckoutContent() {
                   />
                   <Label
                     htmlFor="wantInvoice"
-                    className="cursor-pointer text-sm text-slate-600"
+                    className="cursor-pointer text-sm text-muted-foreground"
                   >
                     <Building2 className="mr-1 inline h-3.5 w-3.5" />
                     Chcę fakturę VAT
@@ -539,7 +539,7 @@ function CheckoutContent() {
                     <div>
                       <Label
                         htmlFor="companyName"
-                        className="text-xs font-medium text-slate-500"
+                        className="text-xs font-medium text-muted-foreground"
                       >
                         Nazwa firmy *
                       </Label>
@@ -548,13 +548,13 @@ function CheckoutContent() {
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
                         placeholder="Firma Sp. z o.o."
-                        className="mt-1.5 border-slate-200 bg-slate-50 focus:bg-white"
+                        className="mt-1.5 border-border bg-muted focus:bg-card"
                       />
                     </div>
                     <div>
                       <Label
                         htmlFor="nip"
-                        className="text-xs font-medium text-slate-500"
+                        className="text-xs font-medium text-muted-foreground"
                       >
                         NIP *
                       </Label>
@@ -563,7 +563,7 @@ function CheckoutContent() {
                         value={nip}
                         onChange={(e) => setNip(e.target.value)}
                         placeholder="1234567890"
-                        className="mt-1.5 border-slate-200 bg-slate-50 focus:bg-white"
+                        className="mt-1.5 border-border bg-muted focus:bg-card"
                       />
                     </div>
                   </div>
@@ -572,16 +572,16 @@ function CheckoutContent() {
             </div>
 
             {/* ── Card B: InPost Delivery ── */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
+            <div className="rounded-2xl border border-border bg-card p-6">
               <div className="mb-5 flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
-                  <Package className="h-4 w-4 text-slate-600" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                  <Package className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-slate-900">
+                  <h2 className="text-base font-semibold text-foreground">
                     Dostawa — InPost Paczkomat
                   </h2>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Wpisz kod lub wybierz punkt z mapy
                   </p>
                 </div>
@@ -592,7 +592,7 @@ function CheckoutContent() {
                 <div>
                   <Label
                     htmlFor="inpostCode"
-                    className="text-xs font-medium text-slate-500"
+                    className="text-xs font-medium text-muted-foreground"
                   >
                     <MapPin className="mr-1 inline h-3.5 w-3.5" />
                     Kod Paczkomatu (np. KRA01M) *
@@ -607,7 +607,7 @@ function CheckoutContent() {
                       }}
                       placeholder="POZ08M"
                       className={cn(
-                        "flex-1 border-slate-200 bg-slate-50 font-mono tracking-wider uppercase focus:bg-white",
+                        "flex-1 border-border bg-muted font-mono tracking-wider uppercase focus:bg-card",
                         inpostCode.trim() && !inpostCodeValid && "border-destructive/50 focus-visible:ring-destructive/20",
                       )}
                       maxLength={10}
@@ -617,7 +617,7 @@ function CheckoutContent() {
                       type="button"
                       variant="outline"
                       onClick={() => setShowInpostMap(true)}
-                      className="shrink-0 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50"
+                      className="shrink-0 gap-1.5 border-border text-muted-foreground hover:bg-muted"
                     >
                       <MapPin className="h-4 w-4" />
                       <span className="hidden sm:inline">Wybierz z mapy</span>
@@ -633,14 +633,14 @@ function CheckoutContent() {
 
                 {/* Address display (filled from map or stays empty for manual entry) */}
                 {inpostAddress && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5">
+                  <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50 p-3.5">
                     <div className="flex items-center gap-2.5">
-                      <MapPin className="h-4 w-4 shrink-0 text-emerald-600" />
-                      <span className="text-sm font-medium text-emerald-900">
+                      <MapPin className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-sm font-medium text-emerald-900 dark:text-emerald-200">
                         {inpostCode}
                       </span>
-                      <span className="text-sm text-emerald-700">—</span>
-                      <span className="text-sm text-emerald-700 truncate">
+                      <span className="text-sm text-emerald-700 dark:text-emerald-400">—</span>
+                      <span className="text-sm text-emerald-700 dark:text-emerald-400 truncate">
                         {inpostAddress}
                       </span>
                     </div>
@@ -650,7 +650,7 @@ function CheckoutContent() {
             </div>
 
             {/* ── Terms Checkbox ── */}
-            <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-5">
               <Checkbox
                 id="terms"
                 checked={termsAccepted}
@@ -660,13 +660,13 @@ function CheckoutContent() {
               <div>
                 <Label
                   htmlFor="terms"
-                  className="cursor-pointer text-sm leading-relaxed text-slate-700"
+                  className="cursor-pointer text-sm leading-relaxed text-foreground"
                 >
                   Akceptuję{" "}
                   <button
                     type="button"
                     onClick={() => setShowTerms(true)}
-                    className="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700"
+                    className="font-medium text-foreground underline underline-offset-2 hover:text-muted-foreground"
                   >
                     umowę wynajmu razem z zamówieniem
                   </button>
@@ -677,27 +677,27 @@ function CheckoutContent() {
 
           {/* ═══════════════ RIGHT COLUMN: Sticky Summary ═══════════════ */}
           <div className="lg:col-span-5">
-            <div className="sticky top-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-5 text-base font-semibold text-slate-900">
+            <div className="sticky top-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <h2 className="mb-5 text-base font-semibold text-foreground">
                 Twoje zamówienie
               </h2>
 
               {/* Dates */}
-              <div className="mb-4 flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3">
-                <CalendarDays className="h-5 w-5 shrink-0 text-slate-400" />
-                <span className="text-sm font-medium text-slate-700">
+              <div className="mb-4 flex items-center gap-3 rounded-xl bg-muted px-4 py-3">
+                <CalendarDays className="h-5 w-5 shrink-0 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">
                   {fromFormatted}
                 </span>
-                <ArrowRight className="h-4 w-4 shrink-0 text-slate-300" />
-                <span className="text-sm font-medium text-slate-700">
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">
                   {toFormatted}
                 </span>
               </div>
 
               {/* Product */}
-              <div className="mb-5 flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3">
-                <Package className="h-5 w-5 shrink-0 text-slate-400" />
-                <span className="text-sm font-medium text-slate-700">
+              <div className="mb-5 flex items-center gap-3 rounded-xl bg-muted px-4 py-3">
+                <Package className="h-5 w-5 shrink-0 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">
                   {displayName}
                 </span>
               </div>
@@ -706,29 +706,29 @@ function CheckoutContent() {
               {pricing && (
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-600">
+                    <span className="text-muted-foreground">
                       Wynajem ({pricing.days} {pluralDni(pricing.days)})
                     </span>
-                    <span className="font-semibold text-slate-900">
+                    <span className="font-semibold text-foreground">
                       {(pricing.rentalSubtotalCents / 100).toFixed(2)} zł
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Kaucja zwrotna</span>
-                    <span className="font-semibold text-slate-900">
+                    <span className="text-muted-foreground">Kaucja zwrotna</span>
+                    <span className="font-semibold text-foreground">
                       {(pricing.depositCents / 100).toFixed(2)} zł
                     </span>
                   </div>
-                  <div className="border-t border-slate-200 pt-3">
+                  <div className="border-t border-border pt-3">
                     <div className="flex justify-between">
-                      <span className="text-base font-bold text-slate-900">
+                      <span className="text-base font-bold text-foreground">
                         Kwota do zapłaty
                       </span>
-                      <span className="text-xl font-bold text-slate-900">
+                      <span className="text-xl font-bold text-foreground">
                         {(pricing.totalCents / 100).toFixed(2)} zł
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Łącznie z kaucją zwrotną
                     </p>
                   </div>
@@ -742,8 +742,8 @@ function CheckoutContent() {
                 className={cn(
                   "mt-6 w-full rounded-xl py-6 text-base font-semibold transition-all",
                   formValid && pricing
-                    ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-900/25 active:scale-[0.98]"
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed",
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/25 active:scale-[0.98]"
+                    : "bg-muted text-muted-foreground cursor-not-allowed",
                 )}
                 size="lg"
               >
@@ -766,7 +766,7 @@ function CheckoutContent() {
 
               {/* Validation hints */}
               {!formValid && (
-                <div className="mt-4 space-y-1 text-xs text-slate-400">
+                <div className="mt-4 space-y-1 text-xs text-muted-foreground">
                   {(!firstName.trim() || !lastName.trim()) && (
                     <p>• Uzupełnij imię i nazwisko</p>
                   )}
@@ -801,8 +801,8 @@ export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-slate-50">
-          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       }
     >

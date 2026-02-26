@@ -338,20 +338,20 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
   const isLoading = loadingProduct || loadingBookings;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
       {/* Header */}
       <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900">
-          <CalendarDays className="h-5 w-5 text-white" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary">
+          <CalendarDays className="h-5 w-5 text-primary-foreground" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">Zarezerwuj termin</h3>
-          <p className="text-xs text-slate-500">Wybierz daty i sprawdź cenę wynajmu</p>
+          <h3 className="text-sm font-semibold text-foreground">Zarezerwuj termin</h3>
+          <p className="text-xs text-muted-foreground">Wybierz daty i sprawdź cenę wynajmu</p>
         </div>
       </div>
 
       {loadingProduct ? (
-        <div className="flex items-center gap-2 py-8 text-sm text-slate-500">
+        <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Ładowanie produktu…
         </div>
@@ -361,7 +361,7 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
         <div className="flex flex-col gap-4">
           {/* ── Date Picker ── */}
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Okres wynajmu
             </label>
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
@@ -369,20 +369,20 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
                 <button
                   type="button"
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm transition-colors hover:bg-white hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10",
-                    !dateRange?.from && "text-slate-400",
+                    "flex w-full items-center gap-2 rounded-xl border border-border bg-muted px-4 py-3 text-left text-sm transition-colors hover:bg-card hover:border-border focus:outline-none focus:ring-2 focus:ring-ring/20",
+                    !dateRange?.from && "text-muted-foreground",
                   )}
                 >
-                  <CalendarDays className="h-4 w-4 shrink-0 text-slate-400" />
+                  <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
                   {dateRange?.from ? (
                     dateRange.to ? (
-                      <span className="text-slate-700 font-medium">
+                      <span className="text-foreground font-medium">
                         {format(dateRange.from, "d MMM", { locale: plDateFns })}
-                        <ArrowRight className="mx-1.5 inline h-3.5 w-3.5 text-slate-400" />
+                        <ArrowRight className="mx-1.5 inline h-3.5 w-3.5 text-muted-foreground" />
                         {format(dateRange.to, "d MMM yyyy", { locale: plDateFns })}
                       </span>
                     ) : (
-                      <span className="text-slate-700">
+                      <span className="text-foreground">
                         {format(dateRange.from, "d MMM yyyy", { locale: plDateFns })} — wybierz koniec
                       </span>
                     )
@@ -411,12 +411,12 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
                   className="rounded-xl border-0"
                 />
                 {/* Legend */}
-                <div className="flex items-center gap-5 border-t border-slate-100 px-4 py-2.5">
-                  <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                <div className="flex items-center gap-5 border-t border-border px-4 py-2.5">
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span className="inline-block h-3 w-3 rounded-sm bg-red-100 border border-red-200" />
                     Zajęte
                   </span>
-                  <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span className="inline-block h-3 w-3 rounded-sm bg-amber-50 border border-amber-200" />
                     Bufor wysyłki (±2 dni)
                   </span>
@@ -427,29 +427,29 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
 
           {/* ── Summary Card ── */}
           {rangeValid && pricing && (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <div className="rounded-xl border border-border bg-muted p-4">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Podsumowanie
               </div>
               <div className="space-y-2.5 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-600">
+                  <span className="text-muted-foreground">
                     {displayName} — {pricing.days} {pluralDni(pricing.days)}
                   </span>
-                  <span className="font-semibold text-slate-900">
+                  <span className="font-semibold text-foreground">
                     {(pricing.rentalSubtotalCents / 100).toFixed(2)} zł
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Kaucja zwrotna</span>
-                  <span className="font-semibold text-slate-900">
+                  <span className="text-muted-foreground">Kaucja zwrotna</span>
+                  <span className="font-semibold text-foreground">
                     {(pricing.depositCents / 100).toFixed(2)} zł
                   </span>
                 </div>
-                <div className="border-t border-slate-200 pt-2.5">
+                <div className="border-t border-border pt-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-900">Razem</span>
-                    <span className="text-xl font-bold text-slate-900">
+                    <span className="font-semibold text-foreground">Razem</span>
+                    <span className="text-xl font-bold text-foreground">
                       {(pricing.totalCents / 100).toFixed(2)} zł
                     </span>
                   </div>
@@ -463,8 +463,8 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
             <div className="flex items-center gap-2 text-sm">
               {checking ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-                  <span className="text-slate-500">Sprawdzanie dostępności…</span>
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <span className="text-muted-foreground">Sprawdzanie dostępności…</span>
                 </>
               ) : availabilityError ? (
                 <>
@@ -489,7 +489,7 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
           {rangeValid && available === true && (
             <Button
               onClick={onContinue}
-              className="w-full rounded-xl bg-slate-900 py-6 text-base font-semibold text-white shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-900/25 active:scale-[0.98]"
+              className="w-full rounded-xl bg-primary py-6 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/25 active:scale-[0.98]"
               size="lg"
             >
               Zarezerwuj termin
