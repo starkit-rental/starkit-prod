@@ -1783,10 +1783,9 @@ function EditOrderPanel({
 
 function ContractPdfCard({
   orderId,
-  supabase,
 }: {
   orderId: string;
-  supabase: ReturnType<typeof createSupabaseBrowserClient>;
+  supabase?: ReturnType<typeof createSupabaseBrowserClient>;
 }) {
   const [generating, setGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -1794,35 +1793,24 @@ function ContractPdfCard({
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Check if PDF already exists in storage
+  // Check if PDF exists via server-side API (uses service role key)
   useEffect(() => {
     async function checkExistingPdf() {
       try {
-        const { data: files } = await supabase.storage
-          .from("contracts")
-          .list(`contracts/${orderId}`);
-
-        if (files && files.length > 0) {
-          const pdfFile = files.find((f) => f.name.endsWith(".pdf"));
-          if (pdfFile) {
-            const path = `contracts/${orderId}/${pdfFile.name}`;
-            const { data: signedUrl } = await supabase.storage
-              .from("contracts")
-              .createSignedUrl(path, 60 * 60 * 24); // 24h
-            if (signedUrl?.signedUrl) {
-              setPdfUrl(signedUrl.signedUrl);
-              setPdfFilename(pdfFile.name);
-            }
-          }
+        const res = await fetch(`/api/office/contract-pdf?orderId=${orderId}`);
+        const json = await res.json();
+        if (json.exists && json.url) {
+          setPdfUrl(json.url);
+          setPdfFilename(json.filename);
         }
       } catch {
-        // Storage bucket may not exist yet — that's fine
+        // ignore
       } finally {
         setChecking(false);
       }
     }
     void checkExistingPdf();
-  }, [orderId, supabase]);
+  }, [orderId]);
 
   async function handleGenerate() {
     setGenerating(true);
