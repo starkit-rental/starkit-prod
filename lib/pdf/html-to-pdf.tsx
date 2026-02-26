@@ -147,19 +147,21 @@ const inlineStyles: Record<string, Record<string, any>> = {
   u: { textDecoration: "underline" as const },
 };
 
-function renderAstNode(node: AstNode, key: string): React.ReactElement | string | null {
+function renderAstNode(node: AstNode, key: string, insideText = false): React.ReactElement | string | null {
   if (node.type === "text") {
     const text = node.text ?? "";
-    return text || null;
+    if (!text) return null;
+    // If inside a Text component, return raw string (valid)
+    if (insideText) return text;
+    // At block level, only render non-whitespace text wrapped in Text
+    if (text.trim()) return <Text key={key} style={{ fontSize: BASE_FONT_SIZE, lineHeight: LINE_HEIGHT }}>{text}</Text>;
+    return null;
   }
 
   const tag = node.tag ?? "";
-  const children = (node.children ?? []).map((child, i) => renderAstNode(child, `${key}-${i}`)).filter(Boolean);
-
-  // Void elements
-  if (tag === "br") {
-    return <Text key={key}>{"\n"}</Text>;
-  }
+  // Inline elements pass insideText=true so text children return raw strings
+  const isInline = !!inlineStyles[tag] || tag === "a";
+  const children = (node.children ?? []).map((child, i) => renderAstNode(child, `${key}-${i}`, insideText || isInline)).filter(Boolean);
 
   if (tag === "hr") {
     return (
@@ -189,6 +191,11 @@ function renderAstNode(node: AstNode, key: string): React.ReactElement | string 
     );
   }
 
+  // br inside text context
+  if (tag === "br") {
+    return insideText ? <Text key={key}>{"\n"}</Text> : null;
+  }
+
   // Lists
   if (tag === "ul" || tag === "ol") {
     // Count actual <li> elements for proper numbering
@@ -199,7 +206,8 @@ function renderAstNode(node: AstNode, key: string): React.ReactElement | string 
           if (child.type === "element" && child.tag === "li") {
             listItemCounter++;
             const bullet = tag === "ol" ? `${listItemCounter}.` : "\u2022";
-            const liChildren = (child.children ?? []).map((c, j) => renderAstNode(c, `${key}-li-${i}-${j}`)).filter(Boolean);
+            // li children run in insideText=true so they return raw strings for Text
+            const liChildren = (child.children ?? []).map((c, j) => renderAstNode(c, `${key}-li-${i}-${j}`, true)).filter(Boolean);
             return (
               <View key={`${key}-li-${i}`} wrap={false} style={{ flexDirection: "row", marginBottom: 1.5, paddingLeft: 4 }}>
                 <Text style={{ fontSize: BASE_FONT_SIZE, width: tag === "ol" ? 14 : 8, color: "#64748b" }}>
@@ -211,7 +219,9 @@ function renderAstNode(node: AstNode, key: string): React.ReactElement | string 
               </View>
             );
           }
-          return renderAstNode(child, `${key}-${i}`);
+          // Skip whitespace text nodes between <li> tags — these cause the numbering skip bug
+          if (child.type === "text" && !(child.text ?? "").trim()) return null;
+          return renderAstNode(child, `${key}-${i}`, false);
         })}
       </View>
     );
@@ -221,9 +231,11 @@ function renderAstNode(node: AstNode, key: string): React.ReactElement | string 
   if (blockStyles[tag]) {
     // For paragraphs and headings, wrap in Text for proper inline rendering
     if (tag === "p" || tag === "h2" || tag === "h3") {
+      // Re-render children in insideText mode
+      const textChildren = (node.children ?? []).map((c, i) => renderAstNode(c, `${key}-t-${i}`, true)).filter(Boolean);
       return (
         <Text key={key} style={blockStyles[tag]}>
-          {children}
+          {textChildren}
         </Text>
       );
     }
@@ -234,9 +246,10 @@ function renderAstNode(node: AstNode, key: string): React.ReactElement | string 
     );
   }
 
-  // Default: just render children
+  // Default: just render children (inline context passes through)
   if (children.length > 0) {
-    return <Text key={key}>{children}</Text>;
+    if (insideText) return <Text key={key}>{children}</Text>;
+    return <View key={key}>{children}</View>;
   }
 
   return null;

@@ -1,21 +1,25 @@
 import React from "react";
+import path from "path";
 import { Document, Page, Text, View, Image, StyleSheet, Font } from "@react-pdf/renderer";
 import { HtmlContent, splitHtmlForColumns } from "./html-to-pdf";
 
 // Roboto — pełna obsługa polskich znaków (Latin Extended)
+// Use local TTF files from /public/fonts/ — CDN URLs unreliable in server-side PDF rendering
+const FONTS_DIR = path.join(process.cwd(), "public", "fonts");
+
 Font.register({
   family: "Roboto",
   fonts: [
     {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-regular-webfont.ttf",
+      src: path.join(FONTS_DIR, "Roboto-Regular.ttf"),
       fontWeight: 400,
     },
     {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-bold-webfont.ttf",
+      src: path.join(FONTS_DIR, "Roboto-Bold.ttf"),
       fontWeight: 700,
     },
     {
-      src: "https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-italic-webfont.ttf",
+      src: path.join(FONTS_DIR, "Roboto-Italic.ttf"),
       fontWeight: 400,
       fontStyle: "italic",
     },

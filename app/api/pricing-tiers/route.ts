@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
+
+function createAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error("Missing Supabase env vars");
+  return createClient(url, key, { auth: { persistSession: false } });
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -9,7 +16,14 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "productId required" }, { status: 400 });
   }
 
-  const supabase = await createSupabaseServerClient();
+  let supabase;
+  try {
+    supabase = createAdminClient();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    console.error("[pricing-tiers GET] client init failed:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   const { data, error } = await supabase
     .from("pricing_tiers")
@@ -35,7 +49,14 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  let supabase;
+  try {
+    supabase = createAdminClient();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    console.error("[pricing-tiers POST] client init failed:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   try {
     const body = await req.json();
