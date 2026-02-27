@@ -104,6 +104,7 @@ function InpostMapDialog({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Load CSS dynamically
   useEffect(() => {
@@ -120,7 +121,16 @@ function InpostMapDialog({
   useEffect(() => {
     if (!open || !scriptLoaded || !containerRef.current) return;
 
+    setLoadError(false);
     containerRef.current.innerHTML = "";
+
+    if (!INPOST_TOKEN) {
+      console.error('[InPost] Token not configured');
+      setLoadError(true);
+      return;
+    }
+
+    console.log('[InPost] Initializing widget with token:', INPOST_TOKEN.substring(0, 20) + '...');
 
     const widget = document.createElement("inpost-geowidget");
     widget.setAttribute("token", INPOST_TOKEN);
@@ -130,7 +140,28 @@ function InpostMapDialog({
     widget.style.display = "block";
     widget.style.width = "100%";
     widget.style.height = "100%";
+    
+    // Listen for widget errors
+    widget.addEventListener('error', (e) => {
+      console.error('[InPost] Widget error:', e);
+      setLoadError(true);
+    });
+
     containerRef.current.appendChild(widget);
+
+    const timeout = setTimeout(() => {
+      const widgetElement = containerRef.current?.querySelector('inpost-geowidget');
+      console.log('[InPost] Widget check:', {
+        exists: !!widgetElement,
+        hasShadowRoot: !!widgetElement?.shadowRoot,
+        innerHTML: widgetElement?.innerHTML
+      });
+      
+      if (!widgetElement?.shadowRoot) {
+        console.error('[InPost] Widget failed to initialize - no shadow root after 10s');
+        setLoadError(true);
+      }
+    }, 10000);
 
     function handlePointSelect(e: Event) {
       const point = (e as CustomEvent).detail;
@@ -143,6 +174,7 @@ function InpostMapDialog({
 
     document.addEventListener("onInpostPointSelect", handlePointSelect);
     return () => {
+      clearTimeout(timeout);
       document.removeEventListener("onInpostPointSelect", handlePointSelect);
     };
   }, [open, scriptLoaded, onPointSelected, onOpenChange]);
@@ -152,7 +184,14 @@ function InpostMapDialog({
       <Script
         src="https://geowidget.inpost.pl/inpost-geowidget.js"
         strategy="lazyOnload"
-        onLoad={() => setScriptLoaded(true)}
+        onLoad={() => {
+          console.log('[InPost] Script loaded successfully');
+          setScriptLoaded(true);
+        }}
+        onError={(e) => {
+          console.error('[InPost] Script failed to load:', e);
+          setLoadError(true);
+        }}
       />
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
@@ -163,10 +202,22 @@ function InpostMapDialog({
             </DialogTitle>
           </DialogHeader>
           <div ref={containerRef} className="flex-1 min-h-0">
-            {!scriptLoaded && (
+            {!scriptLoaded && !loadError && (
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
                 Ładowanie mapy…
+              </div>
+            )}
+            {loadError && (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6 gap-3">
+                <MapPin className="h-12 w-12 text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-foreground mb-1">Nie można załadować mapy</p>
+                  <p className="text-sm text-muted-foreground">Wpisz kod paczkomatu ręcznie (np. KRA01M)</p>
+                </div>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Zamknij
+                </Button>
               </div>
             )}
           </div>
