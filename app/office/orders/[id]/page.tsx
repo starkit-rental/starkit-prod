@@ -170,6 +170,227 @@ const STATUS_LABELS: Record<string, string> = {
 
 const EMAIL_STATUSES = ["reserved", "picked_up", "returned", "cancelled"];
 
+// ── ProductsCard ─────────────────────────────────────────────────────────────
+
+type ProductOption = { id: string; name: string; stock_items: { id: string; serial_number: string | null }[] };
+
+function ProductsCard({
+  orderId,
+  items,
+  supabase,
+  onRefresh,
+}: {
+  orderId: string;
+  items: OrderItemRow[];
+  supabase: ReturnType<typeof createSupabaseBrowserClient>;
+  onRefresh: () => void;
+}) {
+  const [allProducts, setAllProducts] = useState<ProductOption[]>([]);
+  const [editingSerial, setEditingSerial] = useState<string | null>(null); // stock_item_id being edited
+  const [serialDraft, setSerialDraft] = useState("");
+  const [savingSerial, setSavingSerial] = useState(false);
+  const [addSearch, setAddSearch] = useState("");
+  const [addingProductId, setAddingProductId] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from("products")
+      .select("id, name, stock_items(id, serial_number)")
+      .then(({ data }) => setAllProducts((data as any) ?? []));
+  }, [supabase]);
+
+  const currentStockIds = new Set(items.map((i) => i.stock_item_id));
+
+  const filteredProducts = useMemo(() => {
+    const q = addSearch.trim().toLowerCase();
+    return allProducts.filter((p) => !q || p.name.toLowerCase().includes(q));
+  }, [allProducts, addSearch]);
+
+  async function addItem(stockItemId: string) {
+    setAddingProductId(stockItemId);
+    setErr(null);
+    const { error } = await supabase
+      .from("order_items")
+      .insert({ order_id: orderId, stock_item_id: stockItemId });
+    setAddingProductId(null);
+    if (error) { setErr(error.message); return; }
+    setShowAdd(false);
+    setAddSearch("");
+    onRefresh();
+  }
+
+  async function removeItem(stockItemId: string) {
+    setRemoving(stockItemId);
+    setErr(null);
+    const { error } = await supabase
+      .from("order_items")
+      .delete()
+      .eq("order_id", orderId)
+      .eq("stock_item_id", stockItemId);
+    setRemoving(null);
+    if (error) { setErr(error.message); return; }
+    onRefresh();
+  }
+
+  async function saveSerial(stockItemId: string) {
+    setSavingSerial(true);
+    setErr(null);
+    const { error } = await supabase
+      .from("stock_items")
+      .update({ serial_number: serialDraft.trim() || null })
+      .eq("id", stockItemId);
+    setSavingSerial(false);
+    if (error) { setErr(error.message); return; }
+    setEditingSerial(null);
+    onRefresh();
+  }
+
+  return (
+    <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <Package className="h-4 w-4" />
+            Produkty
+          </CardTitle>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 text-xs border-slate-200"
+            onClick={() => { setShowAdd((v) => !v); setAddSearch(""); setErr(null); }}
+          >
+            <X className={cn("h-3 w-3 transition-transform", !showAdd && "rotate-45")} />
+            {showAdd ? "Anuluj" : "Dodaj"}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Add product panel */}
+        {showAdd && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+            <Input
+              placeholder="Szukaj produktu…"
+              value={addSearch}
+              onChange={(e) => setAddSearch(e.target.value)}
+              className="h-8 text-sm bg-white"
+            />
+            <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white max-h-64 overflow-y-auto">
+              {filteredProducts.length === 0 && (
+                <div className="px-3 py-4 text-center text-xs text-slate-400">Brak produktów</div>
+              )}
+              {filteredProducts.map((p) => (
+                <div key={p.id} className="px-3 py-2">
+                  <div className="text-xs font-semibold text-slate-700 mb-1.5">{p.name}</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {p.stock_items.length === 0 && (
+                      <span className="text-[11px] text-slate-400">Brak sztuk w magazynie</span>
+                    )}
+                    {p.stock_items.map((s) => {
+                      const alreadyAdded = currentStockIds.has(s.id);
+                      return (
+                        <button
+                          key={s.id}
+                          disabled={alreadyAdded || addingProductId === s.id}
+                          onClick={() => addItem(s.id)}
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors",
+                            alreadyAdded
+                              ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                              : "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer"
+                          )}
+                        >
+                          {addingProductId === s.id
+                            ? <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                            : alreadyAdded ? <CheckCircle2 className="h-2.5 w-2.5" /> : null}
+                          {s.serial_number || s.id.slice(0, 8)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Existing items */}
+        {items.length === 0 && !showAdd ? (
+          <div className="py-6 text-center text-sm text-slate-500">Brak pozycji w zamówieniu.</div>
+        ) : items.length > 0 && (
+          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+            {items.map((it, idx) => {
+              const stock = normalizeOne(it.stock_items as any);
+              const product = normalizeOne((stock as any)?.products as any);
+              const name = (product as any)?.name ?? "Produkt";
+              const serial = stock?.serial_number ?? "—";
+              const stockId = it.stock_item_id ?? "";
+              const isEditing = editingSerial === stockId;
+
+              return (
+                <div key={`${stockId}-${idx}`} className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
+                    <Package className="h-3.5 w-3.5 text-slate-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-slate-900">{name}</div>
+                    {isEditing ? (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <Input
+                          value={serialDraft}
+                          onChange={(e) => setSerialDraft(e.target.value)}
+                          placeholder="Numer seryjny"
+                          className="h-6 text-xs px-2 w-40"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") void saveSerial(stockId);
+                            if (e.key === "Escape") setEditingSerial(null);
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => void saveSerial(stockId)}
+                          disabled={savingSerial}
+                          className="text-indigo-600 hover:text-indigo-800 text-[11px] font-medium"
+                        >
+                          {savingSerial ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                        </button>
+                        <button onClick={() => setEditingSerial(null)} className="text-slate-400 hover:text-slate-600">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className="flex items-center gap-1 text-xs text-slate-500 hover:text-indigo-600 transition-colors mt-0.5 group"
+                        onClick={() => { setEditingSerial(stockId); setSerialDraft(stock?.serial_number ?? ""); }}
+                      >
+                        <span>SN: {serial}</span>
+                        <Edit3 className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => void removeItem(stockId)}
+                    disabled={removing === stockId}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+                  >
+                    {removing === stockId
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Trash2 className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {err && <div className="text-xs text-red-600 px-1">{err}</div>}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function OfficeOrderDetailsPage() {
   const params = useParams<{ id: string }>();
   const orderId = params?.id;
@@ -211,6 +432,23 @@ export default function OfficeOrderDetailsPage() {
 
   // Status change confirmation dialog
   const [statusDialog, setStatusDialog] = useState<{ newStatus: string; label: string } | null>(null);
+
+  // Inline date & price editing
+  const [editingDates, setEditingDates] = useState(false);
+  const [dateDraft, setDateDraft] = useState({ start: "", end: "" });
+  const [savingDates, setSavingDates] = useState(false);
+  async function saveDates() {
+    if (!orderId) return;
+    setSavingDates(true);
+    const { error } = await supabase
+      .from("orders")
+      .update({ start_date: dateDraft.start, end_date: dateDraft.end })
+      .eq("id", orderId);
+    setSavingDates(false);
+    if (error) { setError(error.message); return; }
+    setEditingDates(false);
+    await loadOrder();
+  }
 
   // Clear all timers on unmount
   useEffect(() => {
@@ -782,17 +1020,57 @@ export default function OfficeOrderDetailsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Pickup</div>
-                      <div className="mt-1.5 text-base font-semibold text-slate-900">{pickupDate}</div>
+                  {editingDates ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Pickup</div>
+                          <Input
+                            type="date"
+                            value={dateDraft.start}
+                            onChange={(e) => setDateDraft((d) => ({ ...d, start: e.target.value }))}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Return</div>
+                          <Input
+                            type="date"
+                            value={dateDraft.end}
+                            onChange={(e) => setDateDraft((d) => ({ ...d, end: e.target.value }))}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingDates(false)}>
+                          Anuluj
+                        </Button>
+                        <Button size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => void saveDates()} disabled={savingDates}>
+                          {savingDates ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
+                          Zapisz
+                        </Button>
+                      </div>
                     </div>
-                    <ArrowRight className="h-6 w-6 text-slate-300" />
-                    <div className="text-right">
-                      <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Return</div>
-                      <div className="mt-1.5 text-base font-semibold text-slate-900">{returnDate}</div>
+                  ) : (
+                    <div
+                      className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 cursor-pointer group"
+                      onClick={() => { setDateDraft({ start: order.start_date?.slice(0, 10) ?? "", end: order.end_date?.slice(0, 10) ?? "" }); setEditingDates(true); }}
+                    >
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Pickup</div>
+                        <div className="mt-1.5 text-base font-semibold text-slate-900 flex items-center gap-1.5">
+                          {pickupDate}
+                          <Edit3 className="h-3.5 w-3.5 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </div>
+                      <ArrowRight className="h-6 w-6 text-slate-300" />
+                      <div className="text-right">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Return</div>
+                        <div className="mt-1.5 text-base font-semibold text-slate-900">{returnDate}</div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
                 {order.inpost_point_id && (
                   <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
@@ -811,40 +1089,12 @@ export default function OfficeOrderDetailsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  <Package className="h-4 w-4" />
-                  Produkty
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {items.length === 0 ? (
-                  <div className="py-6 text-center text-sm text-slate-500">Brak pozycji w zamówieniu.</div>
-                ) : (
-                  <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
-                    {items.map((it, idx) => {
-                      const stock = normalizeOne(it.stock_items as any);
-                      const product = normalizeOne(stock?.products as any);
-                      const name = product?.name ?? "Produkt";
-                      const serial = stock?.serial_number ?? "—";
-
-                      return (
-                        <div key={`${it.stock_item_id}-${idx}`} className="flex items-center gap-4 px-4 py-3.5">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
-                            <Package className="h-4 w-4 text-slate-400" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-semibold text-slate-900">{name}</div>
-                            <div className="text-xs text-slate-500">SN: {serial}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ProductsCard
+              orderId={orderId!}
+              items={items}
+              supabase={supabase}
+              onRefresh={loadOrder}
+            />
           </div>
 
           {/* RIGHT — Finance Management */}
@@ -856,6 +1106,7 @@ export default function OfficeOrderDetailsPage() {
               notes={order.notes}
               invoiceSent={order.invoice_sent}
               totalDeposit={depositSafe}
+              totalRentalPrice={Number(order.total_rental_price ?? 0)}
               onUpdate={loadOrder}
             />
 

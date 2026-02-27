@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { Search, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -87,8 +87,23 @@ export default function OfficeOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState<"order_number" | "start_date" | "end_date" | "total_rental_price" | "order_status" | "payment_status">("start_date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const PAGE_SIZE = 25;
+
+  function toggleSort(key: typeof sortKey) {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+    setPage(1);
+  }
+
+  function SortIcon({ col }: { col: typeof sortKey }) {
+    if (sortKey !== col) return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-40" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="ml-1 inline h-3 w-3 text-indigo-600" />
+      : <ArrowDown className="ml-1 inline h-3 w-3 text-indigo-600" />;
+  }
 
   useEffect(() => {
     let active = true;
@@ -124,30 +139,42 @@ export default function OfficeOrdersPage() {
     };
   }, [supabase]);
 
-  const filtered = useMemo(() => {
+  const filtered = useMemo((): OrderRow[] => {
     const q = query.trim().toLowerCase();
-    if (!q) return orders;
-
-    return orders.filter((o) => {
+    const base: OrderRow[] = !q ? orders : orders.filter((o) => {
       const cust = normalizeCustomer(o.customers);
-      const orderNumber = String(o.order_number ?? "").toLowerCase();
-      const id = String(o.id).toLowerCase();
-      const customerName = String(cust?.full_name ?? "").toLowerCase();
-      const companyName = String(cust?.company_name ?? "").toLowerCase();
-      const orderStatus = String(o.order_status ?? "").toLowerCase();
-      const payStatus = String(o.payment_status ?? "").toLowerCase();
       return (
-        orderNumber.includes(q) ||
-        id.includes(q) ||
-        customerName.includes(q) ||
-        companyName.includes(q) ||
-        orderStatus.includes(q) ||
-        payStatus.includes(q)
+        String(o.order_number ?? "").toLowerCase().includes(q) ||
+        String(o.id).toLowerCase().includes(q) ||
+        String(cust?.full_name ?? "").toLowerCase().includes(q) ||
+        String(cust?.company_name ?? "").toLowerCase().includes(q) ||
+        String(o.order_status ?? "").toLowerCase().includes(q) ||
+        String(o.payment_status ?? "").toLowerCase().includes(q)
       );
     });
-  }, [orders, query]);
 
-  // Reset to page 1 when search query changes
+    return [...base].sort((a, b) => {
+      let va: string | number;
+      let vb: string | number;
+      if (sortKey === "order_number") {
+        va = parseInt((a.order_number || "").replace(/\D/g, "")) || 0;
+        vb = parseInt((b.order_number || "").replace(/\D/g, "")) || 0;
+      } else if (sortKey === "total_rental_price") {
+        va = Number(String(a.total_rental_price ?? 0));
+        vb = Number(String(b.total_rental_price ?? 0));
+      } else if (sortKey === "order_status" || sortKey === "payment_status") {
+        va = (a[sortKey] ?? "").toLowerCase();
+        vb = (b[sortKey] ?? "").toLowerCase();
+      } else {
+        va = (a[sortKey] as string) ?? "";
+        vb = (b[sortKey] as string) ?? "";
+      }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [orders, query, sortKey, sortDir]);
+
   useEffect(() => { setPage(1); }, [query]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -235,13 +262,23 @@ export default function OfficeOrdersPage() {
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50/80">
-                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">#</th>
-                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Klient</th>
-                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
-                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Od</th>
-                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Do</th>
-                      <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Kwota</th>
-                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Płatność</th>
+                      {([
+                        { key: "order_number", label: "#", align: "left" },
+                        { key: null, label: "Klient", align: "left" },
+                        { key: "order_status", label: "Status", align: "left" },
+                        { key: "start_date", label: "Od", align: "left" },
+                        { key: "end_date", label: "Do", align: "left" },
+                        { key: "total_rental_price", label: "Kwota", align: "right" },
+                        { key: "payment_status", label: "Płatność", align: "left" },
+                      ] as const).map(({ key, label, align }) => (
+                        <th
+                          key={label}
+                          onClick={key ? () => toggleSort(key as any) : undefined}
+                          className={`px-5 py-3 text-${align} text-[11px] font-semibold uppercase tracking-wider text-slate-400 ${key ? "cursor-pointer select-none hover:text-slate-700" : ""}`}
+                        >
+                          {label}{key && <SortIcon col={key as any} />}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">

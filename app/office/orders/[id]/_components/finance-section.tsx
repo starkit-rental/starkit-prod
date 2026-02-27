@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { DollarSign, FileText, Save, Upload, Send, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { DollarSign, Edit3, FileText, Loader2, Save, Send, Upload, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +25,7 @@ type FinanceSectionProps = {
   notes: string | null;
   invoiceSent: boolean | null;
   totalDeposit: number;
+  totalRentalPrice: number;
   onUpdate: () => void;
 };
 
@@ -33,14 +36,33 @@ export function FinanceSection({
   notes,
   invoiceSent,
   totalDeposit,
+  totalRentalPrice,
   onUpdate,
 }: FinanceSectionProps) {
+  const supabase = createSupabaseBrowserClient();
   const [localNotes, setLocalNotes] = useState(notes || "");
   const [saving, setSaving] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [sendingInvoice, setSendingInvoice] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingPrice, setEditingPrice] = useState(false);
+  const [priceDraft, setPriceDraft] = useState("");
+  const [savingPrice, setSavingPrice] = useState(false);
+
+  async function savePrice() {
+    const val = parseFloat(priceDraft.replace(",", "."));
+    if (!Number.isFinite(val) || val < 0) return;
+    setSavingPrice(true);
+    const { error: err } = await supabase
+      .from("orders")
+      .update({ total_rental_price: val })
+      .eq("id", orderId);
+    setSavingPrice(false);
+    if (err) { setError(err.message); return; }
+    setEditingPrice(false);
+    onUpdate();
+  }
 
   const getPaymentStatusInfo = () => {
     const s = (paymentStatus ?? "").toLowerCase();
@@ -186,6 +208,41 @@ export function FinanceSection({
               <StatusIcon className="h-4 w-4" />
               <span className="font-medium text-sm">{statusInfo.label}</span>
             </div>
+          </div>
+
+          {/* Rental Price */}
+          <div>
+            <Label className="text-xs text-slate-500 mb-1 block">Kwota wynajmu</Label>
+            {editingPrice ? (
+              <div className="flex items-center gap-2 mt-1">
+                <Input
+                  value={priceDraft}
+                  onChange={(e) => setPriceDraft(e.target.value)}
+                  placeholder="np. 500.00"
+                  className="h-8 text-sm w-32"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void savePrice();
+                    if (e.key === "Escape") setEditingPrice(false);
+                  }}
+                  autoFocus
+                />
+                <span className="text-sm text-slate-500">zł</span>
+                <button onClick={() => void savePrice()} disabled={savingPrice} className="text-indigo-600 hover:text-indigo-800">
+                  {savingPrice ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                </button>
+                <button onClick={() => setEditingPrice(false)} className="text-slate-400 hover:text-slate-600">
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                className="flex items-center gap-1.5 group mt-1"
+                onClick={() => { setPriceDraft(totalRentalPrice.toFixed(2)); setEditingPrice(true); }}
+              >
+                <span className="text-2xl font-bold text-slate-900">{totalRentalPrice.toFixed(2)} zł</span>
+                <Edit3 className="h-3.5 w-3.5 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
+              </button>
+            )}
           </div>
 
           {/* Deposit Amount */}
