@@ -18,6 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -305,13 +306,13 @@ export default function OfficeCustomersPage() {
                 </thead>
                 <tbody>
                   {paginated.map((c) => (
-                    <tr key={c.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/80">
+                    <tr key={c.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/80 cursor-pointer">
                       <td className="px-6 py-4">
-                        <span className="font-semibold text-slate-900">
+                        <Link href={`/office/customers/${c.id}`} className="font-semibold text-slate-900 hover:text-indigo-600 transition-colors">
                           {c.full_name || c.email || "—"}
-                        </span>
+                        </Link>
                         {!c.full_name && c.email && (
-                          <span className="text-xs text-slate-400 italic">brak nazwy</span>
+                          <span className="text-xs text-slate-400 italic ml-1">brak nazwy</span>
                         )}
                       </td>
                       <td className="px-6 py-4">
@@ -391,9 +392,9 @@ export default function OfficeCustomersPage() {
                 <div key={c.id} className="px-4 py-4 transition-colors hover:bg-slate-50/80">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-slate-900 mb-1 truncate">
+                      <Link href={`/office/customers/${c.id}`} className="font-semibold text-slate-900 hover:text-indigo-600 transition-colors mb-1 truncate block">
                         {c.full_name || c.email || "—"}
-                      </div>
+                      </Link>
                       {c.email && (
                         <a href={`mailto:${c.email}`} className="text-sm text-slate-600 hover:text-blue-600 hover:underline truncate block">
                           <Mail className="h-3 w-3 inline mr-1 text-slate-400" />
