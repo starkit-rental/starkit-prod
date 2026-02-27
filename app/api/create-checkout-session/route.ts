@@ -198,6 +198,7 @@ export async function POST(req: Request) {
       end_date: endDate,
       total_rental_price: totalRentalDecimal,
       total_deposit: totalDepositDecimal,
+      payment_method: "stripe",
       payment_status: "pending",
       order_status: "pending",
     };
