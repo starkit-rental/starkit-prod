@@ -134,14 +134,19 @@ export default function NewOrderPageV2() {
         });
         const json = await res.json();
         const bookings = json.bookings ?? [];
-        const bufferDays = json.bufferDays ?? 2;
+        const bufferBefore = json.bufferBefore ?? 1;
+        const bufferAfter = json.bufferAfter ?? 1;
 
         bookings.forEach((b: any) => {
           const start = parseISO(b.start_date);
           const end = parseISO(b.end_date);
           allRanges.push({ start, end, isBuffer: false });
-          allRanges.push({ start: addDays(start, -bufferDays), end: addDays(start, -1), isBuffer: true });
-          allRanges.push({ start: addDays(end, 1), end: addDays(end, bufferDays), isBuffer: true });
+          if (bufferBefore > 0) {
+            allRanges.push({ start: addDays(start, -bufferBefore), end: addDays(start, -1), isBuffer: true });
+          }
+          if (bufferAfter > 0) {
+            allRanges.push({ start: addDays(end, 1), end: addDays(end, bufferAfter), isBuffer: true });
+          }
         });
       }
 

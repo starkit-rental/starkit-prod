@@ -29,23 +29,32 @@ export async function POST(req: Request) {
       auth: { persistSession: false },
     });
 
-    // 1. Get all stock items for this product
-    const { data: stockItems, error: stockError } = await supabase
-      .from("stock_items")
-      .select("id")
-      .eq("product_id", body.productId);
+    // 1. Get product with buffer settings and stock items
+    const { data: product, error: productError } = await supabase
+      .from("products")
+      .select("id,buffer_before,buffer_after,stock_items(id)")
+      .eq("id", body.productId)
+      .maybeSingle();
 
-    if (stockError) {
-      return NextResponse.json({ error: stockError.message }, { status: 500 });
+    if (productError) {
+      return NextResponse.json({ error: productError.message }, { status: 500 });
     }
 
-    const totalStockItems = stockItems?.length ?? 0;
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const bufferBefore = product.buffer_before ?? 1;
+    const bufferAfter = product.buffer_after ?? 1;
+    const stockItems = Array.isArray(product.stock_items) ? product.stock_items : [];
+
+    const totalStockItems = stockItems.length;
 
     if (totalStockItems === 0) {
-      return NextResponse.json({ bookings: [], totalStockItems: 0 });
+      return NextResponse.json({ bookings: [], totalStockItems: 0, bufferBefore, bufferAfter });
     }
 
-    const stockItemIds = stockItems!.map((s: any) => String(s.id));
+    const stockItemIds = stockItems.map((s: any) => String(s.id));
 
     // 2. Get order_items for these stock items
     const { data: orderItems, error: oiError } = await supabase
@@ -58,7 +67,7 @@ export async function POST(req: Request) {
     }
 
     if (!orderItems?.length) {
-      return NextResponse.json({ bookings: [], totalStockItems });
+      return NextResponse.json({ bookings: [], totalStockItems, bufferBefore, bufferAfter });
     }
 
     // Build map: orderId → stockItemId
@@ -80,14 +89,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: ordersError.message }, { status: 500 });
     }
 
-    // Read buffer_days from site_settings (default 2)
-    const { data: bufferRow } = await supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", "buffer_days")
-      .maybeSingle();
-    const bufferDays = Math.max(0, parseInt(bufferRow?.value ?? "2", 10) || 2);
-
     // 4. Build per-stock-item bookings with buffer included
     const bookings = (orders ?? [])
       .filter((o: any) => o.start_date && o.end_date)
@@ -97,11 +98,12 @@ export async function POST(req: Request) {
           stock_item_id: stockItemId,
           start_date: o.start_date,
           end_date: o.end_date,
-          buffer_days: bufferDays,
+          buffer_before: bufferBefore,
+          buffer_after: bufferAfter,
         };
       });
 
-    return NextResponse.json({ bookings, totalStockItems, bufferDays });
+    return NextResponse.json({ bookings, totalStockItems, bufferBefore, bufferAfter });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

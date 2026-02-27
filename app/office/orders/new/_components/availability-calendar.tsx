@@ -194,7 +194,7 @@ export function AvailabilityCalendar({
         </div>
         <div className="flex items-center gap-1.5">
           <div className="h-3 w-3 rounded bg-amber-50 border border-amber-200" />
-          <span>Bufor (+2 dni)</span>
+          <span>Bufor logistyczny</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="h-3 w-3 rounded bg-[#D4A843]" />
