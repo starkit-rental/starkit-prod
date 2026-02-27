@@ -128,21 +128,42 @@ export function FinanceSection({
       formData.append("orderId", orderId);
       formData.append("invoice", invoiceFile);
 
+      console.log("Sending invoice for order:", orderId, "File:", invoiceFile.name);
+
       const res = await fetch("/api/office/send-invoice", {
         method: "POST",
         body: formData,
       });
 
+      console.log("Response status:", res.status);
+
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Błąd wysyłki faktury");
+        let errorMessage = "Błąd wysyłki faktury";
+        try {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+          console.error("API error:", data);
+        } catch (parseError) {
+          const text = await res.text();
+          console.error("Response text:", text);
+          errorMessage = `HTTP ${res.status}: ${text.substring(0, 100)}`;
+        }
+        throw new Error(errorMessage);
       }
+
+      const result = await res.json();
+      console.log("Invoice sent successfully:", result);
 
       setShowInvoiceModal(false);
       setInvoiceFile(null);
       onUpdate();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Błąd wysyłki faktury");
+      console.error("Send invoice error:", e);
+      if (e instanceof TypeError && e.message.includes("fetch")) {
+        setError("Błąd połączenia z serwerem. Sprawdź czy serwer działa.");
+      } else {
+        setError(e instanceof Error ? e.message : "Błąd wysyłki faktury");
+      }
     } finally {
       setSendingInvoice(false);
     }

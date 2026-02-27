@@ -36,12 +36,14 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (orderError || !order) {
+      console.error("Order fetch error:", orderError);
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
     const customer = Array.isArray(order.customers) ? order.customers[0] : order.customers;
     
     if (!customer?.email) {
+      console.error("Customer email not found for order:", orderId);
       return NextResponse.json({ error: "Customer email not found" }, { status: 400 });
     }
 
@@ -49,16 +51,25 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await pdfFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // Convert amounts to numbers safely
+    const totalRental = Number(String(order.total_rental_price ?? 0));
+    const totalDeposit = Number(String(order.total_deposit ?? 0));
+    const totalAmount = Number.isFinite(totalRental) ? totalRental : 0;
+    const depositAmount = Number.isFinite(totalDeposit) ? totalDeposit : 0;
+
+    console.log("Sending invoice email to:", customer.email, "Order:", order.order_number || order.id);
+
     // Send email with invoice
     const emailResult = await resend.emails.send({
-      from: "Starkit <noreply@starkit.pl>",
+      from: "Starkit - wynajem Starlink <wynajem@starkit.pl>",
       to: customer.email,
+      replyTo: "wynajem@starkit.pl",
       subject: `Faktura VAT - Zamówienie #${order.order_number || order.id}`,
       html: buildInvoiceEmailHtml({
         customerName: customer.full_name || "Kliencie",
         orderNumber: order.order_number || order.id,
-        totalAmount: order.total_rental_price || 0,
-        depositAmount: order.total_deposit || 0,
+        totalAmount,
+        depositAmount,
       }),
       attachments: [
         {
