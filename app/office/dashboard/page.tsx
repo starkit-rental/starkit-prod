@@ -2,12 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { addDays, format, isAfter, isBefore, parseISO, startOfDay } from "date-fns";
+import { addDays, format, isAfter, isBefore, parseISO, startOfDay, isPast } from "date-fns";
 import { CalendarDays, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { cn } from "@/lib/utils";
 
 type StockItemWithProduct = {
   id: string;
@@ -29,6 +37,7 @@ type StockItemWithProduct = {
 
 type OrderRow = {
   id: string;
+  order_number: string | null;
   start_date: string;
   end_date: string;
   payment_status: string;
@@ -36,6 +45,13 @@ type OrderRow = {
   total_rental_price: unknown;
   total_deposit: unknown;
   order_items?: Array<{ stock_item_id: string }>;
+  customers?: {
+    full_name: string | null;
+    email: string | null;
+  } | Array<{
+    full_name: string | null;
+    email: string | null;
+  }> | null;
 };
 
 function toNumber(value: unknown): number {
@@ -65,9 +81,18 @@ export default function OfficeDashboardPage() {
 
   const [stockItems, setStockItems] = useState<StockItemWithProduct[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const viewStart = useMemo(() => clampToDate(new Date()), []);
-  const days = useMemo(() => rangeDays(viewStart, 30), [viewStart]);
+  const daysCount = isMobile ? 7 : 30;
+  const days = useMemo(() => rangeDays(viewStart, daysCount), [viewStart, daysCount]);
 
   async function load() {
     setLoading(true);
@@ -86,7 +111,7 @@ export default function OfficeDashboardPage() {
 
     const { data: ordersData, error: ordersError } = await supabase
       .from("orders")
-      .select("id,start_date,end_date,payment_status,order_status,total_rental_price,total_deposit,order_items(stock_item_id)")
+      .select("id,order_number,start_date,end_date,payment_status,order_status,total_rental_price,total_deposit,order_items(stock_item_id),customers:customer_id(full_name,email)")
       .in("payment_status", ["pending", "paid", "manual", "completed"]) 
       .order("start_date", { ascending: true });
 
@@ -195,34 +220,56 @@ export default function OfficeDashboardPage() {
           </div>
 
           <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-900">Planner dostępności</CardTitle>
+              <p className="text-xs text-slate-500 mt-1">
+                {isMobile ? '7 dni' : '30 dni'} • Niebieski: wynajem | Żółty: bufor logistyczny | Czerwony: przeterminowane
+              </p>
+            </CardHeader>
             <CardContent className="p-0">
-              <div className="grid" style={{ gridTemplateColumns: `280px repeat(${days.length}, minmax(32px, 1fr))` }}>
-                <div className="sticky left-0 z-10 border-b border-slate-200 bg-white p-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Egzemplarz
-                </div>
-                {days.map((d) => (
-                  <div key={d.toISOString()} className="border-b border-slate-200 bg-white p-2 text-center text-[10px] text-slate-500">
-                    {format(d, "dd")}
+              <ScrollArea className="w-full">
+                <div className="min-w-max">
+                  <div className="grid" style={{ gridTemplateColumns: `${isMobile ? '180px' : '280px'} repeat(${days.length}, ${isMobile ? '40px' : '48px'})` }}>
+                    <div className="sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 p-3 text-xs font-bold uppercase tracking-wide text-slate-600">
+                      Urządzenie
+                    </div>
+                    {days.map((d) => (
+                      <div key={d.toISOString()} className="border-b border-slate-200 bg-slate-50 p-2 text-center">
+                        <div className={cn(
+                          "text-[10px] font-medium",
+                          isMobile ? "text-slate-600" : "text-slate-500"
+                        )}>
+                          {format(d, isMobile ? 'dd' : 'dd MMM')}
+                        </div>
+                        {!isMobile && (
+                          <div className="text-[9px] text-slate-400">
+                            {format(d, 'EEE')}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {stockItems.map((si) => {
+                      const product = Array.isArray(si.products) ? si.products[0] : si.products;
+                      const displayProduct = product?.name ?? "Produkt";
+                      const serial = si.serial_number ?? "(brak SN)";
+                      const rowOrders = ordersByStockItemId[si.id] ?? [];
+
+                      return (
+                        <TimelineRow
+                          key={si.id}
+                          stockItemId={si.id}
+                          label={`${displayProduct} — ${serial}`}
+                          days={days}
+                          orders={rowOrders}
+                          isMobile={isMobile}
+                        />
+                      );
+                    })}
                   </div>
-                ))}
-
-                {stockItems.map((si) => {
-                  const product = Array.isArray(si.products) ? si.products[0] : si.products;
-                  const displayProduct = product?.name ?? "Produkt";
-                  const serial = si.serial_number ?? "(brak SN)";
-                  const rowOrders = ordersByStockItemId[si.id] ?? [];
-
-                  return (
-                    <TimelineRow
-                      key={si.id}
-                      stockItemId={si.id}
-                      label={`${displayProduct} — ${serial}`}
-                      days={days}
-                      orders={rowOrders}
-                    />
-                  );
-                })}
-              </div>
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
             </CardContent>
           </Card>
         </>
@@ -236,36 +283,115 @@ function TimelineRow(props: {
   label: string;
   days: Date[];
   orders: OrderRow[];
+  isMobile: boolean;
 }) {
-  const { label, days, orders } = props;
+  const { label, days, orders, isMobile } = props;
 
   return (
     <>
-      <div className="sticky left-0 z-10 border-b border-slate-200 bg-white p-2 text-xs">
-        <div className="truncate font-medium">{label}</div>
+      <div className={cn(
+        "sticky left-0 z-10 border-b border-r border-slate-200 bg-white",
+        isMobile ? "p-2" : "p-3"
+      )}>
+        <div className={cn(
+          "truncate font-medium text-slate-700",
+          isMobile ? "text-[10px]" : "text-xs"
+        )}>
+          {label}
+        </div>
       </div>
 
       {days.map((d) => {
         const dayIso = format(d, "yyyy-MM-dd");
-
-        const cell = getCellState(dayIso, orders);
-        const base = "border-b border-slate-200 p-0.5";
-
-        const cls =
-          cell === "rent"
-            ? `${base} bg-primary/30`
-            : cell === "buffer"
-              ? `${base} bg-primary/10`
-              : `${base} bg-white`;
-
-        return <div key={`${props.stockItemId}:${dayIso}`} className={cls} />;
+        const cellData = getCellData(dayIso, orders);
+        
+        return (
+          <TimelineCell
+            key={`${props.stockItemId}:${dayIso}`}
+            cellData={cellData}
+            isMobile={isMobile}
+          />
+        );
       })}
     </>
   );
 }
 
-function getCellState(dayIso: string, orders: OrderRow[]): "none" | "buffer" | "rent" {
+function TimelineCell(props: {
+  cellData: CellData;
+  isMobile: boolean;
+}) {
+  const { cellData, isMobile } = props;
+  const { state, order } = cellData;
+
+  const baseClasses = "border-b border-slate-200 transition-all hover:opacity-80";
+  
+  const stateClasses = {
+    rent: "bg-[#3b82f6]",
+    buffer: "bg-[#f59e0b]",
+    overdue: "bg-[#ef4444]",
+    none: "bg-white hover:bg-slate-50",
+  }[state];
+
+  const cellContent = (
+    <div className={cn(baseClasses, stateClasses, isMobile ? "h-8" : "h-10")} />
+  );
+
+  if (state === "none" || !order) {
+    return cellContent;
+  }
+
+  const customer = Array.isArray(order.customers) ? order.customers[0] : order.customers;
+  const customerName = customer?.full_name || customer?.email || "Brak danych";
+  const orderNumber = order.order_number || order.id.substring(0, 8);
+  const statusLabel = {
+    pending: "Oczekujące",
+    reserved: "Zarezerwowane",
+    picked_up: "Odebrane",
+    returned: "Zwrócone",
+    cancelled: "Anulowane",
+  }[order.order_status?.toLowerCase() || ""] || order.order_status || "Nieznany";
+
+  const stateLabel = {
+    rent: "Wynajem",
+    buffer: "Bufor logistyczny",
+    overdue: "Przeterminowane",
+  }[state];
+
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {cellContent}
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          <div className="space-y-1">
+            <div className="font-semibold text-xs">{stateLabel}</div>
+            <div className="text-xs space-y-0.5">
+              <div><span className="text-slate-400">Klient:</span> {customerName}</div>
+              <div><span className="text-slate-400">Zamówienie:</span> {orderNumber}</div>
+              <div><span className="text-slate-400">Status:</span> {statusLabel}</div>
+              <div className="text-[10px] text-slate-400 mt-1">
+                {format(parseISO(order.start_date), 'dd.MM')} - {format(parseISO(order.end_date), 'dd.MM')}
+              </div>
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+type CellState = "none" | "buffer" | "rent" | "overdue";
+
+type CellData = {
+  state: CellState;
+  order: OrderRow | null;
+};
+
+function getCellData(dayIso: string, orders: OrderRow[]): CellData {
   const day = parseISO(dayIso);
+  const today = startOfDay(new Date());
 
   for (const o of orders) {
     const start = parseISO(o.start_date);
@@ -275,11 +401,21 @@ function getCellState(dayIso: string, orders: OrderRow[]): "none" | "buffer" | "
     const blockedEnd = addDays(end, 2);
 
     if (!isBefore(day, blockedStart) && !isAfter(day, blockedEnd)) {
-      if (!isBefore(day, start) && !isAfter(day, end)) return "rent";
-      return "buffer";
+      if (!isBefore(day, start) && !isAfter(day, end)) {
+        const isOverdue = isPast(end) && !isPast(addDays(end, 2)) && 
+                         ["picked_up", "reserved"].includes(o.order_status?.toLowerCase() || "");
+        return {
+          state: isOverdue ? "overdue" : "rent",
+          order: o,
+        };
+      }
+      return {
+        state: "buffer",
+        order: o,
+      };
     }
   }
 
-  return "none";
+  return { state: "none", order: null };
 }
 
