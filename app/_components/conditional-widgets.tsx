@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-// import SmartsuppScript from "./smartsupp-script";
+import SmartsuppScript from "./smartsupp-script";
 
 export default function ConditionalWidgets() {
   const pathname = usePathname();
@@ -11,5 +11,5 @@ export default function ConditionalWidgets() {
     return null;
   }
 
-  return null;
+  return <SmartsuppScript />;
 }

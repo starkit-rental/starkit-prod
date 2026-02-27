@@ -103,7 +103,10 @@ function InpostMapDialog({
   onPointSelected: (point: InpostPointData) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !!customElements.get('inpost-geowidget');
+  });
   const [loadError, setLoadError] = useState(false);
 
   // Load CSS dynamically
