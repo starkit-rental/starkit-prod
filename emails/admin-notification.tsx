@@ -17,6 +17,7 @@ interface AdminNotificationEmailProps {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  customerAddress?: string;
   companyName?: string;
   nip?: string;
   inpostCode: string;
@@ -32,6 +33,7 @@ export const AdminNotificationEmail = ({
   customerName = "Jan Kowalski",
   customerEmail = "jan@example.com",
   customerPhone = "+48 123 456 789",
+  customerAddress,
   companyName,
   nip,
   inpostCode = "KRA01",
@@ -78,6 +80,12 @@ export const AdminNotificationEmail = ({
                   <td style={tableLabel}>Telefon:</td>
                   <td style={tableValue}>{customerPhone}</td>
                 </tr>
+                {customerAddress && (
+                  <tr>
+                    <td style={tableLabel}>Adres:</td>
+                    <td style={tableValue}>{customerAddress}</td>
+                  </tr>
+                )}
                 {companyName && (
                   <tr>
                     <td style={tableLabel}>Firma:</td>

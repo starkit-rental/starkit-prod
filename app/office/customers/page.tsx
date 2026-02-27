@@ -29,10 +29,13 @@ type CustomerStat = {
   phone: string | null;
   company_name: string | null;
   nip: string | null;
+  address_street: string | null;
+  address_city: string | null;
+  address_zip: string | null;
   created_at: string | null;
-  total_orders: number;
-  total_spent: number;
-  total_deposit: number;
+  total_orders: number | null;
+  total_spent: number | null;
+  total_deposit: number | null;
   first_order_at: string | null;
   last_order_at: string | null;
 };
@@ -75,7 +78,7 @@ export default function OfficeCustomersPage() {
 
     const { data, error: fetchError } = await supabase
       .from("customer_stats")
-      .select("id,full_name,email,phone,company_name,nip,created_at,total_orders,total_spent,total_deposit,first_order_at,last_order_at");
+      .select("id,full_name,email,phone,company_name,nip,address_street,address_city,address_zip,created_at,total_orders,total_spent,total_deposit,first_order_at,last_order_at");
 
     if (fetchError) {
       setError(fetchError.message);
@@ -177,9 +180,9 @@ export default function OfficeCustomersPage() {
   // Stats
   const stats = useMemo(() => {
     const total = customers.length;
-    const withOrders = customers.filter((c) => c.total_orders > 0).length;
+    const withOrders = customers.filter((c) => (c.total_orders ?? 0) > 0).length;
     const totalRevenue = customers.reduce((s, c) => s + (c.total_spent ?? 0), 0);
-    const avgOrderValue = withOrders > 0 ? totalRevenue / customers.reduce((s, c) => s + c.total_orders, 0) : 0;
+    const avgOrderValue = withOrders > 0 ? totalRevenue / customers.reduce((s, c) => s + (c.total_orders ?? 0), 0) : 0;
     return { total, withOrders, totalRevenue, avgOrderValue };
   }, [customers]);
 
@@ -348,7 +351,7 @@ export default function OfficeCustomersPage() {
                         <span
                           className={cn(
                             "inline-flex min-w-[28px] justify-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                            c.total_orders > 0
+                            (c.total_orders ?? 0) > 0
                               ? "bg-blue-100 text-blue-700"
                               : "bg-slate-100 text-slate-500"
                           )}
@@ -395,7 +398,7 @@ export default function OfficeCustomersPage() {
             className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {deleteTarget.total_orders > 0 ? (
+            {(deleteTarget.total_orders ?? 0) > 0 ? (
               <>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">

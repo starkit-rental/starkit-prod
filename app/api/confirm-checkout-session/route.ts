@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     const { data: orderData } = await supabase
       .from("orders")
       .select(
-        "id,order_number,start_date,end_date,total_rental_price,total_deposit,inpost_point_id,inpost_point_address,customers:customer_id(email,full_name,phone,company_name,nip)"
+        "id,order_number,start_date,end_date,total_rental_price,total_deposit,inpost_point_id,inpost_point_address,customers:customer_id(email,full_name,phone,company_name,nip,address_street,address_city,address_zip)"
       )
       .eq("id", orderId)
       .maybeSingle();
@@ -107,6 +107,14 @@ export async function POST(req: Request) {
           totalAmount: total,
         }).catch((err: Error) => console.error("Failed to send order received email:", err));
 
+        // Build customer address
+        const addressParts = [
+          (customer as any).address_street,
+          (customer as any).address_zip,
+          (customer as any).address_city,
+        ].filter(Boolean);
+        const customerAddress = addressParts.length > 0 ? addressParts.join(", ") : undefined;
+
         // Send admin notification email
         sendAdminNotificationEmail({
           orderId: orderData.id,
@@ -114,6 +122,7 @@ export async function POST(req: Request) {
           customerName: customer.full_name || "—",
           customerEmail: customer.email,
           customerPhone: customer.phone || "—",
+          customerAddress,
           companyName: customer.company_name || undefined,
           nip: customer.nip || undefined,
           inpostCode: orderData.inpost_point_id || "—",

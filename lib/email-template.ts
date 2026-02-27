@@ -307,6 +307,7 @@ export function renderInstructionsBox(): string {
 
 export interface OrderVars {
   customer_name: string;
+  customer_address?: string;
   order_number: string;
   start_date: string;
   end_date: string;
@@ -434,6 +435,7 @@ export function buildAdminNotificationHtml(v: OrderVars): string {
     ["Imię i nazwisko:", v.customer_name],
     ...(v.customer_email ? [["Email:", v.customer_email] as [string, string]] : []),
     ...(v.customer_phone ? [["Telefon:", v.customer_phone] as [string, string]] : []),
+    ...(v.customer_address ? [["Adres:", v.customer_address] as [string, string]] : []),
     ...(v.company_name ? [["Firma:", `${v.company_name}${v.nip ? ` (NIP: ${v.nip})` : ""}`] as [string, string]] : []),
   ];
 

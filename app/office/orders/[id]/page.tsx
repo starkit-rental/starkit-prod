@@ -56,6 +56,9 @@ type CustomerRow = {
   phone: string | null;
   company_name: string | null;
   nip: string | null;
+  address_street: string | null;
+  address_city: string | null;
+  address_zip: string | null;
 };
 
 type StockItemRow = {
@@ -493,7 +496,7 @@ export default function OfficeOrderDetailsPage() {
         const { data: fresh } = await supabase
           .from("orders")
           .select(
-            "id,order_number,start_date,end_date,total_rental_price,total_deposit,payment_status,order_status,inpost_point_id,inpost_point_address,customers:customer_id(id,email,full_name,phone,company_name,nip),order_items(stock_item_id,stock_items(id,serial_number,products(id,name)))"
+            "id,order_number,start_date,end_date,total_rental_price,total_deposit,payment_status,order_status,inpost_point_id,inpost_point_address,customers:customer_id(id,email,full_name,phone,company_name,nip,address_street,address_city,address_zip),order_items(stock_item_id,stock_items(id,serial_number,products(id,name)))"
           )
           .eq("id", orderId)
           .maybeSingle();
@@ -701,6 +704,24 @@ export default function OfficeOrderDetailsPage() {
                         {customer.nip && (
                           <div className="text-xs text-slate-500">NIP: {customer.nip}</div>
                         )}
+                      </div>
+                    </div>
+                  )}
+                  {(customer?.address_street || customer?.address_city || customer?.address_zip) && (
+                    <div className="flex items-start gap-3">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div className="min-w-0">
+                        <div className="text-xs text-slate-500">Adres</div>
+                        <div className="font-medium text-slate-700">
+                          {customer.address_street && <div>{customer.address_street}</div>}
+                          {(customer.address_zip || customer.address_city) && (
+                            <div>
+                              {customer.address_zip && <span>{customer.address_zip}</span>}
+                              {customer.address_zip && customer.address_city && <span> </span>}
+                              {customer.address_city && <span>{customer.address_city}</span>}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}

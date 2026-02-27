@@ -269,6 +269,12 @@ function CheckoutContent() {
   const [companyName, setCompanyName] = useState("");
   const [nip, setNip] = useState("");
 
+  // Address
+  const [street, setStreet] = useState("");
+  const [houseNumber, setHouseNumber] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [city, setCity] = useState("");
+
   // InPost
   const [inpostCode, setInpostCode] = useState("");
   const [inpostAddress, setInpostAddress] = useState("");
@@ -333,11 +339,12 @@ function CheckoutContent() {
     if (!firstName.trim() || !lastName.trim()) return false;
     if (!email.includes("@")) return false;
     if (!phone.trim()) return false;
+    if (!street.trim() || !houseNumber.trim() || !zipCode.trim() || !city.trim()) return false;
     if (!inpostCodeValid) return false;
     if (!termsAccepted) return false;
     if (wantInvoice && (!companyName.trim() || !nip.trim())) return false;
     return true;
-  }, [firstName, lastName, email, phone, inpostCodeValid, termsAccepted, wantInvoice, companyName, nip]);
+  }, [firstName, lastName, email, phone, street, houseNumber, zipCode, city, inpostCodeValid, termsAccepted, wantInvoice, companyName, nip]);
 
   // ── Submit → create checkout session ──
   const handleInpostSelect = useCallback((pt: InpostPointData) => {
@@ -361,6 +368,10 @@ function CheckoutContent() {
           customerEmail: email.trim(),
           customerName: `${firstName.trim()} ${lastName.trim()}`,
           customerPhone: phone.trim(),
+          addressStreet: street.trim(),
+          addressHouseNumber: houseNumber.trim(),
+          addressZip: zipCode.trim(),
+          addressCity: city.trim(),
           companyName: wantInvoice ? companyName.trim() : undefined,
           nip: wantInvoice ? nip.trim() : undefined,
           inpostPointId: inpostCode.trim(),
@@ -515,6 +526,79 @@ function CheckoutContent() {
                       className="mt-1.5 border-border bg-muted focus:bg-card"
                       autoComplete="tel"
                     />
+                  </div>
+                </div>
+
+                {/* Address section */}
+                <div className="space-y-4 pt-2">
+                  <h3 className="text-sm font-medium text-foreground">Adres</h3>
+                  
+                  {/* Street and house number */}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="sm:col-span-2">
+                      <Label
+                        htmlFor="street"
+                        className="text-xs font-medium text-muted-foreground"
+                      >
+                        Ulica *
+                      </Label>
+                      <Input
+                        id="street"
+                        value={street}
+                        onChange={(e) => setStreet(e.target.value)}
+                        placeholder="ul. Kwiatowa"
+                        className="mt-1.5 border-border bg-muted focus:bg-card"
+                      />
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="houseNumber"
+                        className="text-xs font-medium text-muted-foreground"
+                      >
+                        Nr domu/mieszkania *
+                      </Label>
+                      <Input
+                        id="houseNumber"
+                        value={houseNumber}
+                        onChange={(e) => setHouseNumber(e.target.value)}
+                        placeholder="12/3"
+                        className="mt-1.5 border-border bg-muted focus:bg-card"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Zip code and city */}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                      <Label
+                        htmlFor="zipCode"
+                        className="text-xs font-medium text-muted-foreground"
+                      >
+                        Kod pocztowy *
+                      </Label>
+                      <Input
+                        id="zipCode"
+                        value={zipCode}
+                        onChange={(e) => setZipCode(e.target.value)}
+                        placeholder="00-000"
+                        className="mt-1.5 border-border bg-muted focus:bg-card"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label
+                        htmlFor="city"
+                        className="text-xs font-medium text-muted-foreground"
+                      >
+                        Miejscowość *
+                      </Label>
+                      <Input
+                        id="city"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="Warszawa"
+                        className="mt-1.5 border-border bg-muted focus:bg-card"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -772,6 +856,9 @@ function CheckoutContent() {
                   )}
                   {!email.includes("@") && <p>• Podaj poprawny adres e-mail</p>}
                   {!phone.trim() && <p>• Podaj numer telefonu</p>}
+                  {(!street.trim() || !houseNumber.trim() || !zipCode.trim() || !city.trim()) && (
+                    <p>• Uzupełnij adres</p>
+                  )}
                   {!inpostCodeValid && <p>• Podaj poprawny kod Paczkomatu</p>}
                   {!termsAccepted && <p>• Zaakceptuj regulamin</p>}
                   {wantInvoice && (!companyName.trim() || !nip.trim()) && (

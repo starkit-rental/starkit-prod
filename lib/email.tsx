@@ -215,6 +215,7 @@ interface ConfirmedEmailParams extends StatusEmailParams {
 
 interface AdminEmailParams extends StatusEmailParams {
   customerPhone: string;
+  customerAddress?: string;
   companyName?: string;
   nip?: string;
   inpostCode: string;
@@ -669,6 +670,7 @@ export async function sendAdminNotificationEmail(params: AdminEmailParams) {
     total_amount: `${params.totalAmount} zł`,
     customer_email: params.customerEmail,
     customer_phone: params.customerPhone,
+    customer_address: params.customerAddress,
     company_name: params.companyName,
     nip: params.nip,
     inpost_point_id: params.inpostCode,

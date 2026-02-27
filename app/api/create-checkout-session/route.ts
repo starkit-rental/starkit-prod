@@ -16,6 +16,10 @@ type CreateCheckoutSessionRequestBody = {
   customerEmail?: string;
   customerName?: string;
   customerPhone?: string;
+  addressStreet?: string;
+  addressHouseNumber?: string;
+  addressZip?: string;
+  addressCity?: string;
   companyName?: string;
   nip?: string;
   inpostPointId?: string;
@@ -58,6 +62,10 @@ export async function POST(req: Request) {
     const customerEmail = body.customerEmail;
     const customerName = body.customerName;
     const customerPhone = body.customerPhone;
+    const addressStreet = body.addressStreet;
+    const addressHouseNumber = body.addressHouseNumber;
+    const addressZip = body.addressZip;
+    const addressCity = body.addressCity;
     const companyName = body.companyName;
     const nipValue = body.nip;
     const inpostPointId = body.inpostPointId;
@@ -86,6 +94,14 @@ export async function POST(req: Request) {
     const customerPayload: Record<string, string> = { email: customerEmail };
     if (customerName) customerPayload.full_name = customerName;
     if (customerPhone) customerPayload.phone = customerPhone;
+    
+    // Build full address from street + house number
+    if (addressStreet && addressHouseNumber) {
+      customerPayload.address_street = `${addressStreet} ${addressHouseNumber}`;
+    }
+    if (addressZip) customerPayload.address_zip = addressZip;
+    if (addressCity) customerPayload.address_city = addressCity;
+    
     if (companyName) customerPayload.company_name = companyName;
     if (nipValue) customerPayload.nip = nipValue;
 
