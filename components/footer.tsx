@@ -54,10 +54,7 @@ export default async function Footer() {
             })}
             <Link
               href="/cookies"
-              className={cn(
-                buttonVariants({ variant: "ghost" }),
-                "transition-colors hover:text-foreground/80 text-foreground/60 text-sm p-0 h-auto hover:bg-transparent"
-              )}
+              className="transition-colors hover:text-foreground/80 text-foreground/60 text-sm p-0 h-auto hover:bg-transparent"
             >
               Polityka Cookies
             </Link>

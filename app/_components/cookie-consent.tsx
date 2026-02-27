@@ -44,6 +44,7 @@ export default function CookieConsent() {
     setPreferences(allPreferences);
     saveConsent(allPreferences);
     setShowBanner(false);
+    setShowSettings(false);
     loadScripts(allPreferences);
   };
 
