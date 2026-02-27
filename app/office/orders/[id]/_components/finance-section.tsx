@@ -22,6 +22,7 @@ type FinanceSectionProps = {
   orderId: string;
   orderNumber: string;
   paymentStatus: string | null;
+  paymentMethod: string | null;
   notes: string | null;
   invoiceSent: boolean | null;
   totalDeposit: number;
@@ -29,10 +30,25 @@ type FinanceSectionProps = {
   onUpdate: () => void;
 };
 
+const PAYMENT_METHODS = [
+  { value: "cash",     label: "Gotówka" },
+  { value: "transfer", label: "Przelew" },
+  { value: "blik",     label: "BLIK" },
+  { value: "stripe",   label: "Stripe" },
+] as const;
+
+const MANUAL_PAYMENT_STATUSES = [
+  { value: "paid",             label: "Opłacone",        cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  { value: "pending",          label: "Oczekuje",         cls: "bg-amber-100 text-amber-700 border-amber-200" },
+  { value: "unpaid",           label: "Nieopłacone",      cls: "bg-red-100 text-red-700 border-red-200" },
+  { value: "deposit_refunded", label: "Kaucja zwrócona",  cls: "bg-blue-100 text-blue-700 border-blue-200" },
+] as const;
+
 export function FinanceSection({
   orderId,
   orderNumber,
   paymentStatus,
+  paymentMethod,
   notes,
   invoiceSent,
   totalDeposit,
@@ -49,6 +65,29 @@ export function FinanceSection({
   const [editingPrice, setEditingPrice] = useState(false);
   const [priceDraft, setPriceDraft] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
+  const [savingPayment, setSavingPayment] = useState(false);
+
+  async function savePaymentStatus(newStatus: string) {
+    setSavingPayment(true);
+    setError(null);
+    const res = await fetch("/api/office/order-payment", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, payment_status: newStatus }),
+    });
+    setSavingPayment(false);
+    if (!res.ok) { const d = await res.json(); setError(d.error || "Błąd zapisu"); return; }
+    onUpdate();
+  }
+
+  async function savePaymentMethod(method: string) {
+    setSavingPayment(true);
+    setError(null);
+    const { error: err } = await supabase.from("orders").update({ payment_method: method }).eq("id", orderId);
+    setSavingPayment(false);
+    if (err) { setError(err.message); return; }
+    onUpdate();
+  }
 
   async function savePrice() {
     const val = parseFloat(priceDraft.replace(",", "."));
@@ -77,6 +116,8 @@ export function FinanceSection({
 
   const statusInfo = getPaymentStatusInfo();
   const StatusIcon = statusInfo.icon;
+  const isStripe = paymentMethod === "stripe";
+  const methodLabel = PAYMENT_METHODS.find((m) => m.value === paymentMethod)?.label ?? null;
 
   async function saveNotes() {
     setSaving(true);
@@ -202,12 +243,72 @@ export function FinanceSection({
         </CardHeader>
         <CardContent className="p-5 space-y-4">
           {/* Payment Status */}
-          <div>
-            <Label className="text-xs text-slate-500 mb-2 block">Status płatności</Label>
-            <div className={cn("inline-flex items-center gap-2 rounded-lg border px-4 py-2", statusInfo.cls)}>
-              <StatusIcon className="h-4 w-4" />
-              <span className="font-medium text-sm">{statusInfo.label}</span>
+          <div className="space-y-2">
+            <Label className="text-xs text-slate-500 block">Status płatności</Label>
+
+            {/* Current status badge */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className={cn("inline-flex items-center gap-2 rounded-lg border px-3 py-1.5", statusInfo.cls)}>
+                <StatusIcon className="h-3.5 w-3.5" />
+                <span className="font-medium text-sm">{statusInfo.label}</span>
+              </div>
+              {isStripe && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/></svg>
+                  Stripe (auto)
+                </span>
+              )}
             </div>
+
+            {/* Manual status change */}
+            <div className="pt-1">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Zmień ręcznie</div>
+              <div className="flex flex-wrap gap-1.5">
+                {MANUAL_PAYMENT_STATUSES.map((s) => (
+                  <button
+                    key={s.value}
+                    disabled={savingPayment || paymentStatus === s.value || (s.value === "paid" && paymentStatus === "completed")}
+                    onClick={() => void savePaymentStatus(s.value)}
+                    className={cn(
+                      "rounded-lg border px-2.5 py-1 text-xs font-medium transition-all",
+                      paymentStatus === s.value || (s.value === "paid" && paymentStatus === "completed")
+                        ? cn(s.cls, "ring-2 ring-offset-1 ring-current cursor-default")
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    )}
+                  >
+                    {savingPayment && (paymentStatus !== s.value) ? s.label : s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Method */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500 block">Metoda płatności</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {PAYMENT_METHODS.map((m) => (
+                <button
+                  key={m.value}
+                  disabled={savingPayment}
+                  onClick={() => void savePaymentMethod(m.value)}
+                  className={cn(
+                    "rounded-lg border px-2.5 py-1 text-xs font-medium transition-all",
+                    paymentMethod === m.value
+                      ? "border-indigo-300 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-200 ring-offset-1"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  )}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            {methodLabel && (
+              <div className="text-[11px] text-slate-400">
+                Wybrana: <span className="font-medium text-slate-600">{methodLabel}</span>
+                {isStripe && <span className="ml-1">· status aktualizowany automatycznie przez Stripe</span>}
+              </div>
+            )}
           </div>
 
           {/* Rental Price */}

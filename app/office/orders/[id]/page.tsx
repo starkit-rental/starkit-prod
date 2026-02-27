@@ -92,6 +92,7 @@ type OrderRow = {
   total_rental_price: unknown;
   total_deposit: unknown;
   payment_status: string | null;
+  payment_method: string | null;
   order_status: string | null;
   notes: string | null;
   invoice_sent: boolean | null;
@@ -739,7 +740,7 @@ export default function OfficeOrderDetailsPage() {
         const { data: fresh } = await supabase
           .from("orders")
           .select(
-            "id,order_number,start_date,end_date,total_rental_price,total_deposit,payment_status,order_status,notes,invoice_sent,inpost_point_id,inpost_point_address,customers:customer_id(id,email,full_name,phone,company_name,nip,address_street,address_city,address_zip),order_items(stock_item_id,stock_items(id,serial_number,products(id,name)))"
+            "id,order_number,start_date,end_date,total_rental_price,total_deposit,payment_status,payment_method,order_status,notes,invoice_sent,inpost_point_id,inpost_point_address,customers:customer_id(id,email,full_name,phone,company_name,nip,address_street,address_city,address_zip),order_items(stock_item_id,stock_items(id,serial_number,products(id,name)))"
           )
           .eq("id", orderId)
           .maybeSingle();
@@ -1103,6 +1104,7 @@ export default function OfficeOrderDetailsPage() {
               orderId={orderId!}
               orderNumber={displayNumber}
               paymentStatus={order.payment_status}
+              paymentMethod={order.payment_method}
               notes={order.notes}
               invoiceSent={order.invoice_sent}
               totalDeposit={depositSafe}
