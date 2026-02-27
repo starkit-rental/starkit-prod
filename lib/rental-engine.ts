@@ -76,7 +76,8 @@ function diffDaysUtc(start: Date, end: Date): number {
   const startUtc = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
   const endUtc = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
   const ms = endUtc - startUtc;
-  return Math.floor(ms / (24 * 60 * 60 * 1000));
+  // Booqable-style inclusive range: 2→8 March should count as 7 days
+  return Math.floor(ms / (24 * 60 * 60 * 1000)) + 1;
 }
 
 export async function checkAvailability<TOrder = unknown>(
