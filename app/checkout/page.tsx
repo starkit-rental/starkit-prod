@@ -921,7 +921,7 @@ function CheckoutContent() {
               {/* Submit CTA */}
               <Button
                 onClick={onSubmit}
-                disabled={!formValid || submitting || !pricing}
+                disabled={!formValid || submitting || !pricing || (!turnstileToken && !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)}
                 className={cn(
                   "mt-6 w-full rounded-xl py-6 text-base font-semibold transition-all",
                   formValid && pricing
