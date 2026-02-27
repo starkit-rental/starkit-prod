@@ -87,57 +87,41 @@ export default function CookieConsent() {
   };
 
   if (!showBanner && !showSettings) {
-    // Pokaż przycisk ustawień w rogu ekranu
-    return (
-      <div className="fixed bottom-4 right-4 z-50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowSettings(true)}
-          className="bg-background/90 backdrop-blur-sm border-border"
-        >
-          <Settings className="h-4 w-4 mr-2" />
-          Cookies
-        </Button>
-      </div>
-    );
+    return null;
   }
 
   // Główne okno zgody
   if (showBanner) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background border-t border-border">
-        <Card className="max-w-4xl mx-auto">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <Cookie className="h-6 w-6 text-muted-foreground mt-1 flex-shrink-0" />
-              <div className="flex-1 space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Ta strona używa plików cookies
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Używamy plików cookies, aby zapewnić najlepsze doświadczenia na naszej stronie. 
-                    Zgodnie z polskim prawem i RODO, potrzebujemy Twojej zgody na używanie niektórych cookies. 
-                    Niezbędne cookies są zawsze włączone, ponieważ są wymagane do działania strony.
-                  </p>
-                </div>
+      <div className="fixed bottom-0 left-0 right-0 z-50 p-3 bg-background/95 backdrop-blur-sm border-t border-border">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-start gap-3">
+            <Cookie className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="flex-1 space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-1">
+                  Ta strona używa plików cookies
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Używamy plików cookies, aby zapewnić najlepsze doświadczenia na naszej stronie. 
+                  Zgodnie z polskim prawem i RODO, potrzebujemy Twojej zgody na używanie niektórych cookies.
+                </p>
+              </div>
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button onClick={acceptAll} className="flex-1">
-                    Akceptuj wszystkie
-                  </Button>
-                  <Button variant="outline" onClick={openSettings} className="flex-1">
-                    Dostosuj zgody
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={closeBanner}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={acceptAll} size="sm" className="flex-1">
+                  Akceptuj wszystkie
+                </Button>
+                <Button variant="outline" size="sm" onClick={openSettings} className="flex-1">
+                  Dostosuj zgody
+                </Button>
+                <Button variant="ghost" size="sm" onClick={closeBanner}>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -145,83 +129,98 @@ export default function CookieConsent() {
   // Okno ustawień szczegółowych
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-      <Card className="max-w-md w-full">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-6">
+      <Card className="max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Cookie className="h-6 w-6 text-muted-foreground" />
-              <h3 className="text-lg font-semibold text-foreground">Ustawienia cookies</h3>
+              <Cookie className="h-5 w-5 text-muted-foreground" />
+              <h3 className="text-base font-semibold text-foreground">Ustawienia cookies</h3>
             </div>
             <Button variant="ghost" size="sm" onClick={closeSettings}>
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="space-y-6">
-            <p className="text-sm text-muted-foreground">
-              Wybierz, które kategorie plików cookies chcesz zezwolić na tej stronie.
-            </p>
+          <p className="text-xs text-muted-foreground mb-4">
+            Wybierz, które kategorie plików cookies chcesz zezwolić na tej stronie.
+          </p>
 
+          <div className="space-y-4">
             {/* Niezbędne cookies */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-foreground">Niezbędne cookies</h4>
-                  <p className="text-xs text-muted-foreground">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-foreground">Niezbędne cookies</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Wymagane do działania strony - nie można ich wyłączyć
                   </p>
+                  <ul className="text-xs text-muted-foreground mt-1.5 space-y-0.5 list-disc list-inside">
+                    <li>Sesja użytkownika</li>
+                    <li>Preferencje motywu (dark/light)</li>
+                    <li>Zgoda na cookies</li>
+                  </ul>
                 </div>
                 <input
                   type="checkbox"
                   checked={preferences.necessary}
                   disabled
-                  className="h-4 w-4 text-primary border-border rounded"
+                  className="h-4 w-4 mt-0.5 text-primary border-border rounded"
                 />
               </div>
             </div>
 
             {/* Analityczne cookies */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-foreground">Analityczne cookies</h4>
-                  <p className="text-xs text-muted-foreground">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-foreground">Analityczne cookies</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Pomagają nam zrozumieć, jak korzystasz z naszej strony
                   </p>
+                  <ul className="text-xs text-muted-foreground mt-1.5 space-y-0.5 list-disc list-inside">
+                    <li>Statystyki odwiedzin</li>
+                    <li>Popularne podstrony</li>
+                    <li>Dane geograficzne</li>
+                  </ul>
                 </div>
                 <input
                   type="checkbox"
                   checked={preferences.analytics}
                   onChange={(e) => setPreferences({ ...preferences, analytics: e.target.checked })}
-                  className="h-4 w-4 text-primary border-border rounded focus:ring-primary"
+                  className="h-4 w-4 mt-0.5 text-primary border-border rounded focus:ring-primary"
                 />
               </div>
             </div>
 
             {/* Marketingowe cookies */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-foreground">Marketingowe cookies</h4>
-                  <p className="text-xs text-muted-foreground">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-foreground">Marketingowe cookies</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Używane do personalizacji reklam i treści
                   </p>
+                  <ul className="text-xs text-muted-foreground mt-1.5 space-y-0.5 list-disc list-inside">
+                    <li>Personalizacja reklam</li>
+                    <li>Kampanie marketingowe</li>
+                    <li>Retargeting</li>
+                  </ul>
                 </div>
                 <input
                   type="checkbox"
                   checked={preferences.marketing}
                   onChange={(e) => setPreferences({ ...preferences, marketing: e.target.checked })}
-                  className="h-4 w-4 text-primary border-border rounded focus:ring-primary"
+                  className="h-4 w-4 mt-0.5 text-primary border-border rounded focus:ring-primary"
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex gap-3 mt-6">
-            <Button onClick={acceptSelected} className="flex-1">
+          <div className="flex gap-2 mt-5">
+            <Button onClick={acceptSelected} size="sm" className="flex-1">
               Zapisz ustawienia
             </Button>
-            <Button variant="outline" onClick={acceptAll} className="flex-1">
+            <Button variant="outline" size="sm" onClick={acceptAll} className="flex-1">
               Akceptuj wszystkie
             </Button>
           </div>

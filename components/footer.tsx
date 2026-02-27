@@ -52,6 +52,15 @@ export default async function Footer() {
                 </Link>
               );
             })}
+            <Link
+              href="/cookies"
+              className={cn(
+                buttonVariants({ variant: "ghost" }),
+                "transition-colors hover:text-foreground/80 text-foreground/60 text-sm p-0 h-auto hover:bg-transparent"
+              )}
+            >
+              Polityka Cookies
+            </Link>
           </div>
         )}
         <div className="mt-8 flex flex-row gap-6 justify-center lg:mt-5 text-xs border-t pt-8">
@@ -62,12 +71,6 @@ export default async function Footer() {
               </span>
             )}
           </div>
-          <Link
-            href="/cookies"
-            className="text-foreground/60 hover:text-foreground/80 transition-colors"
-          >
-            Polityka Cookies
-          </Link>
         </div>
       </div>
     </footer>
