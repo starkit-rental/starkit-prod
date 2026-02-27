@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import ConditionalWidgets from "./_components/conditional-widgets";
 import CookieConsent from "./_components/cookie-consent";
 import OrganizationSchema from "@/components/seo/organization-schema";
+import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 
 const isProduction = process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
 
@@ -78,6 +79,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Toaster position="top-center" richColors />
         <OrganizationSchema />
       </body>
+      {isProduction && (
+        <>
+          <GoogleTagManager gtmId="GTM-MQXCK4RC" />
+          <GoogleAnalytics gaId="G-TFV3MF7EEF" />
+        </>
+      )}
     </html>
   );
 }

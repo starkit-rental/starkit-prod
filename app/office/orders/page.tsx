@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { Search, Calendar } from "lucide-react";
+import { Search, Calendar, FileText, MessageSquare, CheckCircle2, XCircle, Clock } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ type OrderRow = {
   total_rental_price: unknown;
   payment_status: string | null;
   order_status: string | null;
+  notes: string | null;
+  invoice_sent: boolean | null;
   customers?: CustomerRow | CustomerRow[] | null;
 };
 
@@ -57,12 +59,14 @@ function shortOrderNumber(orderId: string): string {
 
 function pillForPayment(status: string | null | undefined) {
   const s = (status ?? "").toLowerCase();
-  if (s === "paid") return { label: "Paid", cls: "bg-emerald-100 text-emerald-700" };
-  if (s === "payment_due") return { label: "Payment due", cls: "bg-amber-100 text-amber-700" };
-  if (s === "pending") return { label: "Pending", cls: "bg-amber-100 text-amber-700" };
-  if (s === "manual") return { label: "Manual", cls: "bg-sky-100 text-sky-700" };
-  if (s === "failed") return { label: "Failed", cls: "bg-rose-100 text-rose-700" };
-  return { label: status || "—", cls: "bg-slate-100 text-slate-500" };
+  if (s === "paid" || s === "completed") return { label: "Opłacone", cls: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 };
+  if (s === "deposit_refunded") return { label: "Kaucja zwrócona", cls: "bg-blue-100 text-blue-700", icon: CheckCircle2 };
+  if (s === "unpaid") return { label: "Nieopłacone", cls: "bg-red-100 text-red-700", icon: XCircle };
+  if (s === "payment_due") return { label: "Do zapłaty", cls: "bg-amber-100 text-amber-700", icon: Clock };
+  if (s === "pending") return { label: "Oczekuje", cls: "bg-amber-100 text-amber-700", icon: Clock };
+  if (s === "manual") return { label: "Ręczne", cls: "bg-sky-100 text-sky-700", icon: CheckCircle2 };
+  if (s === "failed") return { label: "Błąd", cls: "bg-rose-100 text-rose-700", icon: XCircle };
+  return { label: status || "—", cls: "bg-slate-100 text-slate-500", icon: Clock };
 }
 
 function pillForOrder(status: string | null | undefined) {
@@ -93,7 +97,7 @@ export default function OfficeOrdersPage() {
       const { data, error: fetchError } = await supabase
         .from("orders")
         .select(
-          "id,order_number,start_date,end_date,total_rental_price,payment_status,order_status,customers:customer_id(id,email,full_name,company_name)"
+          "id,order_number,start_date,end_date,total_rental_price,payment_status,order_status,notes,invoice_sent,customers:customer_id(id,email,full_name,company_name)"
         )
         .order("start_date", { ascending: false });
 
@@ -183,6 +187,7 @@ export default function OfficeOrdersPage() {
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Okres</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Kwota</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Płatność</th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Info</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -227,9 +232,22 @@ export default function OfficeOrdersPage() {
                         </td>
                         <td className="px-6 py-4 text-right font-semibold text-slate-900">{moneyPln(o.total_rental_price)}</td>
                         <td className="px-6 py-4">
-                          <span className={cn("inline-flex rounded-full px-3 py-1 text-xs font-medium", payPill.cls)}>
-                            {payPill.label}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {payPill.icon && <payPill.icon className="h-3.5 w-3.5" />}
+                            <span className={cn("inline-flex rounded-full px-3 py-1 text-xs font-medium", payPill.cls)}>
+                              {payPill.label}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <div title={o.invoice_sent ? "Faktura wysłana" : "Faktura nie wysłana"}>
+                              <FileText className={cn("h-4 w-4", o.invoice_sent ? "text-blue-600" : "text-slate-300")} />
+                            </div>
+                            <div title={o.notes || "Brak notatek"}>
+                              <MessageSquare className={cn("h-4 w-4", o.notes ? "text-amber-600" : "text-slate-300")} />
+                            </div>
+                          </div>
                         </td>
                       </tr>
                     );
