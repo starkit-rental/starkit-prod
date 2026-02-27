@@ -92,14 +92,22 @@ export async function POST(req: NextRequest) {
       .update({ invoice_sent: true })
       .eq("id", orderId);
 
-    // Log email
-    await supabase.from("email_logs").insert({
+    // Log email in history
+    const logResult = await supabase.from("email_logs").insert({
       order_id: orderId,
       recipient: customer.email,
       subject: `Faktura VAT - Zamówienie #${order.order_number || order.id}`,
+      type: "invoice",
       status: "sent",
       resend_id: emailResult.data?.id,
+      sent_at: new Date().toISOString(),
     });
+
+    if (logResult.error) {
+      console.error("Failed to log email:", logResult.error);
+    }
+
+    console.log("Invoice email sent and logged successfully");
 
     return NextResponse.json({ success: true, emailId: emailResult.data?.id });
   } catch (e) {
@@ -193,32 +201,20 @@ function buildInvoiceEmailHtml(params: {
 
           <!-- Footer -->
           <tr>
-            <td style="background-color: #f8fafc; padding: 30px; border-top: 1px solid #e2e8f0;">
+            <td style="background-color: #f8fafc; padding: 24px 30px; border-top: 1px solid #e2e8f0;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="text-align: center; padding-bottom: 15px;">
-                    <p style="margin: 0; color: #1e293b; font-size: 16px; font-weight: 600;">
-                      Zakład Graficzny Maciej Godek
-                    </p>
-                  </td>
-                </tr>
-                <tr>
                   <td style="text-align: center;">
-                    <p style="margin: 0 0 5px 0; color: #64748b; font-size: 13px;">
-                      📧 kontakt@starkit.pl
+                    <p style="margin: 0 0 8px 0; color: #64748b; font-size: 13px; line-height: 1.5;">
+                      <strong style="color: #1e293b;">Starkit</strong> — wynajem Starlink Mini
                     </p>
-                    <p style="margin: 0 0 5px 0; color: #64748b; font-size: 13px;">
-                      🌐 www.starkit.pl
+                    <p style="margin: 0 0 4px 0; color: #64748b; font-size: 12px; line-height: 1.5;">
+                      <a href="mailto:wynajem@starkit.pl" style="color: #1e293b; text-decoration: underline;">wynajem@starkit.pl</a>
+                      &nbsp;·&nbsp;
+                      <a href="https://www.starkit.pl" style="color: #1e293b; text-decoration: underline;">www.starkit.pl</a>
                     </p>
-                    <p style="margin: 0; color: #64748b; font-size: 13px;">
-                      📱 +48 XXX XXX XXX
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="text-align: center; padding-top: 20px;">
-                    <p style="margin: 0; color: #94a3b8; font-size: 12px;">
-                      © ${new Date().getFullYear()} Starkit. Wszystkie prawa zastrzeżone.
+                    <p style="margin: 8px 0 0; color: #94a3b8; font-size: 11px; line-height: 1.4;">
+                      Ta wiadomość została wygenerowana automatycznie. Możesz odpowiedzieć na tego maila.
                     </p>
                   </td>
                 </tr>
