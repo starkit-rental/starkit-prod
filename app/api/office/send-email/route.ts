@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendAndLog } from "@/lib/email";
 import { withStarkitTemplate } from "@/lib/email-template";
+import { requireAuth } from "@/lib/auth-guard";
+import { sendEmailSchema } from "@/lib/validation";
 
 export async function POST(req: NextRequest) {
-  try {
-    const { orderId, to, subject, body } = await req.json();
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
 
-    if (!orderId || !to || !subject || !body) {
-      return NextResponse.json({ error: "Missing required fields: orderId, to, subject, body" }, { status: 400 });
+  try {
+    const rawBody = await req.json();
+    const validation = sendEmailSchema.safeParse(rawBody);
+
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: "Invalid input", 
+        details: validation.error.format() 
+      }, { status: 400 });
     }
+
+    const { orderId, to, subject, body } = validation.data;
 
     // Wrap in Starkit branded template so logged HTML has full branding
     const isHtml = /<[a-z][\s\S]*>/i.test(body);

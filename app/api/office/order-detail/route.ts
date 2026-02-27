@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuth } from "@/lib/auth-guard";
 
 function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -8,13 +9,16 @@ function createAdminClient() {
 }
 
 export async function GET(req: NextRequest) {
-  const orderId = req.nextUrl.searchParams.get("orderId");
-  if (!orderId) {
-    return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
-  }
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
 
-  const supabase = createAdminClient();
+  try {
+    const orderId = req.nextUrl.searchParams.get("orderId");
+    if (!orderId) {
+      return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
+    }
 
+    const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("orders")
     .select(
@@ -27,9 +31,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (!data) {
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
-  }
+    if (!data) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
 
-  return NextResponse.json({ order: data }, { status: 200 });
+    return NextResponse.json({ order: data }, { status: 200 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuth } from "@/lib/auth-guard";
 import { getResendClient } from "@/lib/resend";
 
 // Increase timeout for file upload and email sending
@@ -15,6 +16,9 @@ function createSupabaseAdmin() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const formData = await req.formData();
     const orderId = formData.get("orderId") as string;

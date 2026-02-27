@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuth } from "@/lib/auth-guard";
 
 function createAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -11,6 +12,9 @@ function createAdmin() {
 // GET /api/office/contract-pdf?orderId=xxx
 // Returns signed URL for existing PDF if it exists in storage
 export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
+
   const orderId = req.nextUrl.searchParams.get("orderId");
   if (!orderId) {
     return NextResponse.json({ error: "Missing orderId" }, { status: 400 });

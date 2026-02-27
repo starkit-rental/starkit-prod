@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuth } from "@/lib/auth-guard";
+import { deleteCustomerSchema } from "@/lib/validation";
 
 function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -8,13 +10,21 @@ function createAdminClient() {
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const customerId = body?.customerId;
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
 
-    if (!customerId) {
-      return NextResponse.json({ error: "Missing customerId" }, { status: 400 });
+  try {
+    const rawBody = await req.json();
+    const validation = deleteCustomerSchema.safeParse(rawBody);
+
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: "Invalid input", 
+        details: validation.error.format() 
+      }, { status: 400 });
     }
+
+    const { customerId } = validation.data;
 
     const supabase = createAdminClient();
 

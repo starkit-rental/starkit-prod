@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuth } from "@/lib/auth-guard";
+import { orderPaymentSchema } from "@/lib/validation";
 
 function createSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,13 +12,21 @@ function createSupabaseAdmin() {
 }
 
 export async function PATCH(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { orderId, payment_status, notes, invoice_sent } = body;
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
 
-    if (!orderId) {
-      return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
+  try {
+    const rawBody = await req.json();
+    const validation = orderPaymentSchema.safeParse(rawBody);
+
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: "Invalid input", 
+        details: validation.error.format() 
+      }, { status: 400 });
     }
+
+    const { orderId, payment_status, payment_method, notes, invoice_sent } = validation.data;
 
     const supabase = createSupabaseAdmin();
 

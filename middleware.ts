@@ -2,6 +2,17 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
+  // Enforce HTTPS in production
+  if (
+    process.env.NODE_ENV === "production" &&
+    request.headers.get("x-forwarded-proto") !== "https"
+  ) {
+    return NextResponse.redirect(
+      `https://${request.headers.get("host")}${request.nextUrl.pathname}${request.nextUrl.search}`,
+      301
+    );
+  }
+
   const response = NextResponse.next({
     request: {
       headers: request.headers,

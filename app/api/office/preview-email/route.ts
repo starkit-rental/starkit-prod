@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-guard";
 import {
   withStarkitTemplate,
   renderAlertBox,
@@ -40,6 +41,9 @@ function resolveSampleVars(text: string): string {
  *   2. templateId + content — build from code template builder (for messenger modal)
  */
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await req.json();
     const {

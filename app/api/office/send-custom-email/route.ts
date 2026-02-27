@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendAndLog } from "@/lib/email";
+import { requireAuth } from "@/lib/auth-guard";
 import {
   withStarkitTemplate,
   EMAIL_SUBJECTS,
@@ -20,6 +21,9 @@ function createAdminClient() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await req.json();
     const { orderId, templateId, finalContent, customSubject } = body as {
