@@ -7,6 +7,9 @@ import {
   calculatePrice,
   checkAvailability,
 } from "@/lib/rental-engine";
+import { createCheckoutSchema } from "@/lib/validation";
+import { checkoutLimiter, getClientIp } from "@/lib/rate-limit";
+import { verifyTurnstileToken, detectHoneypot, validateFormTiming } from "@/lib/turnstile";
 
 type CreateCheckoutSessionRequestBody = {
   productId: string;
@@ -44,6 +47,18 @@ function decimalToCents(value: unknown): number {
 
 export async function POST(req: Request) {
   try {
+    // 1. RATE LIMITING - prevent spam attacks
+    const clientIp = getClientIp(req);
+    try {
+      await checkoutLimiter.check(5, clientIp); // 5 requests per 60 seconds per IP
+    } catch {
+      console.warn(`[Bot Protection] Rate limit exceeded for IP: ${clientIp}`);
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const supabaseUrl = assertEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL");
     const supabaseAnonKey = assertEnv(
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -54,7 +69,49 @@ export async function POST(req: Request) {
 
     const siteUrl = assertEnv(process.env.NEXT_PUBLIC_SITE_URL, "NEXT_PUBLIC_SITE_URL");
 
-    const body = (await req.json()) as Partial<CreateCheckoutSessionRequestBody>;
+    const rawBody = await req.json();
+    
+    // 2. VALIDATION - validate all inputs with Zod
+    const validation = createCheckoutSchema.safeParse(rawBody);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: validation.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const body = validation.data;
+
+    // 3. BOT PROTECTION - Honeypot detection
+    if (detectHoneypot(body._honeypot)) {
+      console.warn(`[Bot Protection] Honeypot triggered for IP: ${clientIp}`);
+      // Return success to fool bots, but don't create order
+      return NextResponse.json(
+        { error: "Invalid request" },
+        { status: 400 }
+      );
+    }
+
+    // 4. BOT PROTECTION - Form timing validation (prevent instant submissions)
+    if (!validateFormTiming(body.formTimestamp)) {
+      console.warn(`[Bot Protection] Suspicious form timing for IP: ${clientIp}`);
+      return NextResponse.json(
+        { error: "Please take your time filling out the form" },
+        { status: 400 }
+      );
+    }
+
+    // 5. BOT PROTECTION - Cloudflare Turnstile verification (if configured)
+    if (body.turnstileToken) {
+      const isValid = await verifyTurnstileToken(body.turnstileToken);
+      if (!isValid) {
+        console.warn(`[Bot Protection] Turnstile verification failed for IP: ${clientIp}`);
+        return NextResponse.json(
+          { error: "Bot verification failed. Please try again." },
+          { status: 403 }
+        );
+      }
+    }
 
     const productId = body.productId;
     const startDate = body.startDate;

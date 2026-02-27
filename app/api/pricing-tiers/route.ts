@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { publicLimiter, getClientIp } from "@/lib/rate-limit";
 
 function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -9,6 +10,17 @@ function createAdminClient() {
 }
 
 export async function GET(req: Request) {
+  // Rate limiting - 30 requests per 60 seconds per IP
+  const clientIp = getClientIp(req);
+  try {
+    await publicLimiter.check(30, clientIp);
+  } catch {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      { status: 429 }
+    );
+  }
+
   const { searchParams } = new URL(req.url);
   const productId = searchParams.get("productId");
 

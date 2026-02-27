@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { sendOrderReceivedEmail, sendAdminNotificationEmail } from "@/lib/email";
+import { publicLimiter, getClientIp } from "@/lib/rate-limit";
 
 type ConfirmCheckoutSessionBody = {
   sessionId: string;
@@ -16,6 +17,17 @@ function assertEnv(value: string | undefined, name: string): string {
 
 export async function POST(req: Request) {
   try {
+    // Rate limiting - 10 requests per 60 seconds per IP
+    const clientIp = getClientIp(req);
+    try {
+      await publicLimiter.check(10, clientIp);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many requests. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     const stripeSecretKey = assertEnv(process.env.STRIPE_SECRET_KEY, "STRIPE_SECRET_KEY");
     const supabaseUrl = assertEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL");
     const supabaseServiceRoleKey = assertEnv(

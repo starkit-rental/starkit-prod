@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 import { checkAvailability } from "@/lib/rental-engine";
+import { availabilityLimiter, getClientIp } from "@/lib/rate-limit";
 
 type Body = {
   productId: string;
@@ -16,6 +17,17 @@ function assertEnv(value: string | undefined, name: string): string {
 
 export async function POST(req: Request) {
   try {
+    // Rate limiting - 20 requests per 10 seconds per IP
+    const clientIp = getClientIp(req);
+    try {
+      await availabilityLimiter.check(20, clientIp);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many requests. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     const supabaseUrl = assertEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL");
     const supabaseAnonKey = assertEnv(
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

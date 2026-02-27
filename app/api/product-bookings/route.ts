@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { availabilityLimiter, getClientIp } from "@/lib/rate-limit";
 
 type Body = {
   productId: string;
@@ -12,8 +13,19 @@ function assertEnv(value: string | undefined, name: string): string {
 
 const BLOCKING_PAYMENT_STATUSES = ["pending", "paid", "manual", "completed"];
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // Rate limiting - 20 requests per 10 seconds per IP
+    const clientIp = getClientIp(req);
+    try {
+      await availabilityLimiter.check(20, clientIp);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many requests. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     const supabaseUrl = assertEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL");
     const supabaseKey =
       process.env.SUPABASE_SERVICE_ROLE_KEY ??

@@ -56,3 +56,30 @@ export const generateContractSchema = z.object({
 export const sendInvoiceParamsSchema = z.object({
   orderId: uuidSchema,
 });
+
+// Create checkout session validation (with bot protection)
+export const createCheckoutSchema = z.object({
+  productId: uuidSchema,
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  currency: z.string().optional(),
+  customerEmail: emailSchema.optional(),
+  customerName: z.string().min(1).max(200).optional(),
+  customerPhone: z.string().max(50).optional(),
+  addressStreet: z.string().max(200).optional(),
+  addressHouseNumber: z.string().max(20).optional(),
+  addressZip: z.string().max(20).optional(),
+  addressCity: z.string().max(100).optional(),
+  companyName: z.string().max(200).optional(),
+  nip: z.string().max(50).optional(),
+  inpostPointId: z.string().max(100).optional(),
+  inpostPointAddress: z.string().max(500).optional(),
+  termsAcceptedAt: z.string().optional(),
+  termsVersion: z.string().optional(),
+  successUrl: z.string().url().optional(),
+  cancelUrl: z.string().url().optional(),
+  // Bot protection fields
+  turnstileToken: z.string().optional(), // Cloudflare Turnstile token
+  formTimestamp: z.string().optional(), // When form was opened (ISO timestamp)
+  _honeypot: z.string().optional(), // Hidden field - bots will fill it
+});
