@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
+import { FinanceSection } from "./_components/finance-section";
 
 import {
   ArrowLeft,
@@ -92,6 +93,8 @@ type OrderRow = {
   total_deposit: unknown;
   payment_status: string | null;
   order_status: string | null;
+  notes: string | null;
+  invoice_sent: boolean | null;
   inpost_point_id: string | null;
   inpost_point_address: string | null;
   customers?: CustomerRow | CustomerRow[] | null;
@@ -496,7 +499,7 @@ export default function OfficeOrderDetailsPage() {
         const { data: fresh } = await supabase
           .from("orders")
           .select(
-            "id,order_number,start_date,end_date,total_rental_price,total_deposit,payment_status,order_status,inpost_point_id,inpost_point_address,customers:customer_id(id,email,full_name,phone,company_name,nip,address_street,address_city,address_zip),order_items(stock_item_id,stock_items(id,serial_number,products(id,name)))"
+            "id,order_number,start_date,end_date,total_rental_price,total_deposit,payment_status,order_status,notes,invoice_sent,inpost_point_id,inpost_point_address,customers:customer_id(id,email,full_name,phone,company_name,nip,address_street,address_city,address_zip),order_items(stock_item_id,stock_items(id,serial_number,products(id,name)))"
           )
           .eq("id", orderId)
           .maybeSingle();
@@ -830,41 +833,17 @@ export default function OfficeOrderDetailsPage() {
             </Card>
           </div>
 
-          {/* RIGHT — Finance Receipt */}
+          {/* RIGHT — Finance Management */}
           <div className="lg:col-span-3 flex flex-col gap-6">
-            <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  <Receipt className="h-4 w-4" />
-                  Finanse
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Wynajem</span>
-                    <span className="font-medium text-slate-700">{moneyPln(order.total_rental_price)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Kaucja</span>
-                    <span className="font-medium text-slate-700">{moneyPln(order.total_deposit)}</span>
-                  </div>
-                  <div className="border-t border-slate-200 pt-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-900">Razem</span>
-                      <span className="text-xl font-bold text-slate-900">{`${total.toFixed(2)} zł`}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-slate-400" />
-                  <span className={cn("inline-flex rounded-full px-3 py-1 text-xs font-medium", payPill.cls)}>
-                    {payPill.label}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            <FinanceSection
+              orderId={orderId!}
+              orderNumber={displayNumber}
+              paymentStatus={order.payment_status}
+              notes={order.notes}
+              invoiceSent={order.invoice_sent}
+              totalDeposit={depositSafe}
+              onUpdate={loadOrder}
+            />
 
             {/* PDF Contract */}
             <ContractPdfCard orderId={orderId!} supabase={supabase} />
