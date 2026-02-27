@@ -33,7 +33,6 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { calculatePrice } from "@/lib/rental-engine";
 import { cn } from "@/lib/utils";
-import { Turnstile } from "@marsidev/react-turnstile";
 
 /* ───────────────────────────── constants ───────────────────────────── */
 
@@ -122,49 +121,10 @@ function InpostMapDialog({
 
   // Mount widget when dialog opens
   useEffect(() => {
-    if (!open || !scriptLoaded || !containerRef.current) return;
+    if (!open || !scriptLoaded) return;
 
-    setLoadError(false);
-    containerRef.current.innerHTML = "";
-
-    if (!INPOST_TOKEN) {
-      console.error('[InPost] Token not configured');
-      setLoadError(true);
-      return;
-    }
-
-    console.log('[InPost] Initializing widget with token:', INPOST_TOKEN.substring(0, 20) + '...');
-
-    const widget = document.createElement("inpost-geowidget");
-    widget.setAttribute("token", INPOST_TOKEN);
-    widget.setAttribute("language", "pl");
-    widget.setAttribute("config", "parcelcollect");
-    widget.setAttribute("onpoint", "onInpostPointSelect");
-    widget.style.display = "block";
-    widget.style.width = "100%";
-    widget.style.height = "100%";
-    
-    // Listen for widget errors
-    widget.addEventListener('error', (e) => {
-      console.error('[InPost] Widget error:', e);
-      setLoadError(true);
-    });
-
-    containerRef.current.appendChild(widget);
-
-    const timeout = setTimeout(() => {
-      const widgetElement = containerRef.current?.querySelector('inpost-geowidget');
-      console.log('[InPost] Widget check:', {
-        exists: !!widgetElement,
-        hasShadowRoot: !!widgetElement?.shadowRoot,
-        innerHTML: widgetElement?.innerHTML
-      });
-      
-      if (!widgetElement?.shadowRoot) {
-        console.error('[InPost] Widget failed to initialize - no shadow root after 10s');
-        setLoadError(true);
-      }
-    }, 10000);
+    let mountTimeout: ReturnType<typeof setTimeout>;
+    let errorTimeout: ReturnType<typeof setTimeout>;
 
     function handlePointSelect(e: Event) {
       const point = (e as CustomEvent).detail;
@@ -176,8 +136,50 @@ function InpostMapDialog({
     }
 
     document.addEventListener("onInpostPointSelect", handlePointSelect);
+
+    // Wait for Radix Dialog open animation to finish before mounting widget.
+    // OpenLayers reads container dimensions on init — if mounted during the
+    // CSS transition the container reports 0px and the map renders blank.
+    mountTimeout = setTimeout(() => {
+      if (!containerRef.current) return;
+
+      setLoadError(false);
+      containerRef.current.innerHTML = "";
+
+      if (!INPOST_TOKEN) {
+        console.error('[InPost] Token not configured');
+        setLoadError(true);
+        return;
+      }
+
+      const widget = document.createElement("inpost-geowidget");
+      widget.setAttribute("token", INPOST_TOKEN);
+      widget.setAttribute("language", "pl");
+      widget.setAttribute("config", "parcelcollect");
+      widget.setAttribute("onpoint", "onInpostPointSelect");
+      widget.style.display = "block";
+      widget.style.width = "100%";
+      widget.style.height = "100%";
+
+      widget.addEventListener('error', (e) => {
+        console.error('[InPost] Widget error:', e);
+        setLoadError(true);
+      });
+
+      containerRef.current.appendChild(widget);
+
+      errorTimeout = setTimeout(() => {
+        const el = containerRef.current?.querySelector('inpost-geowidget');
+        if (!el?.shadowRoot) {
+          console.error('[InPost] Widget failed to initialize after 10s');
+          setLoadError(true);
+        }
+      }, 10000);
+    }, 200);
+
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(mountTimeout);
+      clearTimeout(errorTimeout);
       document.removeEventListener("onInpostPointSelect", handlePointSelect);
     };
   }, [open, scriptLoaded, onPointSelected, onOpenChange]);
@@ -346,7 +348,6 @@ function CheckoutContent() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Bot protection
-  const [turnstileToken, setTurnstileToken] = useState<string>("");
   const [formTimestamp] = useState(() => new Date().toISOString());
 
   // ── Load product by ID ──
@@ -438,7 +439,6 @@ function CheckoutContent() {
           termsAcceptedAt: new Date().toISOString(),
           termsVersion: TERMS_VERSION,
           // Bot protection fields
-          turnstileToken,
           formTimestamp,
           _honeypot: "", // Hidden field - bots will fill it
         }),
@@ -907,19 +907,6 @@ function CheckoutContent() {
                 aria-hidden="true"
               />
 
-              {/* CLOUDFLARE TURNSTILE - Bot protection */}
-              {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
-                <div className="mt-4">
-                  <Turnstile
-                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
-                    onSuccess={setTurnstileToken}
-                    options={{
-                      theme: "light",
-                      size: "invisible", // Invisible to users
-                    }}
-                  />
-                </div>
-              )}
 
               {/* Submit CTA */}
               <Button

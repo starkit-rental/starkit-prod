@@ -79,7 +79,6 @@ export const createCheckoutSchema = z.object({
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional(),
   // Bot protection fields
-  turnstileToken: z.string().optional(), // Cloudflare Turnstile token
   formTimestamp: z.string().optional(), // When form was opened (ISO timestamp)
   _honeypot: z.string().optional(), // Hidden field - bots will fill it
 });

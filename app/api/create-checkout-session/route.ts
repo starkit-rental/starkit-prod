@@ -9,7 +9,7 @@ import {
 } from "@/lib/rental-engine";
 import { createCheckoutSchema } from "@/lib/validation";
 import { checkoutLimiter, getClientIp } from "@/lib/rate-limit";
-import { verifyTurnstileToken, detectHoneypot, validateFormTiming } from "@/lib/turnstile";
+import { detectHoneypot, validateFormTiming } from "@/lib/turnstile";
 
 type CreateCheckoutSessionRequestBody = {
   productId: string;
@@ -99,18 +99,6 @@ export async function POST(req: Request) {
         { error: "Please take your time filling out the form" },
         { status: 400 }
       );
-    }
-
-    // 5. BOT PROTECTION - Cloudflare Turnstile verification (if configured)
-    if (body.turnstileToken) {
-      const isValid = await verifyTurnstileToken(body.turnstileToken);
-      if (!isValid) {
-        console.warn(`[Bot Protection] Turnstile verification failed for IP: ${clientIp}`);
-        return NextResponse.json(
-          { error: "Bot verification failed. Please try again." },
-          { status: 403 }
-        );
-      }
     }
 
     const productId = body.productId;
