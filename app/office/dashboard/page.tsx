@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { addDays, format, isAfter, isBefore, parseISO, startOfDay, isPast } from "date-fns";
+import { addDays, addMonths, format, isAfter, isBefore, parseISO, startOfDay, isPast } from "date-fns";
 import { pl } from "date-fns/locale";
-import { CalendarDays, Plus } from "lucide-react";
+import { CalendarDays, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,6 +87,7 @@ export default function OfficeDashboardPage() {
   const [stockItems, setStockItems] = useState<StockItemWithProduct[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [isMobile, setIsMobile] = useState(false);
+  const [viewStart, setViewStart] = useState(() => clampToDate(new Date()));
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -95,9 +96,12 @@ export default function OfficeDashboardPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const viewStart = useMemo(() => clampToDate(new Date()), []);
   const daysCount = isMobile ? 7 : 30;
   const days = useMemo(() => rangeDays(viewStart, daysCount), [viewStart, daysCount]);
+
+  const goToToday = () => setViewStart(clampToDate(new Date()));
+  const goToPrevMonth = () => setViewStart(prev => clampToDate(addMonths(prev, -1)));
+  const goToNextMonth = () => setViewStart(prev => clampToDate(addMonths(prev, 1)));
 
   async function load() {
     setLoading(true);
@@ -189,6 +193,41 @@ export default function OfficeDashboardPage() {
         <div className="text-sm text-muted-foreground">Ładowanie...</div>
       ) : (
         <>
+          {/* Timeline Navigation */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToPrevMonth}
+                className="h-8"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Poprzedni miesiąc
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToToday}
+                className="h-8"
+              >
+                Dzisiaj
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToNextMonth}
+                className="h-8"
+              >
+                Następny miesiąc
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+            <div className="text-sm text-slate-600">
+              {format(viewStart, 'd MMMM yyyy', { locale: pl })} - {format(addDays(viewStart, daysCount - 1), 'd MMMM yyyy', { locale: pl })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <Card className="bg-white border-slate-200 shadow-sm">
               <CardHeader className="pb-2">

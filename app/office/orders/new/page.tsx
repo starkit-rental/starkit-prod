@@ -115,7 +115,7 @@ export default function NewOrderPageV2() {
     }
   }, [selectedStart, selectedEnd]);
 
-  // Load occupied ranges for ALL products selected in line items
+  // Load occupied ranges - only show dates as blocked when ALL stock items are occupied
   const loadOccupiedRanges = useCallback(async () => {
     const productIds = lineItems.map((li) => li.productId);
     if (productIds.length === 0) {
@@ -134,20 +134,79 @@ export default function NewOrderPageV2() {
         });
         const json = await res.json();
         const bookings = json.bookings ?? [];
+        const totalStockItems = json.totalStockItems ?? 0;
         const bufferBefore = json.bufferBefore ?? 1;
         const bufferAfter = json.bufferAfter ?? 1;
+
+        if (totalStockItems === 0) continue;
+
+        // Count how many stock items are occupied per date
+        const occupiedCountPerDate = new Map<string, Set<string>>();
 
         bookings.forEach((b: any) => {
           const start = parseISO(b.start_date);
           const end = parseISO(b.end_date);
-          allRanges.push({ start, end, isBuffer: false });
-          if (bufferBefore > 0) {
-            allRanges.push({ start: addDays(start, -bufferBefore), end: addDays(start, -1), isBuffer: true });
+          const stockItemId = b.stock_item_id;
+
+          // Add core rental days
+          let current = start;
+          while (current <= end) {
+            const key = format(current, 'yyyy-MM-dd');
+            if (!occupiedCountPerDate.has(key)) occupiedCountPerDate.set(key, new Set());
+            occupiedCountPerDate.get(key)!.add(stockItemId);
+            current = addDays(current, 1);
           }
+
+          // Add buffer days
+          if (bufferBefore > 0) {
+            let bufferDay = addDays(start, -1);
+            for (let i = 0; i < bufferBefore; i++) {
+              const key = format(bufferDay, 'yyyy-MM-dd');
+              if (!occupiedCountPerDate.has(key)) occupiedCountPerDate.set(key, new Set());
+              occupiedCountPerDate.get(key)!.add(stockItemId);
+              bufferDay = addDays(bufferDay, -1);
+            }
+          }
+
           if (bufferAfter > 0) {
-            allRanges.push({ start: addDays(end, 1), end: addDays(end, bufferAfter), isBuffer: true });
+            let bufferDay = addDays(end, 1);
+            for (let i = 0; i < bufferAfter; i++) {
+              const key = format(bufferDay, 'yyyy-MM-dd');
+              if (!occupiedCountPerDate.has(key)) occupiedCountPerDate.set(key, new Set());
+              occupiedCountPerDate.get(key)!.add(stockItemId);
+              bufferDay = addDays(bufferDay, 1);
+            }
           }
         });
+
+        // Only mark dates as occupied if ALL stock items are occupied
+        const fullyOccupiedDates: string[] = [];
+        occupiedCountPerDate.forEach((stockItemIds, dateKey) => {
+          if (stockItemIds.size >= totalStockItems) {
+            fullyOccupiedDates.push(dateKey);
+          }
+        });
+
+        // Convert to ranges for calendar display
+        if (fullyOccupiedDates.length > 0) {
+          fullyOccupiedDates.sort();
+          let rangeStart = parseISO(fullyOccupiedDates[0]);
+          let rangeEnd = rangeStart;
+
+          for (let i = 1; i < fullyOccupiedDates.length; i++) {
+            const currentDate = parseISO(fullyOccupiedDates[i]);
+            const prevDate = parseISO(fullyOccupiedDates[i - 1]);
+            
+            if (Math.abs(currentDate.getTime() - prevDate.getTime()) <= 86400000) {
+              rangeEnd = currentDate;
+            } else {
+              allRanges.push({ start: rangeStart, end: rangeEnd, isBuffer: false });
+              rangeStart = currentDate;
+              rangeEnd = currentDate;
+            }
+          }
+          allRanges.push({ start: rangeStart, end: rangeEnd, isBuffer: false });
+        }
       }
 
       setOccupiedRanges(allRanges);
