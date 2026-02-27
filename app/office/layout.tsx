@@ -154,6 +154,15 @@ export default function OfficeLayout({ children }: { children: React.ReactNode }
 
   // The emails page has its own internal header/layout, skip the page wrapper padding for it
   const isEmailsPage = pathname?.startsWith("/office/settings/emails");
+  const isLoginPage = pathname === "/office/login";
+
+  if (isLoginPage) {
+    return (
+      <div className="office-light min-h-screen bg-slate-50 flex items-center justify-center">
+        {children}
+      </div>
+    );
+  }
 
   return (
     // Force light mode: office-light resets all CSS vars to light values, overriding .dark on <html>

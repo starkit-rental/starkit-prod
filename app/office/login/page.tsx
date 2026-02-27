@@ -41,29 +41,54 @@ function LoginContent() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col gap-4 pt-12">
-      <div>
-        <h1 className="text-lg font-semibold">Logowanie</h1>
-        <p className="text-sm text-muted-foreground">Dostęp do panelu /office</p>
+    <div className="w-full max-w-sm px-4">
+      {/* Logo */}
+      <div className="mb-8 flex justify-center">
+        <img src="/logo.png" alt="Starkit" className="h-10 object-contain" />
       </div>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">Email</label>
-          <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
-        </div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <h1 className="text-xl font-bold text-slate-900 mb-1">Zaloguj się</h1>
+        <p className="text-sm text-slate-500 mb-6">Panel zarządzania Starkit</p>
 
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">Hasło</label>
-          <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
-        </div>
+        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Email</label>
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="admin@starkit.pl"
+              className="h-10"
+            />
+          </div>
 
-        {error && <div className="text-sm text-destructive">{error}</div>}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Hasło</label>
+            <Input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              required
+              autoComplete="current-password"
+              placeholder="••••••••"
+              className="h-10"
+            />
+          </div>
 
-        <Button type="submit" disabled={loading}>
-          {loading ? "Logowanie..." : "Zaloguj"}
-        </Button>
-      </form>
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <Button type="submit" disabled={loading} className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold mt-1">
+            {loading ? "Logowanie…" : "Zaloguj się"}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }
