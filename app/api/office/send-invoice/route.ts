@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
+import { getResendClient } from "@/lib/resend";
 
 function createSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -9,8 +9,6 @@ function createSupabaseAdmin() {
   if (!serviceKey) throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
   return createClient(url, serviceKey, { auth: { persistSession: false } });
 }
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,6 +58,7 @@ export async function POST(req: NextRequest) {
     console.log("Sending invoice email to:", customer.email, "Order:", order.order_number || order.id);
 
     // Send email with invoice
+    const resend = getResendClient();
     const emailResult = await resend.emails.send({
       from: "Starkit - wynajem Starlink <wynajem@starkit.pl>",
       to: customer.email,
