@@ -62,6 +62,12 @@ export default async function Footer() {
               </span>
             )}
           </div>
+          <Link
+            href="/cookies"
+            className="text-foreground/60 hover:text-foreground/80 transition-colors"
+          >
+            Polityka Cookies
+          </Link>
         </div>
       </div>
     </footer>

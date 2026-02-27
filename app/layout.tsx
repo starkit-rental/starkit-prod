@@ -5,8 +5,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import ConditionalWidgets from "./_components/conditional-widgets";
-import CookiebotScript from "./_components/cookiebot-script";
-import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
+import CookieConsent from "./_components/cookie-consent";
 import OrganizationSchema from "@/components/seo/organization-schema";
 
 const isProduction = process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
@@ -71,7 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="dns-prefetch" href="https://cdn.sanity.io" />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased overscroll-none", fontSans.variable)} suppressHydrationWarning>
-        {isProduction && <CookiebotScript />}
+        <CookieConsent />
         <ConditionalWidgets />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
@@ -79,12 +78,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Toaster position="top-center" richColors />
         <OrganizationSchema />
       </body>
-      {isProduction && (
-        <>
-          <GoogleTagManager gtmId="GTM-MQXCK4RC" />
-          <GoogleAnalytics gaId="G-TFV3MF7EEF" />
-        </>
-      )}
     </html>
   );
 }
