@@ -104,22 +104,63 @@ export async function checkAvailability<TOrder = unknown>(
     throw new Error("Invalid date range: endDate must be after startDate");
   }
 
-  const blockedStart = addDaysUtc(start, -bufferDays);
-  const blockedEnd = addDaysUtc(end, bufferDays);
+  // Fetch product to get per-product buffer settings
+  const { data: productData } = await supabase
+    .from(config.productsTable)
+    .select("buffer_before,buffer_after")
+    .eq("id", productId)
+    .maybeSingle();
+
+  const bufferBefore = productData?.buffer_before ?? bufferDays;
+  const bufferAfter = productData?.buffer_after ?? bufferDays;
+
+  const blockedStart = addDaysUtc(start, -bufferBefore);
+  const blockedEnd = addDaysUtc(end, bufferAfter);
 
   const blockedStartIso = toIsoDateOnly(blockedStart);
   const blockedEndIso = toIsoDateOnly(blockedEnd);
 
   const { data: stockItems, error: stockItemsError } = await supabase
     .from(config.stockItemsTable)
-    .select("id")
+    .select("id,unavailable_from,unavailable_to")
     .eq(config.productIdColumnInStockItems, productId);
 
   if (stockItemsError) {
     throw new Error(`Supabase stock items query failed: ${stockItemsError.message}`);
   }
 
-  const allStockItemIds = (stockItems ?? []).map((row: any) => String(row.id));
+  // Filter out stock items that are unavailable during the requested period
+  const startIso = toIsoDateOnly(start);
+  const endIso = toIsoDateOnly(end);
+  
+  const availableStockItems = (stockItems ?? []).filter((item: any) => {
+    if (!item.unavailable_from && !item.unavailable_to) return true;
+    
+    const unavailFrom = item.unavailable_from;
+    const unavailTo = item.unavailable_to;
+    
+    // Check if requested period overlaps with unavailability period
+    if (unavailFrom && unavailTo) {
+      // Period is unavailable if: start <= unavailTo AND end >= unavailFrom
+      if (startIso <= unavailTo && endIso >= unavailFrom) {
+        return false;
+      }
+    } else if (unavailFrom) {
+      // Only start date set - unavailable from that date onwards
+      if (endIso >= unavailFrom) {
+        return false;
+      }
+    } else if (unavailTo) {
+      // Only end date set - unavailable until that date
+      if (startIso <= unavailTo) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+
+  const allStockItemIds = availableStockItems.map((row: any) => String(row.id));
 
   if (allStockItemIds.length === 0) {
     return {

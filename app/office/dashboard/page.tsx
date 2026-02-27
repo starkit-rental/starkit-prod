@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addDays, format, isAfter, isBefore, parseISO, startOfDay, isPast } from "date-fns";
+import { pl } from "date-fns/locale";
 import { CalendarDays, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,11 +27,15 @@ type StockItemWithProduct = {
         id: string;
         name?: string | null;
         sanity_slug?: string | null;
+        buffer_before?: number | null;
+        buffer_after?: number | null;
       }
     | Array<{
         id: string;
         name?: string | null;
         sanity_slug?: string | null;
+        buffer_before?: number | null;
+        buffer_after?: number | null;
       }>
     | null;
 };
@@ -100,7 +105,7 @@ export default function OfficeDashboardPage() {
 
     const { data: stockData, error: stockError } = await supabase
       .from("stock_items")
-      .select("id,serial_number,product_id,products(id,name,sanity_slug)")
+      .select("id,serial_number,product_id,products(id,name,sanity_slug,buffer_before,buffer_after)")
       .order("id", { ascending: true });
 
     if (stockError) {
@@ -239,11 +244,11 @@ export default function OfficeDashboardPage() {
                           "text-[10px] font-medium",
                           isMobile ? "text-slate-600" : "text-slate-500"
                         )}>
-                          {format(d, isMobile ? 'dd' : 'dd MMM')}
+                          {format(d, isMobile ? 'dd' : 'dd MMM', { locale: pl })}
                         </div>
                         {!isMobile && (
                           <div className="text-[9px] text-slate-400">
-                            {format(d, 'EEE')}
+                            {format(d, 'EEE', { locale: pl })}
                           </div>
                         )}
                       </div>
@@ -254,6 +259,8 @@ export default function OfficeDashboardPage() {
                       const displayProduct = product?.name ?? "Produkt";
                       const serial = si.serial_number ?? "(brak SN)";
                       const rowOrders = ordersByStockItemId[si.id] ?? [];
+                      const bufferBefore = product?.buffer_before ?? 1;
+                      const bufferAfter = product?.buffer_after ?? 1;
 
                       return (
                         <TimelineRow
@@ -263,6 +270,8 @@ export default function OfficeDashboardPage() {
                           days={days}
                           orders={rowOrders}
                           isMobile={isMobile}
+                          bufferBefore={bufferBefore}
+                          bufferAfter={bufferAfter}
                         />
                       );
                     })}
@@ -284,8 +293,10 @@ function TimelineRow(props: {
   days: Date[];
   orders: OrderRow[];
   isMobile: boolean;
+  bufferBefore: number;
+  bufferAfter: number;
 }) {
-  const { label, days, orders, isMobile } = props;
+  const { label, days, orders, isMobile, bufferBefore, bufferAfter } = props;
 
   return (
     <>
@@ -303,7 +314,7 @@ function TimelineRow(props: {
 
       {days.map((d) => {
         const dayIso = format(d, "yyyy-MM-dd");
-        const cellData = getCellData(dayIso, orders);
+        const cellData = getCellData(dayIso, orders, bufferBefore, bufferAfter);
         
         return (
           <TimelineCell
@@ -389,7 +400,7 @@ type CellData = {
   order: OrderRow | null;
 };
 
-function getCellData(dayIso: string, orders: OrderRow[]): CellData {
+function getCellData(dayIso: string, orders: OrderRow[], bufferBefore: number, bufferAfter: number): CellData {
   const day = parseISO(dayIso);
   const today = startOfDay(new Date());
 
@@ -397,12 +408,12 @@ function getCellData(dayIso: string, orders: OrderRow[]): CellData {
     const start = parseISO(o.start_date);
     const end = parseISO(o.end_date);
 
-    const blockedStart = addDays(start, -2);
-    const blockedEnd = addDays(end, 2);
+    const blockedStart = addDays(start, -bufferBefore);
+    const blockedEnd = addDays(end, bufferAfter);
 
     if (!isBefore(day, blockedStart) && !isAfter(day, blockedEnd)) {
       if (!isBefore(day, start) && !isAfter(day, end)) {
-        const isOverdue = isPast(end) && !isPast(addDays(end, 2)) && 
+        const isOverdue = isPast(end) && !isPast(addDays(end, bufferAfter)) && 
                          ["picked_up", "reserved"].includes(o.order_status?.toLowerCase() || "");
         return {
           state: isOverdue ? "overdue" : "rent",
