@@ -33,6 +33,7 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { calculatePrice } from "@/lib/rental-engine";
 import { cn } from "@/lib/utils";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 /* ───────────────────────────── constants ───────────────────────────── */
 
@@ -290,6 +291,10 @@ function CheckoutContent() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Bot protection
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const [formTimestamp] = useState(() => new Date().toISOString());
+
   // ── Load product by ID ──
   useEffect(() => {
     if (!productId) {
@@ -378,10 +383,23 @@ function CheckoutContent() {
           inpostPointAddress: inpostAddress.trim() || undefined,
           termsAcceptedAt: new Date().toISOString(),
           termsVersion: TERMS_VERSION,
+          // Bot protection fields
+          turnstileToken,
+          formTimestamp,
+          _honeypot: "", // Hidden field - bots will fill it
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Nie udało się utworzyć sesji");
+      if (!res.ok) {
+        // Handle specific bot protection errors
+        if (res.status === 429) {
+          throw new Error("Zbyt wiele prób. Proszę poczekać chwilę i spróbować ponownie.");
+        }
+        if (res.status === 403) {
+          throw new Error("Weryfikacja nie powiodła się. Odśwież stronę i spróbuj ponownie.");
+        }
+        throw new Error(json?.error || "Nie udało się utworzyć sesji");
+      }
       if (!json?.url) throw new Error("Brak URL do płatności");
       window.location.href = String(json.url);
     } catch (e) {
@@ -819,10 +837,40 @@ function CheckoutContent() {
                 </div>
               )}
 
+              {/* HONEYPOT FIELD - Hidden field to catch bots */}
+              <input
+                type="text"
+                name="_honeypot"
+                tabIndex={-1}
+                autoComplete="off"
+                style={{
+                  position: "absolute",
+                  left: "-9999px",
+                  width: "1px",
+                  height: "1px",
+                  opacity: 0,
+                }}
+                aria-hidden="true"
+              />
+
+              {/* CLOUDFLARE TURNSTILE - Bot protection */}
+              {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+                <div className="mt-4">
+                  <Turnstile
+                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                    onSuccess={setTurnstileToken}
+                    options={{
+                      theme: "light",
+                      size: "invisible", // Invisible to users
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Submit CTA */}
               <Button
                 onClick={onSubmit}
-                disabled={!formValid || submitting || !pricing}
+                disabled={!formValid || submitting || !pricing || (!turnstileToken && !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)}
                 className={cn(
                   "mt-6 w-full rounded-xl py-6 text-base font-semibold transition-all",
                   formValid && pricing
