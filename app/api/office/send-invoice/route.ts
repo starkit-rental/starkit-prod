@@ -125,33 +125,42 @@ function buildInvoiceEmailHtml(params: {
   depositAmount: number;
 }): string {
   const { customerName, orderNumber, totalAmount, depositAmount } = params;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
 
   return `
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>Faktura VAT - Starkit</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f1f5f9; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f1f5f9;">
     <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+      <td align="center" style="padding: 32px 16px;">
+        
+        <!-- Container -->
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);">
           
-          <!-- Header -->
+          <!-- Gold accent bar -->
           <tr>
-            <td style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                Dziękujemy za wybór Starkit! 🚀
-              </h1>
+            <td style="height: 4px; background: linear-gradient(90deg, #D4A843, #e8c65a, #D4A843);"></td>
+          </tr>
+          
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding: 32px 40px 16px;">
+              <a href="${baseUrl}" style="text-decoration: none;">
+                <img src="${baseUrl}/logo.png" width="150" alt="Starkit" style="display: block; border: 0; width: 150px; max-width: 150px; height: auto;" />
+              </a>
             </td>
           </tr>
 
           <!-- Content -->
           <tr>
-            <td style="padding: 40px 30px;">
+            <td style="padding: 0 40px 32px;">
               <p style="margin: 0 0 20px 0; color: #1e293b; font-size: 16px; line-height: 1.6;">
                 Cześć <strong>${customerName}</strong>,
               </p>
