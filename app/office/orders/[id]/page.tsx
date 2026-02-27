@@ -890,6 +890,7 @@ export default function OfficeOrderDetailsPage() {
                         customer_confirmation: "Potwierdzenie dla klienta",
                         admin_notification: "Powiadomienie dla admina",
                         manual: "Ręczna wysyłka",
+                        invoice: "Faktura VAT",
                       };
                       const typeLabel = typeLabels[log.type] || log.type;
                       const sentDate = format(
