@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getResendClient } from "@/lib/resend";
 
+// Increase timeout for file upload and email sending
+export const maxDuration = 60; // 60 seconds
+export const dynamic = 'force-dynamic';
+
 function createSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
