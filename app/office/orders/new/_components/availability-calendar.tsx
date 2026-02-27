@@ -102,7 +102,7 @@ export function AvailabilityCalendar({
             value={selectedStart ? format(selectedStart, 'yyyy-MM-dd') : ''}
             onChange={(e) => handleManualDateChange('start', e.target.value)}
             min={format(minDate, 'yyyy-MM-dd')}
-            className="w-full h-9 px-3 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4A843] focus:border-transparent"
+            className="w-full h-9 px-3 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
           />
         </div>
         <div>
@@ -112,7 +112,7 @@ export function AvailabilityCalendar({
             value={selectedEnd ? format(selectedEnd, 'yyyy-MM-dd') : ''}
             onChange={(e) => handleManualDateChange('end', e.target.value)}
             min={selectedStart ? format(selectedStart, 'yyyy-MM-dd') : format(minDate, 'yyyy-MM-dd')}
-            className="w-full h-9 px-3 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4A843] focus:border-transparent"
+            className="w-full h-9 px-3 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
           />
         </div>
       </div>
@@ -175,8 +175,8 @@ export function AvailabilityCalendar({
                 isCurrentMonth && !isDisabled && "text-slate-700 hover:bg-slate-100",
                 isOccupied && !isBuffer && "bg-red-50 text-red-400 cursor-not-allowed",
                 isBuffer && "bg-amber-50 text-amber-400 cursor-not-allowed",
-                isSelected && !isDisabled && "bg-[#D4A843] text-white hover:bg-[#D4A843]/90",
-                isToday && !isSelected && "ring-1 ring-[#D4A843]",
+                isSelected && !isDisabled && "bg-indigo-600 text-white hover:bg-indigo-700",
+                isToday && !isSelected && "ring-1 ring-indigo-400",
                 isDisabled && "opacity-50 cursor-not-allowed"
               )}
             >
@@ -197,7 +197,7 @@ export function AvailabilityCalendar({
           <span>Bufor logistyczny</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-3 w-3 rounded bg-[#D4A843]" />
+          <div className="h-3 w-3 rounded bg-indigo-600" />
           <span>Wybrane</span>
         </div>
       </div>

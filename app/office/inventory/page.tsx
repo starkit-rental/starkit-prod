@@ -269,11 +269,11 @@ export default function OfficeInventoryPage() {
   const stockForUnavailability = showUnavailability ? Object.values(stockItemsByProduct).flat().find(s => s.id === showUnavailability) : null;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Package className="h-5 w-5 text-slate-700" />
-          <h1 className="text-xl font-semibold text-slate-900">Inventory</h1>
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Magazyn</h1>
+          <p className="mt-0.5 text-sm text-slate-500">Produkty i egzemplarze sprzętowe</p>
         </div>
 
         <Button onClick={() => setShowAddProduct(true)} size="sm">
@@ -292,112 +292,212 @@ export default function OfficeInventoryPage() {
       )}
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Ładowanie...</div>
+        <div className="flex items-center gap-2 py-8 text-sm text-slate-500">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+          Ładowanie magazynu…
+        </div>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50">
-                  <TableHead className="font-semibold">Nazwa produktu</TableHead>
-                  <TableHead className="font-semibold">Cena / Kaucja</TableHead>
-                  <TableHead className="font-semibold">Bufor (dni)</TableHead>
-                  <TableHead className="font-semibold">SKU</TableHead>
-                  <TableHead className="font-semibold text-right">Akcje</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((p) => {
-                  const stock = stockItemsByProduct[p.id] ?? [];
-                  const displayName = p.name ?? "(bez nazwy)";
-                  const price = toNumber(p.base_price_day);
-                  const deposit = toNumber(p.deposit_amount);
+        <>
+          {/* Desktop Table View */}
+          <Card className="hidden md:block">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead className="font-semibold">Nazwa produktu</TableHead>
+                    <TableHead className="font-semibold">Cena / Kaucja</TableHead>
+                    <TableHead className="font-semibold">Bufor (dni)</TableHead>
+                    <TableHead className="font-semibold">SKU</TableHead>
+                    <TableHead className="font-semibold text-right">Akcje</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {products.map((p) => {
+                    const stock = stockItemsByProduct[p.id] ?? [];
+                    const displayName = p.name ?? "(bez nazwy)";
+                    const price = toNumber(p.base_price_day);
+                    const deposit = toNumber(p.deposit_amount);
 
-                  return (
-                    <TableRow key={p.id} className="group">
-                      <TableCell>
-                        <div>
-                          <div className="font-medium text-slate-900">{displayName}</div>
-                          {p.sanity_slug && (
-                            <div className="text-xs text-slate-500 mt-0.5">slug: {p.sanity_slug}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="font-medium">{price.toFixed(2)} zł / dzień</div>
-                          <div className="text-slate-500">{deposit.toFixed(2)} zł kaucja</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">{p.buffer_before ?? 1}</span>
-                            <span className="text-slate-500">przed</span>
+                    return (
+                      <TableRow key={p.id} className="group">
+                        <TableCell>
+                          <div>
+                            <div className="font-medium text-slate-900">{displayName}</div>
+                            {p.sanity_slug && (
+                              <div className="text-xs text-slate-500 mt-0.5">slug: {p.sanity_slug}</div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">{p.buffer_after ?? 1}</span>
-                            <span className="text-slate-500">po</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div className="font-medium">{price.toFixed(2)} zł / dzień</div>
+                            <div className="text-slate-500">{deposit.toFixed(2)} zł kaucja</div>
                           </div>
-                        </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">{p.buffer_before ?? 1}</span>
+                              <span className="text-slate-500">przed</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">{p.buffer_after ?? 1}</span>
+                              <span className="text-slate-500">po</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            {stock.map((si) => {
+                              const isUnavailable = si.unavailable_from || si.unavailable_to;
+                              return (
+                                <div
+                                  key={si.id}
+                                  className={cn(
+                                    "flex items-center gap-2 rounded px-2 py-1 text-xs",
+                                    isUnavailable ? "bg-red-50 text-red-700" : "bg-slate-50 text-slate-700"
+                                  )}
+                                >
+                                  <span className="font-mono">{si.serial_number || "(brak SN)"}</span>
+                                  {isUnavailable && (
+                                    <span className="text-[10px] text-red-600">Niedostępny</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {stock.length === 0 && (
+                              <span className="text-xs text-slate-400">Brak egzemplarzy</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowEditProduct(p.id)}
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowDeleteProduct(p.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {products.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
+                        Brak produktów. Dodaj pierwszy produkt, aby rozpocząć.
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {products.map((p) => {
+              const stock = stockItemsByProduct[p.id] ?? [];
+              const displayName = p.name ?? "(bez nazwy)";
+              const price = toNumber(p.base_price_day);
+              const deposit = toNumber(p.deposit_amount);
+
+              return (
+                <Card key={p.id} className="bg-white border-slate-200 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-slate-900 mb-1">{displayName}</div>
+                        {p.sanity_slug && (
+                          <div className="text-xs text-slate-500">slug: {p.sanity_slug}</div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowEditProduct(p.id)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowDeleteProduct(p.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                      <div>
+                        <div className="text-xs text-slate-500 mb-1">Cena / dzień</div>
+                        <div className="font-medium">{price.toFixed(2)} zł</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500 mb-1">Kaucja</div>
+                        <div className="font-medium">{deposit.toFixed(2)} zł</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500 mb-1">Bufor przed</div>
+                        <div className="font-medium">{p.buffer_before ?? 1} dni</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500 mb-1">Bufor po</div>
+                        <div className="font-medium">{p.buffer_after ?? 1} dni</div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                        Egzemplarze ({stock.length})
+                      </div>
+                      {stock.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
                           {stock.map((si) => {
                             const isUnavailable = si.unavailable_from || si.unavailable_to;
                             return (
                               <div
                                 key={si.id}
                                 className={cn(
-                                  "flex items-center gap-2 rounded px-2 py-1 text-xs",
+                                  "rounded px-2 py-1 text-xs font-mono",
                                   isUnavailable ? "bg-red-50 text-red-700" : "bg-slate-50 text-slate-700"
                                 )}
                               >
-                                <span className="font-mono">{si.serial_number || "(brak SN)"}</span>
-                                {isUnavailable && (
-                                  <span className="text-[10px] text-red-600">Niedostępny</span>
-                                )}
+                                {si.serial_number || "(brak SN)"}
                               </div>
                             );
                           })}
-                          {stock.length === 0 && (
-                            <span className="text-xs text-slate-400">Brak egzemplarzy</span>
-                          )}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowEditProduct(p.id)}
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowDeleteProduct(p.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                {products.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
-                      Brak produktów. Dodaj pierwszy produkt, aby rozpocząć.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                      ) : (
+                        <div className="text-xs text-slate-400 italic">Brak egzemplarzy</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {products.length === 0 && (
+              <Card className="bg-white border-slate-200 shadow-sm">
+                <CardContent className="p-8 text-center text-sm text-slate-500">
+                  Brak produktów. Dodaj pierwszy produkt, aby rozpocząć.
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </>
       )}
 
       {/* Add Product Dialog */}

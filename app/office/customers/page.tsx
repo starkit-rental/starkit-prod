@@ -14,6 +14,8 @@ import {
   Trash2,
   AlertTriangle,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -165,6 +167,15 @@ export default function OfficeCustomersPage() {
     return result;
   }, [customers, query, sortField, sortDir]);
 
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
+
+  // Reset to page 1 when search/sort changes
+  useEffect(() => { setPage(1); }, [query, sortField, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   function toggleSort(field: SortField) {
     if (sortField === field) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -184,54 +195,38 @@ export default function OfficeCustomersPage() {
   }, [customers]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Klienci</h1>
-          <p className="mt-1 text-sm text-slate-500">Baza klientów i statystyki zamówień</p>
-        </div>
-        <div className="text-xs font-medium text-slate-500">
-          {filtered.length} z {customers.length}
-        </div>
+    <div className="flex flex-col gap-5">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">Klienci</h1>
+        <p className="mt-0.5 text-sm text-slate-500">Baza klientów i historia zamówień</p>
       </div>
 
       {/* KPI Cards */}
       {!loading && !error && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Card className="bg-white border-slate-200 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="h-4 w-4 text-slate-400" />
-                <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Klienci</span>
-              </div>
-              <div className="text-2xl font-semibold text-slate-900">{stats.total}</div>
+            <CardContent className="px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Klienci</div>
+              <div className="text-2xl font-bold text-slate-900">{stats.total}</div>
             </CardContent>
           </Card>
           <Card className="bg-white border-slate-200 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <ShoppingCart className="h-4 w-4 text-slate-400" />
-                <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Z zamówieniami</span>
-              </div>
-              <div className="text-2xl font-semibold text-slate-900">{stats.withOrders}</div>
+            <CardContent className="px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Z zamówieniami</div>
+              <div className="text-2xl font-bold text-slate-900">{stats.withOrders}</div>
             </CardContent>
           </Card>
           <Card className="bg-white border-slate-200 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="h-4 w-4 text-slate-400" />
-                <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Przychód</span>
-              </div>
-              <div className="text-2xl font-semibold text-slate-900">{moneyPln(stats.totalRevenue)}</div>
+            <CardContent className="px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Przychód</div>
+              <div className="text-2xl font-bold text-slate-900">{moneyPln(stats.totalRevenue)}</div>
             </CardContent>
           </Card>
           <Card className="bg-white border-slate-200 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <ShoppingCart className="h-4 w-4 text-slate-400" />
-                <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Śr. zamówienie</span>
-              </div>
-              <div className="text-2xl font-semibold text-slate-900">{moneyPln(stats.avgOrderValue)}</div>
+            <CardContent className="px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Śr. zamówienie</div>
+              <div className="text-2xl font-bold text-slate-900">{moneyPln(stats.avgOrderValue)}</div>
             </CardContent>
           </Card>
         </div>
@@ -240,27 +235,35 @@ export default function OfficeCustomersPage() {
       {/* Customer Table */}
       <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <CardContent className="p-0">
-          <div className="border-b border-slate-200 px-6 py-4">
-            <div className="relative max-w-sm">
+          <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-3 md:px-5">
+            <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Szukaj po nazwie, email, firmie, NIP…"
-                className="h-10 bg-slate-50 border-slate-200 pl-10 text-sm placeholder:text-slate-400 focus-visible:bg-white"
+                className="h-9 bg-slate-50 border-slate-200 pl-9 text-sm placeholder:text-slate-400 focus-visible:bg-white"
               />
             </div>
+            <span className="shrink-0 text-xs font-medium text-slate-400 tabular-nums">
+              {filtered.length} / {customers.length}
+            </span>
           </div>
 
           {loading ? (
-            <div className="px-6 py-12 text-center text-sm text-slate-500">Ładowanie klientów…</div>
+            <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+              Ładowanie klientów…
+            </div>
           ) : error ? (
-            <div className="px-6 py-12 text-center text-sm text-destructive">{error}</div>
+            <div className="px-5 py-12 text-center text-sm text-red-600">{error}</div>
           ) : filtered.length === 0 ? (
-            <div className="px-6 py-12 text-center text-sm text-slate-500">Brak wyników dla podanego zapytania.</div>
+            <div className="px-5 py-16 text-center text-sm text-slate-400">Brak wyników dla podanego zapytania.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] border-collapse text-sm">
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full min-w-[900px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/60">
                     <SortableHeader
@@ -301,7 +304,7 @@ export default function OfficeCustomersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((c) => (
+                  {paginated.map((c) => (
                     <tr key={c.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/80">
                       <td className="px-6 py-4">
                         <span className="font-semibold text-slate-900">
@@ -381,6 +384,129 @@ export default function OfficeCustomersPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden divide-y divide-slate-100">
+              {paginated.map((c) => (
+                <div key={c.id} className="px-4 py-4 transition-colors hover:bg-slate-50/80">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-slate-900 mb-1 truncate">
+                        {c.full_name || c.email || "—"}
+                      </div>
+                      {c.email && (
+                        <a href={`mailto:${c.email}`} className="text-sm text-slate-600 hover:text-blue-600 hover:underline truncate block">
+                          <Mail className="h-3 w-3 inline mr-1 text-slate-400" />
+                          {c.email}
+                        </a>
+                      )}
+                      {c.phone && (
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          <Phone className="h-3 w-3 inline mr-1 text-slate-400" />
+                          {c.phone}
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => {
+                        setDeleteError(null);
+                        setDeleteTarget(c);
+                      }}
+                      aria-label="Usuń klienta"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {c.company_name && (
+                    <div className="mb-3 text-sm text-slate-700">
+                      <Building2 className="h-3 w-3 inline mr-1 text-slate-400" />
+                      {c.company_name}
+                      {c.nip && <span className="text-xs text-slate-500 ml-2">NIP: {c.nip}</span>}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <ShoppingCart className="h-3.5 w-3.5 text-slate-400" />
+                        <span
+                          className={cn(
+                            "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
+                            (c.total_orders ?? 0) > 0
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-slate-100 text-slate-500"
+                          )}
+                        >
+                          {c.total_orders} zam.
+                        </span>
+                      </div>
+                      <div className="font-semibold text-slate-900">{moneyPln(c.total_spent ?? 0)}</div>
+                    </div>
+                    <div className="text-slate-500">{dateShort(c.last_order_at)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
+                  <span className="text-xs text-slate-400 tabular-nums">
+                    Strona {page} z {totalPages} · {filtered.length} klientów
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPage(1)}
+                      disabled={page === 1}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                    >
+                      «
+                    </button>
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+                      const p = start + i;
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-medium transition-colors ${
+                            p === page
+                              ? "bg-indigo-600 text-white"
+                              : "text-slate-600 hover:bg-slate-100"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setPage(totalPages)}
+                      disabled={page === totalPages}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                    >
+                      »
+                    </button>
+                  </div>
+                </div>
+              )}
+          </>
           )}
         </CardContent>
       </Card>

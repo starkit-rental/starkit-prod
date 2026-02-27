@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { addDays, addMonths, format, isAfter, isBefore, parseISO, startOfDay, isPast } from "date-fns";
 import { pl } from "date-fns/locale";
 import { CalendarDays, Plus, ChevronLeft, ChevronRight } from "lucide-react";
@@ -78,7 +77,6 @@ function clampToDate(date: Date): Date {
 }
 
 export default function OfficeDashboardPage() {
-  const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [loading, setLoading] = useState(true);
@@ -121,7 +119,7 @@ export default function OfficeDashboardPage() {
     const { data: ordersData, error: ordersError } = await supabase
       .from("orders")
       .select("id,order_number,start_date,end_date,payment_status,order_status,total_rental_price,total_deposit,order_items(stock_item_id),customers:customer_id(full_name,email)")
-      .in("payment_status", ["pending", "paid", "manual", "completed"]) 
+      .not("order_status", "eq", "cancelled")
       .order("start_date", { ascending: true });
 
     if (ordersError) {
@@ -155,15 +153,15 @@ export default function OfficeDashboardPage() {
 
   const stats = useMemo(() => {
     const active = orders.filter((o) => ["reserved", "picked_up"].includes(String(o.order_status ?? "").toLowerCase())).length;
-    const pending = orders.filter((o) =>
-      String(o.order_status ?? "").toLowerCase() === "pending" &&
-      String(o.payment_status ?? "").toLowerCase() === "paid"
-    ).length;
+    const pending = orders.filter((o) => String(o.order_status ?? "").toLowerCase() === "pending").length;
     const revenue = orders
-      .filter((o) => String(o.payment_status ?? "").toLowerCase() === "paid")
+      .filter((o) => ["paid", "manual", "completed", "deposit_refunded"].includes(String(o.payment_status ?? "").toLowerCase()))
       .reduce((sum, o) => sum + toNumber(o.total_rental_price), 0);
     const depositsToReturn = orders
-      .filter((o) => String(o.order_status ?? "").toLowerCase() === "returned")
+      .filter((o) =>
+        String(o.order_status ?? "").toLowerCase() === "returned" &&
+        String(o.payment_status ?? "").toLowerCase() !== "deposit_refunded"
+      )
       .reduce((sum, o) => sum + toNumber(o.total_deposit), 0);
 
     return { active, pending, revenue, depositsToReturn };
@@ -171,104 +169,101 @@ export default function OfficeDashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <CalendarDays className="h-5 w-5" />
-          <h1 className="text-lg font-semibold">Dashboard</h1>
-        </div>
-
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => router.push("/office/orders/new")}
-        >
-          <Plus className="h-4 w-4" />
-          Nowe zamówienie
-        </Button>
+      {/* Page Header */}
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">Pulpit</h1>
+        <p className="mt-0.5 text-sm text-slate-500">Przegląd aktywności i dostępności sprzętu</p>
       </div>
 
-      {error && <div className="text-sm text-destructive">{error}</div>}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Ładowanie...</div>
+        <div className="flex items-center gap-2 text-sm text-slate-500 py-8">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+          Ładowanie danych…
+        </div>
       ) : (
         <>
-          {/* Timeline Navigation */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={goToPrevMonth}
-                className="h-8"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Poprzedni miesiąc
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={goToToday}
-                className="h-8"
-              >
-                Dzisiaj
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={goToNextMonth}
-                className="h-8"
-              >
-                Następny miesiąc
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-            <div className="text-sm text-slate-600">
-              {format(viewStart, 'd MMMM yyyy', { locale: pl })} - {format(addDays(viewStart, daysCount - 1), 'd MMMM yyyy', { locale: pl })}
-            </div>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+                    <CalendarDays className="h-4.5 w-4.5 text-blue-600" />
+                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Aktywne</span>
+                </div>
+                <div className="text-2xl font-bold text-slate-900">{stats.active}</div>
+                <div className="text-xs text-slate-500 mt-0.5">Zarezerwowane + Wydane</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50">
+                    <Plus className="h-4.5 w-4.5 text-amber-600" />
+                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Nowe</span>
+                </div>
+                <div className="text-2xl font-bold text-slate-900">{stats.pending}</div>
+                <div className="text-xs text-slate-500 mt-0.5">Oczekujące na potwierdzenie</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50">
+                    <ChevronRight className="h-4.5 w-4.5 text-emerald-600" />
+                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Przychód</span>
+                </div>
+                <div className="text-2xl font-bold text-slate-900">{moneyPln(stats.revenue)}</div>
+                <div className="text-xs text-slate-500 mt-0.5">Z opłaconych zamówień</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50">
+                    <ChevronLeft className="h-4.5 w-4.5 text-violet-600" />
+                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Kaucje</span>
+                </div>
+                <div className="text-2xl font-bold text-slate-900">{moneyPln(stats.depositsToReturn)}</div>
+                <div className="text-xs text-slate-500 mt-0.5">Do zwrotu klientom</div>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <Card className="bg-white border-slate-200 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-wide text-slate-500">Aktywne</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-2xl font-semibold text-slate-900">{stats.active}</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-white border-slate-200 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-wide text-slate-500">Oczekujące</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-2xl font-semibold text-slate-900">{stats.pending}</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-white border-slate-200 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-wide text-slate-500">Przychód</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-2xl font-semibold text-slate-900">{moneyPln(stats.revenue)}</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-white border-slate-200 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-wide text-slate-500">Kaucje do zwrotu</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-2xl font-semibold text-slate-900">{moneyPln(stats.depositsToReturn)}</div>
-              </CardContent>
-            </Card>
+          {/* Timeline Controls */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={goToPrevMonth} className="h-8 px-3 border-slate-200">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToToday} className="h-8 px-3 border-slate-200 font-medium">
+                Dzisiaj
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToNextMonth} className="h-8 px-3 border-slate-200">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-medium text-slate-700">
+                {format(viewStart, 'd MMM', { locale: pl })} – {format(addDays(viewStart, daysCount - 1), 'd MMM yyyy', { locale: pl })}
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-slate-500">
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-blue-500 inline-block" /> Wynajem</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-amber-400 inline-block" /> Bufor</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-red-500 inline-block" /> Przeterminowane</span>
+            </div>
           </div>
 
           <Card className="bg-white border-slate-200 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-900">Planner dostępności</CardTitle>
-              <p className="text-xs text-slate-500 mt-1">
-                {isMobile ? '7 dni' : '30 dni'} • Niebieski: wynajem | Żółty: bufor logistyczny | Czerwony: przeterminowane
-              </p>
+            <CardHeader className="pb-2 px-4 pt-4 border-b border-slate-100">
+              <CardTitle className="text-sm font-semibold text-slate-900">Planer dostępności</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <ScrollArea className="w-full">

@@ -508,7 +508,7 @@ export default function NewOrderPageV2() {
           {orderCreated && createdOrderId && (
             <Button
               onClick={() => router.push(`/office/orders/${createdOrderId}`)}
-              className="bg-[#D4A843] hover:bg-[#D4A843]/90"
+              className="bg-indigo-600 hover:bg-indigo-700"
             >
               <Check className="h-4 w-4 mr-2" />
               Zobacz zamówienie
@@ -522,7 +522,7 @@ export default function NewOrderPageV2() {
             <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
               <CardHeader className="pb-3 border-b border-slate-100">
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <User className="h-4 w-4 text-[#D4A843]" />
+                  <User className="h-4 w-4 text-indigo-500" />
                   Klient
                 </CardTitle>
               </CardHeader>
@@ -627,7 +627,7 @@ export default function NewOrderPageV2() {
             <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
               <CardHeader className="pb-3 border-b border-slate-100">
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <Package className="h-4 w-4 text-[#D4A843]" />
+                  <Package className="h-4 w-4 text-indigo-500" />
                   Produkty
                 </CardTitle>
               </CardHeader>
@@ -661,7 +661,7 @@ export default function NewOrderPageV2() {
             <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
               <CardHeader className="pb-3 border-b border-slate-100">
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <Calendar className="h-4 w-4 text-[#D4A843]" />
+                  <Calendar className="h-4 w-4 text-indigo-500" />
                   Okres wynajmu
                 </CardTitle>
               </CardHeader>
@@ -692,7 +692,7 @@ export default function NewOrderPageV2() {
               <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
                 <CardHeader className="pb-3 border-b border-slate-100">
                   <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <CreditCard className="h-4 w-4 text-[#D4A843]" />
+                    <CreditCard className="h-4 w-4 text-indigo-500" />
                     Podsumowanie
                   </CardTitle>
                 </CardHeader>
@@ -727,7 +727,7 @@ export default function NewOrderPageV2() {
             <Button
               onClick={handleCreateOrder}
               disabled={orderCreated || saving || !selectedCustomer && !isNewCustomer || lineItems.length === 0}
-              className="w-full h-12 bg-[#D4A843] hover:bg-[#D4A843]/90 text-white font-semibold"
+              className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
             >
               {saving ? (
                 <>

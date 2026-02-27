@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { Save, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,28 +74,17 @@ export default function ContractEditorPage() {
   const hasChanges = contractContent !== originalContent;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/office/settings"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-              Edytor Umowy Najmu
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Zarządzaj treścią regulaminu w umowach PDF
-            </p>
-          </div>
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Umowa najmu</h1>
+          <p className="mt-0.5 text-sm text-slate-500">Edytuj treść regulaminu w umowach PDF</p>
         </div>
 
         <Button
           onClick={saveContractContent}
           disabled={!hasChanges || saving}
+          size="sm"
           className="gap-2"
         >
           {saving ? (

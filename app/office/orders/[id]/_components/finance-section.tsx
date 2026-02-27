@@ -174,7 +174,7 @@ export function FinanceSection({
       <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <CardHeader className="pb-3 border-b border-slate-100">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <DollarSign className="h-4 w-4 text-[#D4A843]" />
+            <DollarSign className="h-4 w-4 text-indigo-600" />
             Finanse
           </CardTitle>
         </CardHeader>

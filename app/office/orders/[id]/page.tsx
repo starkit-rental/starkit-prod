@@ -138,11 +138,13 @@ function normalizeOne<T>(value: T | T[] | null | undefined): T | null {
 
 function pillForPayment(status: string | null | undefined) {
   const s = (status ?? "").toLowerCase();
-  if (s === "paid") return { label: "Paid", cls: "bg-emerald-100 text-emerald-700" };
-  if (s === "payment_due") return { label: "Payment due", cls: "bg-amber-100 text-amber-700" };
-  if (s === "pending") return { label: "Pending", cls: "bg-amber-100 text-amber-700" };
-  if (s === "manual") return { label: "Manual", cls: "bg-sky-100 text-sky-700" };
-  if (s === "failed") return { label: "Failed", cls: "bg-rose-100 text-rose-700" };
+  if (s === "paid") return { label: "Opłacone", cls: "bg-emerald-100 text-emerald-700" };
+  if (s === "payment_due") return { label: "Do zapłaty", cls: "bg-amber-100 text-amber-700" };
+  if (s === "pending") return { label: "Oczekuje", cls: "bg-amber-100 text-amber-700" };
+  if (s === "completed") return { label: "Zakończone", cls: "bg-emerald-100 text-emerald-700" };
+  if (s === "deposit_refunded") return { label: "Kaucja zwrócona", cls: "bg-blue-100 text-blue-700" };
+  if (s === "manual") return { label: "Ręczne", cls: "bg-sky-100 text-sky-700" };
+  if (s === "failed") return { label: "Błąd", cls: "bg-rose-100 text-rose-700" };
   return { label: status || "—", cls: "bg-slate-100 text-slate-500" };
 }
 
@@ -556,60 +558,72 @@ export default function OfficeOrderDetailsPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-5">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/office/orders"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
-            <p className="text-xs font-medium text-slate-500">Zamówienie</p>
-            <h1 className="text-lg font-semibold tracking-tight text-slate-900">#{displayNumber}</h1>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg font-bold text-slate-900">#{displayNumber}</h1>
+              {order && (
+                <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold", orderPill.cls)}>
+                  {orderPill.label}
+                </span>
+              )}
+              {order && (
+                <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold", payPill.cls)}>
+                  {payPill.label}
+                </span>
+              )}
+            </div>
+            {customer && (
+              <p className="text-sm text-slate-500 truncate mt-0.5">
+                {customer.full_name || customer.company_name || customer.email || "Nieznany klient"}
+              </p>
+            )}
           </div>
-          <span className={cn("ml-2 inline-flex rounded-full px-3 py-1 text-xs font-medium", orderPill.cls)}>
-            {orderPill.label}
-          </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Select
-            value={order?.order_status ?? ""}
-            onValueChange={(val) => handleStatusChange(val)}
-          >
-            <SelectTrigger className="h-9 w-[160px] border-slate-200 bg-white text-sm">
-              <SelectValue placeholder="Zmień status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pending">Nowe</SelectItem>
-              <SelectItem value="reserved">Zarezerwowane</SelectItem>
-              <SelectItem value="picked_up">Wydane</SelectItem>
-              <SelectItem value="returned">Zwrócone</SelectItem>
-              <SelectItem value="cancelled">Anulowane</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-2 shrink-0">
+          {order && (
+            <Select
+              value={order.order_status ?? ""}
+              onValueChange={(val) => handleStatusChange(val)}
+            >
+              <SelectTrigger className="h-8 w-[160px] border-slate-200 bg-white text-sm font-medium">
+                <SelectValue placeholder="Zmień status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Nowe</SelectItem>
+                <SelectItem value="reserved">Zarezerwowane</SelectItem>
+                <SelectItem value="picked_up">Wydane</SelectItem>
+                <SelectItem value="returned">Zwrócone</SelectItem>
+                <SelectItem value="cancelled">Anulowane</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
 
           <Button
             variant="outline"
             size="sm"
             onClick={handleDeleteOrder}
-            className="h-9 gap-2 border-destructive/50 text-destructive hover:bg-destructive hover:text-white"
+            className="h-8 gap-1.5 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-xs"
             disabled={deleting}
           >
-            {deleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
+            {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             <span className="hidden sm:inline">Usuń</span>
           </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-200">
+      <div className="flex gap-0 border-b border-slate-200">
         {TAB_ITEMS.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -619,8 +633,8 @@ export default function OfficeOrderDetailsPage() {
               className={cn(
                 "flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px",
                 activeTab === tab.id
-                  ? "border-[#FFD700] text-slate-900"
-                  : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
+                  ? "border-indigo-600 text-slate-900"
+                  : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
               )}
             >
               <Icon className="h-4 w-4" />
@@ -861,7 +875,7 @@ export default function OfficeOrderDetailsPage() {
                   <Button
                     size="sm"
                     onClick={openMessenger}
-                    className="h-8 gap-1.5 bg-[#1a1a2e] text-white hover:bg-[#2a2a4e] text-xs font-medium"
+                    className="h-8 gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-medium"
                   >
                     <Send className="h-3.5 w-3.5" />
                     Wyślij wiadomość
@@ -1012,7 +1026,7 @@ export default function OfficeOrderDetailsPage() {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-3.5 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#1a1a2e]">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600">
                   <Send className="h-4 w-4 text-white" />
                 </div>
                 <div>
@@ -1131,7 +1145,7 @@ export default function OfficeOrderDetailsPage() {
                   size="sm"
                   onClick={sendCustomEmail}
                   disabled={messengerSending || !messengerContent.trim()}
-                  className="h-9 gap-1.5 bg-[#1a1a2e] text-white hover:bg-[#2a2a4e] font-medium"
+                  className="h-9 gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700 font-medium"
                 >
                   {messengerSending ? (
                     <>
@@ -1501,7 +1515,7 @@ function SendEmailPanel({
     <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
       <CardHeader className="border-b border-slate-100 pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <Send className="h-4 w-4 text-[#FFD700]" />
+          <Send className="h-4 w-4 text-indigo-500" />
           Wyślij e-mail
         </CardTitle>
       </CardHeader>
@@ -1696,7 +1710,7 @@ function EditOrderPanel({
     <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
       <CardHeader className="border-b border-slate-100 pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <Edit3 className="h-4 w-4 text-[#FFD700]" />
+          <Edit3 className="h-4 w-4 text-indigo-500" />
           Edytuj pozycje zamówienia
         </CardTitle>
       </CardHeader>
@@ -1898,7 +1912,7 @@ function ContractPdfCard({
             </p>
             <Button
               size="sm"
-              className="w-full gap-1.5 h-9 bg-[#1a1a2e] hover:bg-[#2a2a4e] text-white text-xs"
+              className="w-full gap-1.5 h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
               onClick={handleGenerate}
               disabled={generating}
             >

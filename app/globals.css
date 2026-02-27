@@ -2,7 +2,7 @@
 
 @plugin "tailwindcss-animate";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *):not(.office-light *):not(.office-light));
 
 @theme {
   --font-sans: var(--font-sans);
@@ -151,6 +151,37 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+/* Force light mode for the office admin panel — overrides .dark from ThemeProvider */
+.office-light {
+  color-scheme: light;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.13 0.028 261.692);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.13 0.028 261.692);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.13 0.028 261.692);
+  --primary: oklch(0.21 0.034 264.665);
+  --primary-foreground: oklch(0.985 0.002 247.839);
+  --secondary: oklch(0.967 0.003 264.542);
+  --secondary-foreground: oklch(0.21 0.034 264.665);
+  --muted: oklch(0.967 0.003 264.542);
+  --muted-foreground: oklch(0.551 0.027 264.364);
+  --accent: oklch(0.967 0.003 264.542);
+  --accent-foreground: oklch(0.21 0.034 264.665);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.928 0.006 264.531);
+  --input: oklch(0.928 0.006 264.531);
+  --ring: oklch(0.707 0.022 261.325);
+  --sidebar: oklch(0.985 0.002 247.839);
+  --sidebar-foreground: oklch(0.13 0.028 261.692);
+  --sidebar-primary: oklch(0.21 0.034 264.665);
+  --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
+  --sidebar-accent: oklch(0.967 0.003 264.542);
+  --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
+  --sidebar-border: oklch(0.928 0.006 264.531);
+  --sidebar-ring: oklch(0.707 0.022 261.325);
+}
+
 @utility container {
   width: 100%;
   margin-left: auto;
@@ -210,7 +241,9 @@
   body {
     @apply bg-background text-foreground;
   }
-  h1 {
+
+  /* Heading styles scoped to client-facing pages only (not the office admin panel) */
+  :not(.office-light *) h1 {
     font-family: var(--font-sans);
     font-size: 2.5rem;
     line-height: 1.2;
@@ -220,7 +253,7 @@
     }
   }
 
-  h2 {
+  :not(.office-light *) h2 {
     font-family: var(--font-sans);
     font-size: 2rem;
     line-height: 1.2;
@@ -230,7 +263,7 @@
     }
   }
 
-  h3 {
+  :not(.office-light *) h3 {
     font-family: var(--font-sans);
     font-size: 1.5rem;
     line-height: 1.2;
@@ -239,7 +272,7 @@
     }
   }
 
-  h4 {
+  :not(.office-light *) h4 {
     font-family: var(--font-sans);
     font-size: 1.25rem;
     line-height: 1.3;
@@ -248,7 +281,7 @@
     }
   }
 
-  h5 {
+  :not(.office-light *) h5 {
     font-family: var(--font-sans);
     font-size: 1.125rem;
     line-height: 1.4;
@@ -257,7 +290,7 @@
     }
   }
 
-  h6 {
+  :not(.office-light *) h6 {
     font-family: var(--font-sans);
     font-size: 1rem;
     line-height: 1.4;

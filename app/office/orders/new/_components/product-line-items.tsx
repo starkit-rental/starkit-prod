@@ -78,8 +78,8 @@ export function ProductLineItems({
         >
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#D4A843]/20">
-                <Package className="h-5 w-5 text-[#D4A843]" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100">
+                <Package className="h-5 w-5 text-indigo-600" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-900">
@@ -159,7 +159,7 @@ export function ProductLineItems({
           variant="outline"
           onClick={() => setShowProductPicker(true)}
           disabled={disabled}
-          className="w-full h-12 border-dashed border-slate-300 hover:border-[#D4A843] hover:bg-amber-50/50 text-slate-600"
+          className="w-full h-12 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/50 text-slate-600"
         >
           <Plus className="h-4 w-4 mr-2" />
           Dodaj produkt
@@ -185,7 +185,7 @@ export function ProductLineItems({
               <button
                 key={product.id}
                 onClick={() => addLineItem(product)}
-                className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-white hover:border-[#D4A843] hover:bg-amber-50/50 transition-colors text-left"
+                className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-white hover:border-indigo-400 hover:bg-indigo-50/50 transition-colors text-left"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100">

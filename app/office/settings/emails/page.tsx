@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Save, Loader2, Mail, Eye, RotateCcw, Send, CheckCircle2 } from "lucide-react";
-import Link from "next/link";
+import { Save, Loader2, Mail, Eye, RotateCcw, Send, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -340,24 +339,12 @@ export default function EmailTemplatesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-0 h-[calc(100vh-80px)]">
+    <div className="flex flex-col gap-0 h-[calc(100vh-56px)]">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-200 shrink-0">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/office/settings"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight text-slate-900">
-              Szablony e-mail
-            </h1>
-            <p className="text-xs text-slate-500">
-              Edytuj automatyczne wiadomości wysyłane do klientów
-            </p>
-          </div>
+      <div className="flex items-center justify-between gap-4 px-5 py-3.5 border-b border-slate-200 shrink-0 bg-white">
+        <div>
+          <h1 className="text-base font-bold text-slate-900">E-maile</h1>
+          <p className="text-xs text-slate-500">Automatyczne wiadomości do klientów</p>
         </div>
         <div className="flex items-center gap-2">
           {hasChanges && (
@@ -370,7 +357,7 @@ export default function EmailTemplatesPage() {
             size="sm"
             onClick={saveCurrentTemplate}
             disabled={!hasChanges || saving}
-            className="h-9 gap-1.5 bg-[#1a1a2e] text-white hover:bg-[#2a2a4e] font-medium"
+            className="h-9 gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700 font-medium"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Zapisz szablon
@@ -402,7 +389,7 @@ export default function EmailTemplatesPage() {
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <Mail className={`h-3.5 w-3.5 shrink-0 ${active ? "text-[#D4A843]" : "text-slate-400"}`} />
+                      <Mail className={`h-3.5 w-3.5 shrink-0 ${active ? "text-indigo-600" : "text-slate-400"}`} />
                       <span className={`text-xs font-medium truncate ${active ? "text-slate-900" : "text-slate-600"}`}>
                         {tpl.label}
                       </span>

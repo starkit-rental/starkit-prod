@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { Search, Calendar, FileText, MessageSquare, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -86,6 +86,9 @@ export default function OfficeOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 25;
 
   useEffect(() => {
     let active = true;
@@ -144,117 +147,258 @@ export default function OfficeOrdersPage() {
     });
   }, [orders, query]);
 
+  // Reset to page 1 when search query changes
+  useEffect(() => { setPage(1); }, [query]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Metrics
+  const metrics = useMemo(() => {
+    const total = orders.length;
+    const revenue = orders.reduce((s, o) => {
+      const n = Number(String(o.total_rental_price ?? 0));
+      return s + (Number.isFinite(n) ? n : 0);
+    }, 0);
+    const due = orders.filter(o => ["payment_due", "pending", "unpaid"].includes((o.payment_status ?? "").toLowerCase())).reduce((s, o) => {
+      const n = Number(String(o.total_rental_price ?? 0));
+      return s + (Number.isFinite(n) ? n : 0);
+    }, 0);
+    return { total, revenue, due };
+  }, [orders]);
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Zamówienia</h1>
-          <p className="mt-1 text-sm text-slate-500">Przeglądaj i zarządzaj zamówieniami klientów</p>
-        </div>
-        <div className="text-xs font-medium text-slate-500">
-          {filtered.length} z {orders.length}
-        </div>
+    <div className="flex flex-col gap-5">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">Zamówienia</h1>
+        <p className="mt-0.5 text-sm text-slate-500">Zarządzaj wynajmami i śledź płatności</p>
       </div>
+
+      {/* Metrics Bar */}
+      {!loading && !error && (
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardContent className="px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Zamówienia</div>
+              <div className="text-2xl font-bold text-slate-900">{metrics.total}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardContent className="px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Przychód</div>
+              <div className="text-2xl font-bold text-slate-900">{moneyPln(metrics.revenue)}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardContent className="px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Do zapłaty</div>
+              <div className="text-2xl font-bold text-amber-600">{moneyPln(metrics.due)}</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <CardContent className="p-0">
-          <div className="border-b border-slate-200 px-6 py-4">
-            <div className="relative max-w-sm">
+          {/* Search + count row */}
+          <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-3 md:px-5">
+            <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Szukaj po numerze (SK-...), kliencie, firmie lub statusie…"
-                className="h-10 bg-slate-50 border-slate-200 pl-10 text-sm placeholder:text-slate-400 focus-visible:bg-white"
+                placeholder="Szukaj po numerze, kliencie, firmie lub statusie…"
+                className="h-9 bg-slate-50 border-slate-200 pl-9 text-sm placeholder:text-slate-400 focus-visible:bg-white"
               />
             </div>
+            <span className="shrink-0 text-xs font-medium text-slate-400 tabular-nums">
+              {filtered.length === orders.length ? orders.length : `${filtered.length} / ${orders.length}`} wyników
+            </span>
           </div>
 
           {loading ? (
-            <div className="px-6 py-12 text-center text-sm text-slate-500">Ładowanie zamówień…</div>
+            <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+              Ładowanie zamówień…
+            </div>
           ) : error ? (
-            <div className="px-6 py-12 text-center text-sm text-destructive">{error}</div>
+            <div className="px-5 py-12 text-center text-sm text-red-600">{error}</div>
           ) : filtered.length === 0 ? (
-            <div className="px-6 py-12 text-center text-sm text-slate-500">Brak wyników dla podanego zapytania.</div>
+            <div className="px-5 py-16 text-center">
+              <div className="text-slate-400 text-sm">Brak wyników dla &ldquo;{query}&rdquo;</div>
+            </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px] border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/60">
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Zamówienie</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Klient</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Okres</th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Kwota</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Płatność</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Info</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((o) => {
-                    const cust = normalizeCustomer(o.customers);
-                    const orderPill = pillForOrder(o.order_status);
-                    const payPill = pillForPayment(o.payment_status);
-                    const displayNumber = o.order_number || shortOrderNumber(String(o.id));
+            <>
+              {/* Desktop Table */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/80">
+                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">#</th>
+                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Klient</th>
+                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
+                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Od</th>
+                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Do</th>
+                      <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Kwota</th>
+                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Płatność</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paginated.map((o) => {
+                      const cust = normalizeCustomer(o.customers);
+                      const orderPill = pillForOrder(o.order_status);
+                      const payPill = pillForPayment(o.payment_status);
+                      const displayNumber = o.order_number || shortOrderNumber(String(o.id));
 
-                    return (
-                      <tr key={o.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/80">
-                        <td className="px-6 py-4">
-                          <Link
-                            href={`/office/orders/${o.id}`}
-                            className="font-semibold text-slate-900 hover:text-blue-600 hover:underline"
-                          >
-                            {displayNumber}
-                          </Link>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-900">
-                              {cust?.full_name || cust?.company_name || cust?.email || "—"}
+                      return (
+                        <tr key={o.id} className="group transition-colors hover:bg-slate-50">
+                          <td className="px-5 py-3.5">
+                            <Link
+                              href={`/office/orders/${o.id}`}
+                              className="font-mono text-xs font-semibold text-slate-500 group-hover:text-blue-600 transition-colors"
+                            >
+                              #{displayNumber}
+                            </Link>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <Link href={`/office/orders/${o.id}`} className="block group/link">
+                              <div className="flex items-center gap-2.5">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-700">
+                                  {(cust?.full_name || cust?.company_name || cust?.email || "?")[0]?.toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm font-medium text-slate-900 group-hover/link:text-blue-600 transition-colors">
+                                    {cust?.full_name || cust?.company_name || cust?.email || "—"}
+                                  </div>
+                                  {cust?.full_name && cust?.company_name && (
+                                    <div className="truncate text-xs text-slate-400">{cust.company_name}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </Link>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold", orderPill.cls)}>
+                              {orderPill.label}
                             </span>
-                            {cust?.full_name && cust?.company_name && (
-                              <span className="text-xs text-slate-500">{cust.company_name}</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={cn("inline-flex rounded-full px-3 py-1 text-xs font-medium", orderPill.cls)}>
-                            {orderPill.label}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center gap-1.5 text-slate-700">
-                            <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                            {dateShort(o.start_date)}
-                            <span className="text-slate-400">→</span>
-                            {dateShort(o.end_date)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right font-semibold text-slate-900">{moneyPln(o.total_rental_price)}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-1.5">
-                            {payPill.icon && <payPill.icon className="h-3.5 w-3.5" />}
-                            <span className={cn("inline-flex rounded-full px-3 py-1 text-xs font-medium", payPill.cls)}>
+                          </td>
+                          <td className="px-5 py-3.5 text-sm text-slate-600 tabular-nums">{dateShort(o.start_date)}</td>
+                          <td className="px-5 py-3.5 text-sm text-slate-600 tabular-nums">{dateShort(o.end_date)}</td>
+                          <td className="px-5 py-3.5 text-right text-sm font-semibold text-slate-900 tabular-nums">{moneyPln(o.total_rental_price)}</td>
+                          <td className="px-5 py-3.5">
+                            <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold", payPill.cls)}>
                               {payPill.label}
                             </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <div title={o.invoice_sent ? "Faktura wysłana" : "Faktura nie wysłana"}>
-                              <FileText className={cn("h-4 w-4", o.invoice_sent ? "text-blue-600" : "text-slate-300")} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="lg:hidden divide-y divide-slate-100">
+                {paginated.map((o) => {
+                  const cust = normalizeCustomer(o.customers);
+                  const orderPill = pillForOrder(o.order_status);
+                  const payPill = pillForPayment(o.payment_status);
+                  const displayNumber = o.order_number || shortOrderNumber(String(o.id));
+
+                  return (
+                    <Link
+                      key={o.id}
+                      href={`/office/orders/${o.id}`}
+                      className="flex items-start gap-3 px-4 py-4 transition-colors hover:bg-slate-50 active:bg-slate-100"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 mt-0.5">
+                        {(cust?.full_name || cust?.company_name || cust?.email || "?")[0]?.toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1.5">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-slate-900 truncate">
+                              {cust?.full_name || cust?.company_name || cust?.email || "—"}
                             </div>
-                            <div title={o.notes || "Brak notatek"}>
-                              <MessageSquare className={cn("h-4 w-4", o.notes ? "text-amber-600" : "text-slate-300")} />
-                            </div>
+                            <div className="text-xs font-mono text-slate-400">#{displayNumber}</div>
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <div className="text-sm font-bold text-slate-900 whitespace-nowrap shrink-0">
+                            {moneyPln(o.total_rental_price)}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold", orderPill.cls)}>
+                            {orderPill.label}
+                          </span>
+                          <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold", payPill.cls)}>
+                            {payPill.label}
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            {dateShort(o.start_date)} → {dateShort(o.end_date)}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
+                  <span className="text-xs text-slate-400 tabular-nums">
+                    Strona {page} z {totalPages} · {filtered.length} wyników
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPage(1)}
+                      disabled={page === 1}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                    >
+                      «
+                    </button>
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+                      const p = start + i;
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-medium transition-colors ${
+                            p === page
+                              ? "bg-indigo-600 text-white"
+                              : "text-slate-600 hover:bg-slate-100"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setPage(totalPages)}
+                      disabled={page === totalPages}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs font-medium"
+                    >
+                      »
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
