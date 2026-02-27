@@ -29,9 +29,6 @@ type CustomerStat = {
   phone: string | null;
   company_name: string | null;
   nip: string | null;
-  address_street: string | null;
-  address_city: string | null;
-  address_zip: string | null;
   created_at: string | null;
   total_orders: number | null;
   total_spent: number | null;
@@ -78,7 +75,7 @@ export default function OfficeCustomersPage() {
 
     const { data, error: fetchError } = await supabase
       .from("customer_stats")
-      .select("id,full_name,email,phone,company_name,nip,address_street,address_city,address_zip,created_at,total_orders,total_spent,total_deposit,first_order_at,last_order_at");
+      .select("id,full_name,email,phone,company_name,nip,created_at,total_orders,total_spent,total_deposit,first_order_at,last_order_at");
 
     if (fetchError) {
       setError(fetchError.message);
