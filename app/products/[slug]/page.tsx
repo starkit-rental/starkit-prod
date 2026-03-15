@@ -106,7 +106,7 @@ export default async function ProductPage({ params }: PageProps) {
 
               {/* Title */}
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                {product.title}
+                Wynajem {product.title}
               </h1>
 
               {/* Price */}

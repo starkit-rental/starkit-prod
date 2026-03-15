@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import ConditionalWidgets from "./_components/conditional-widgets";
 import CookieConsent from "./_components/cookie-consent";
 import OrganizationSchema from "@/components/seo/organization-schema";
+import WebsiteSchema from "@/components/seo/website-schema";
 import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 
 const isProduction = process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
@@ -70,19 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pl" suppressHydrationWarning>
       <head>
-        {/* Critical font preload for better FCP */}
-        <link
-          rel="preload"
-          href="https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZJhiI2B.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
-
         {/* Preconnect to external domains for performance */}
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-
         <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.sanity.io" />
       </head>
@@ -94,6 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </ThemeProvider>
         <Toaster position="top-center" richColors />
         <OrganizationSchema />
+        <WebsiteSchema />
       </body>
       {isProduction && (
         <>

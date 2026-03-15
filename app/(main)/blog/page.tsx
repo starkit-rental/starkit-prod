@@ -27,10 +27,10 @@ export default async function BlogPage() {
     <section className="container py-12 md:py-16">
       <div className="max-w-2xl mb-10">
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
-          Blog Starkit
+          Blog – Wynajem Starlink: Poradniki i Aktualności
         </h1>
         <p className="text-muted-foreground text-lg">
-          Porady, aktualności i poradniki o wynajmie Starlink i Starlink Mini.
+          Poradniki, porównania i aktualności o wynajmie Starlink i Starlink Mini. Dowiedz się jak działa wypożyczalnia Starlink, ile kosztuje i dla kogo jest najlepsza.
         </p>
       </div>
 

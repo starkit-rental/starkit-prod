@@ -34,14 +34,15 @@ export default function ProductSchema({ product }: ProductSchemaProps) {
       "@type": "Organization",
       name: "SpaceX",
     },
+    ...(product.pricePerDay != null && {
     offers: {
       "@type": "Offer",
       "@id": `${productUrl}#offer`,
-      price: product.pricePerDay ?? 0,
+      price: product.pricePerDay,
       priceCurrency: "PLN",
       priceSpecification: {
         "@type": "UnitPriceSpecification",
-        price: product.pricePerDay ?? 0,
+        price: product.pricePerDay,
         priceCurrency: "PLN",
         unitText: "dzień",
         referenceQuantity: {
@@ -91,6 +92,7 @@ export default function ProductSchema({ product }: ProductSchemaProps) {
         },
       },
     },
+    }),
   };
 
   return (

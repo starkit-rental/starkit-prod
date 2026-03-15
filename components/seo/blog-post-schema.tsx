@@ -14,8 +14,19 @@ type BlogPostSchemaProps = {
     } | null;
     _createdAt?: string | null;
     _updatedAt?: string | null;
+    body?: any[] | null;
+    meta_description?: string | null;
   };
 };
+
+function estimateWordCount(blocks?: any[] | null): number {
+  if (!blocks?.length) return 0;
+  return blocks
+    .filter((b) => b._type === "block" && b.children)
+    .flatMap((b) => b.children)
+    .map((c: any) => (c.text || "").split(/\s+/).filter(Boolean).length)
+    .reduce((a: number, b: number) => a + b, 0);
+}
 
 export default function BlogPostSchema({ post }: BlogPostSchemaProps) {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
@@ -27,24 +38,36 @@ export default function BlogPostSchema({ post }: BlogPostSchemaProps) {
 
   const postUrl = `${baseUrl}/blog/${slug}`;
 
+  const wordCount = estimateWordCount(post.body);
+
   const schema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
+    "@id": `${postUrl}#article`,
     headline: post.title,
-    description: post.excerpt || `${post.title} - Blog Starkit`,
+    description: post.excerpt || post.meta_description || `${post.title} - Blog Starkit`,
     url: postUrl,
+    inLanguage: "pl-PL",
+    ...(wordCount > 0 && { wordCount }),
+    keywords: ["wynajem starlink", "starlink mini", "wypożyczalnia starlink", "internet satelitarny"],
     ...(post._createdAt && { datePublished: post._createdAt }),
     ...(post._updatedAt && { dateModified: post._updatedAt }),
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": `${baseUrl}/#website`,
+    },
     author: {
       "@type": "Person",
-      name: post.author?.name || "Starkit",
+      "@id": `${baseUrl}/#author`,
+      name: post.author?.name || "Starkit Team",
     },
     publisher: {
       "@type": "Organization",
+      "@id": `${baseUrl}/#organization`,
       name: "Starkit",
       logo: {
         "@type": "ImageObject",
-        url: `${baseUrl}/images/og-image.jpg`,
+        url: `${baseUrl}/logo.png`,
       },
     },
     mainEntityOfPage: {

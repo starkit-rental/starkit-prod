@@ -45,7 +45,7 @@ const portableTextComponents: PortableTextProps["components"] = {
             marginLeft: "auto",
             marginRight: "auto",
           }}
-          quality={100}
+          quality={82}
         />
       );
     },
@@ -141,7 +141,7 @@ const portableTextComponents: PortableTextProps["components"] = {
         <Link
           href={href}
           target={target}
-          rel={target ? "noopener" : undefined}
+          rel={target ? "noopener noreferrer" : undefined}
           style={{ textDecoration: "underline" }}
         >
           {children}

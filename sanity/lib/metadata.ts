@@ -9,38 +9,38 @@ export function generatePageMetadata({
   page: PAGE_QUERYResult | POST_QUERYResult;
   slug: string;
 }) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const pageUrl = siteUrl + `/${slug === "index" ? "" : slug}`;
+  const isBlogPost = slug.startsWith("blog/");
+  const ogImage = page?.ogImage
+    ? urlFor(page?.ogImage).quality(85).url()
+    : `${siteUrl}/images/og-image.jpg`;
+  const ogWidth = page?.ogImage?.asset?.metadata?.dimensions?.width || 1200;
+  const ogHeight = page?.ogImage?.asset?.metadata?.dimensions?.height || 630;
+
   return {
     title: page?.meta_title,
     description: page?.meta_description,
     openGraph: {
-      images: [
-        {
-          url: page?.ogImage
-            ? urlFor(page?.ogImage).quality(100).url()
-            : `${process.env.NEXT_PUBLIC_SITE_URL}/images/og-image.jpg`,
-          width: page?.ogImage?.asset?.metadata?.dimensions?.width || 1200,
-          height: page?.ogImage?.asset?.metadata?.dimensions?.height || 630,
-        },
-      ],
+      url: pageUrl,
+      images: [{ url: ogImage, width: ogWidth, height: ogHeight }],
       locale: "pl_PL",
-      type: "website",
+      type: isBlogPost ? "article" : "website",
     },
     twitter: {
       card: "summary_large_image",
       title: page?.meta_title,
       description: page?.meta_description,
-      images: page?.ogImage
-        ? [urlFor(page?.ogImage).quality(100).url()]
-        : [`${process.env.NEXT_PUBLIC_SITE_URL}/images/og-image.jpg`],
+      images: [ogImage],
     },
     robots: !isProduction
-      ? "noindex, nofollow"
+      ? { index: false, follow: false }
       : page?.noindex
-        ? "noindex"
-        : "index, follow",
+        ? { index: false, follow: false }
+        : { index: true, follow: true },
     alternates: {
-      canonical:
-        process.env.NEXT_PUBLIC_SITE_URL + `/${slug === "index" ? "" : slug}`,
+      canonical: pageUrl,
+      languages: { "pl": pageUrl },
     },
   };
 }

@@ -3,16 +3,16 @@ export default function OrganizationSchema() {
 
   const schema = {
     "@context": "https://schema.org",
-    "@type": ["LocalBusiness", "RentalCarCompany"],
+    "@type": "LocalBusiness",
     "@id": `${baseUrl}/#organization`,
     name: "Starkit",
-    alternateName: ["Starkit Wynajem Starlink", "Starkit - Wypożyczalnia Starlink"],
+    alternateName: ["Starkit Wynajem Starlink", "Wypożyczalnia Starlink Starkit"],
     url: baseUrl,
     logo: {
       "@type": "ImageObject",
-      url: `${baseUrl}/images/og-image.jpg`,
-      width: 1200,
-      height: 630,
+      url: `${baseUrl}/logo.png`,
+      width: 200,
+      height: 200,
     },
     image: `${baseUrl}/images/og-image.jpg`,
     description:
@@ -38,15 +38,21 @@ export default function OrganizationSchema() {
         {
           "@type": "Offer",
           itemOffered: {
-            "@type": "RentalCarBusiness",
+            "@type": "Service",
             name: "Wynajem Starlink Standard",
+            description:
+              "Wynajem zestawu Starlink Standard – internet satelitarny do 250 Mbps. Dostawa na terenie całej Polski.",
+            url: `${baseUrl}/products/starlink-standard`,
           },
         },
         {
           "@type": "Offer",
           itemOffered: {
-            "@type": "RentalCarBusiness",
+            "@type": "Service",
             name: "Wynajem Starlink Mini",
+            description:
+              "Wynajem zestawu Starlink Mini – kompaktowy internet satelitarny do 100 Mbps. Idealny dla podróżników i pracy zdalnej.",
+            url: `${baseUrl}/products/starlink-mini`,
           },
         },
       ],
@@ -58,7 +64,10 @@ export default function OrganizationSchema() {
       areaServed: "PL",
       availableLanguage: ["Polish"],
     },
-    sameAs: [],
+    sameAs: [
+      "https://www.facebook.com/starkit.pl",
+      "https://www.instagram.com/starkit.pl",
+    ],
   };
 
   return (
