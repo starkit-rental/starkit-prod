@@ -44,6 +44,7 @@ export interface ContractTemplateProps {
   totalAmount: string;
   inpostPointId: string;
   inpostPointAddress: string;
+  deliveryMethod?: string;
   contractContent: string;
   rentalDays?: number;
   logoUrl?: string;
@@ -290,11 +291,13 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
   totalAmount,
   inpostPointId,
   inpostPointAddress,
+  deliveryMethod,
   contractContent,
   rentalDays,
   logoUrl,
   orderItems,
 }) => {
+  const isPersonalPickup = deliveryMethod === "personal_pickup";
   const currentDate = new Date().toLocaleDateString("pl-PL", {
     day: "2-digit",
     month: "long",
@@ -338,6 +341,10 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
               <View style={styles.row}>
                 <Text style={styles.label}>Firma:</Text>
                 <Text style={styles.value}>Zakład Graficzny Maciej Godek</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>NIP:</Text>
+                <Text style={styles.value}>{process.env.OWNER_NIP || "7811234567"}</Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Email:</Text>
@@ -424,15 +431,38 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
               )}
             </View>
             <View style={styles.partyBox}>
-              <View style={styles.row}>
-                <Text style={styles.label}>Paczkomat:</Text>
-                <Text style={styles.value}>{inpostPointId || "\u2014"}</Text>
-              </View>
-              {inpostPointAddress && (
-                <View style={styles.row}>
-                  <Text style={styles.label}>Adres:</Text>
-                  <Text style={styles.value}>{inpostPointAddress}</Text>
-                </View>
+              {isPersonalPickup ? (
+                <>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Dostawa:</Text>
+                    <Text style={styles.value}>Odbiór osobisty</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Adres:</Text>
+                    <Text style={styles.value}>Poznań, ul. Cumownicza</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Tel. kontaktowy:</Text>
+                    <Text style={styles.value}>+48 453 461 061</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Dostawa:</Text>
+                    <Text style={styles.value}>Paczkomat InPost</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Paczkomat:</Text>
+                    <Text style={styles.value}>{inpostPointId || "\u2014"}</Text>
+                  </View>
+                  {inpostPointAddress && (
+                    <View style={styles.row}>
+                      <Text style={styles.label}>Adres:</Text>
+                      <Text style={styles.value}>{inpostPointAddress}</Text>
+                    </View>
+                  )}
+                </>
               )}
             </View>
           </View>

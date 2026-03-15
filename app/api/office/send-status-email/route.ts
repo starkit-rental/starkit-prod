@@ -65,24 +65,55 @@ export async function POST(req: NextRequest) {
         totalAmount: totalAmount ?? "0.00",
       });
     } else {
-      const simpleParams = {
-        orderId,
-        orderNumber: orderNumber ?? undefined,
-        customerEmail,
-        customerName: customerName ?? "Kliencie",
-        startDate,
-        endDate,
-        totalAmount: totalAmount ?? "0.00",
-      };
-
       if (statusType === "ready_for_pickup") {
-        await sendOrderReadyForPickupEmail(simpleParams);
+        await sendOrderReadyForPickupEmail({
+          orderId,
+          orderNumber: orderNumber ?? undefined,
+          customerEmail,
+          customerName: customerName ?? "Kliencie",
+          customerPhone: customerPhone ?? undefined,
+          companyName: companyName ?? undefined,
+          nip: nip ?? undefined,
+          startDate,
+          endDate,
+          totalAmount: totalAmount ?? "0.00",
+          rentalPrice: rentalPrice ?? "0.00",
+          deposit: deposit ?? "0.00",
+          deliveryMethod: deliveryMethod ?? "personal_pickup",
+        });
       } else if (statusType === "picked_up") {
-        await sendOrderPickedUpEmail(simpleParams);
+        await sendOrderPickedUpEmail({
+          orderId,
+          orderNumber: orderNumber ?? undefined,
+          customerEmail,
+          customerName: customerName ?? "Kliencie",
+          startDate,
+          endDate,
+          totalAmount: totalAmount ?? "0.00",
+          deliveryMethod: deliveryMethod ?? "inpost",
+          inpostPointId: inpostPointId ?? undefined,
+          inpostPointAddress: inpostPointAddress ?? undefined,
+        });
       } else if (statusType === "returned") {
-        await sendOrderReturnedEmail(simpleParams);
+        await sendOrderReturnedEmail({
+          orderId,
+          orderNumber: orderNumber ?? undefined,
+          customerEmail,
+          customerName: customerName ?? "Kliencie",
+          startDate,
+          endDate,
+          totalAmount: totalAmount ?? "0.00",
+        });
       } else if (statusType === "cancelled") {
-        await sendOrderCancelledEmail(simpleParams);
+        await sendOrderCancelledEmail({
+          orderId,
+          orderNumber: orderNumber ?? undefined,
+          customerEmail,
+          customerName: customerName ?? "Kliencie",
+          startDate,
+          endDate,
+          totalAmount: totalAmount ?? "0.00",
+        });
       }
     }
 

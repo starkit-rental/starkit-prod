@@ -12,6 +12,7 @@ import {
   renderFinancialBox,
   renderPdfBox,
   renderPickupBox,
+  renderPersonalPickedUpBox,
   renderInstructionsBox,
   buildAdminNotificationHtml,
   buildOrderReadyForPickupHtml,
@@ -213,6 +214,21 @@ interface ConfirmedEmailParams extends StatusEmailParams {
   deliveryMethod?: string;
   rentalPrice: string;
   deposit: string;
+}
+
+interface PickedUpEmailParams extends StatusEmailParams {
+  deliveryMethod?: string;
+  inpostPointId?: string;
+  inpostPointAddress?: string;
+}
+
+interface ReadyForPickupEmailParams extends StatusEmailParams {
+  customerPhone?: string;
+  companyName?: string;
+  nip?: string;
+  rentalPrice: string;
+  deposit: string;
+  deliveryMethod?: string;
 }
 
 interface AdminEmailParams extends StatusEmailParams {
@@ -482,6 +498,7 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
         totalAmount={params.totalAmount}
         inpostPointId={params.inpostPointId}
         inpostPointAddress={params.inpostPointAddress}
+        deliveryMethod={params.deliveryMethod ?? "inpost"}
         contractContent={contractContent}
         rentalDays={rentalDays}
         orderItems={pdfOrderItems.length > 0 ? pdfOrderItems : undefined}
@@ -531,11 +548,13 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  3. ORDER READY FOR PICKUP (status → ready_for_pickup, personal pickup)
+//  3. ORDER READY FOR PICKUP (status → ready_for_pickup, personal pickup, z PDF)
 // ═══════════════════════════════════════════════════════════
 
-export async function sendOrderReadyForPickupEmail(params: StatusEmailParams) {
+export async function sendOrderReadyForPickupEmail(params: ReadyForPickupEmailParams) {
   const displayId = params.orderNumber || params.orderId;
+  const supabase = createEmailSupabaseClient();
+  const rentalDays = calculateRentalDays(params.startDate, params.endDate);
 
   const vars: Record<string, string> = {
     customer_name: params.customerName,
@@ -549,8 +568,77 @@ export async function sendOrderReadyForPickupEmail(params: StatusEmailParams) {
   const subject = `Sprzęt gotowy do odbioru osobistego! SK-${displayId}`;
   const html = buildOrderReadyForPickupHtml(vars as unknown as OrderVars);
 
+  // Pobierz treść umowy do PDF
+  const { data: contractRow } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "contract_content")
+    .single();
+  const contractContent = contractRow?.value || "Treść regulaminu niedostępna.";
+
+  // Pobierz produkty z zamówienia dla PDF
+  let pdfOrderItems: { name: string; serialNumber?: string }[] = [];
   try {
-    return await sendAndLog({ to: params.customerEmail, subject, html, orderId: params.orderId, type: "order_picked_up" });
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (UUID_RE.test(params.orderId)) {
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("order_items(stock_item_id,stock_items(serial_number,products(name)))")
+        .eq("id", params.orderId)
+        .maybeSingle();
+      const items = (orderData?.order_items ?? []) as any[];
+      pdfOrderItems = items
+        .map((it) => {
+          const stock = Array.isArray(it?.stock_items) ? it.stock_items[0] : it?.stock_items;
+          const product = Array.isArray(stock?.products) ? stock.products[0] : stock?.products;
+          if (!product) return null;
+          return { name: String(product.name ?? "—"), serialNumber: stock?.serial_number ? String(stock.serial_number) : undefined };
+        })
+        .filter(Boolean) as { name: string; serialNumber?: string }[];
+    }
+  } catch (e) {
+    console.warn("[email] Could not fetch order items for ready_for_pickup PDF:", e);
+  }
+
+  // Generate PDF
+  const pdfFilename = `Umowa_Najmu_Starkit_${displayId.replace(/[^a-zA-Z0-9-]/g, "_")}.pdf`;
+  let pdfBuffer: Buffer | undefined;
+  try {
+    pdfBuffer = await renderToBuffer(
+      <ContractTemplate
+        orderNumber={displayId}
+        customerName={params.customerName}
+        customerEmail={params.customerEmail}
+        customerPhone={params.customerPhone || "—"}
+        companyName={params.companyName}
+        nip={params.nip}
+        startDate={params.startDate}
+        endDate={params.endDate}
+        rentalPrice={params.rentalPrice}
+        deposit={params.deposit}
+        totalAmount={params.totalAmount}
+        inpostPointId=""
+        inpostPointAddress=""
+        deliveryMethod="personal_pickup"
+        contractContent={contractContent}
+        rentalDays={rentalDays}
+        orderItems={pdfOrderItems.length > 0 ? pdfOrderItems : undefined}
+      />
+    );
+    console.log(`[email] PDF generated for ready_for_pickup ${displayId} (${pdfBuffer.length} bytes)`);
+  } catch (pdfError) {
+    console.error(`[email] PDF generation FAILED for ready_for_pickup ${displayId}:`, pdfError);
+  }
+
+  try {
+    return await sendAndLog({
+      to: params.customerEmail,
+      subject,
+      html,
+      orderId: params.orderId,
+      type: "order_picked_up",
+      attachments: pdfBuffer ? [{ filename: pdfFilename, content: pdfBuffer }] : undefined,
+    });
   } catch (error) {
     await logEmail({ orderId: params.orderId, recipient: params.customerEmail, subject, type: "order_picked_up", status: "failed", errorMessage: error instanceof Error ? error.message : "Unknown error" });
     throw error;
@@ -558,11 +646,12 @@ export async function sendOrderReadyForPickupEmail(params: StatusEmailParams) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  4. ORDER PICKED UP (status → picked_up)
+//  4. ORDER PICKED UP (status → picked_up) — rozróżnienie odbiór osobisty vs InPost
 // ═══════════════════════════════════════════════════════════
 
-export async function sendOrderPickedUpEmail(params: StatusEmailParams) {
+export async function sendOrderPickedUpEmail(params: PickedUpEmailParams) {
   const displayId = params.orderNumber || params.orderId;
+  const isPersonalPickup = params.deliveryMethod === "personal_pickup";
 
   const vars: Record<string, string> = {
     customer_name: params.customerName,
@@ -570,9 +659,30 @@ export async function sendOrderPickedUpEmail(params: StatusEmailParams) {
     start_date: params.startDate,
     end_date: params.endDate,
     total_amount: `${params.totalAmount} zł`,
+    delivery_method: params.deliveryMethod ?? "inpost",
+    inpost_point_id: params.inpostPointId ?? "",
+    inpost_point_address: params.inpostPointAddress ?? "",
   };
 
-  const fallbackBody = `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">🚀 Sprzęt jest już w drodze!</h1>
+  let subject: string;
+  let html: string;
+
+  if (isPersonalPickup) {
+    subject = `Potwierdzenie wydania sprzętu SK-${displayId}`;
+    const personalBody = `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">✅ Sprzęt wydany!</h1>
+<p style="margin:0 0 24px;font-size:15px;color:#64748b;text-align:center">Zamówienie {{order_number}}, {{customer_name}}</p>
+<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Potwierdzamy wydanie zestawu Starlink Mini z zamówienia <strong>{{order_number}}</strong>. Sprzęt jest już w Twoich rękach — miłego korzystania!</p>
+${renderPersonalPickedUpBox()}
+{{instructions_box}}
+{{info_box}}
+<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65"><strong>Okres wynajmu:</strong> {{start_date}} – {{end_date}}</p>
+<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Jeśli napotkasz jakiekolwiek problemy z uruchomieniem, odpowiedz na tego maila lub zadzwoń: <a href="tel:+48453461061" style="color:#1a1a2e;font-weight:600">+48 453 461 061</a></p>
+<p style="margin:24px 0 0;font-size:15px;color:#334155;line-height:1.65">Pozdrawiamy,<br/><strong>Zespół Starkit</strong></p>`;
+    const resolved = await resolveEmailContent("order_picked_up", vars, subject, personalBody);
+    html = resolved.html;
+    subject = resolved.subject;
+  } else {
+    const fallbackBody = `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">🚀 Sprzęt jest już w drodze!</h1>
 <p style="margin:0 0 24px;font-size:15px;color:#64748b;text-align:center">Zamówienie {{order_number}} zostało wysłane, {{customer_name}}</p>
 <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Twój zestaw Starlink Mini został nadany i wkrótce będzie gotowy do odbioru. Poniżej znajdziesz dane punktu odbioru oraz instrukcję uruchomienia.</p>
 {{pickup_box}}
@@ -581,13 +691,10 @@ export async function sendOrderPickedUpEmail(params: StatusEmailParams) {
 <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65"><strong>Okres wynajmu:</strong> {{start_date}} – {{end_date}}</p>
 <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Jeśli napotkasz jakiekolwiek problemy z uruchomieniem, odpowiedz na tego maila — pomożemy!</p>
 <p style="margin:24px 0 0;font-size:15px;color:#334155;line-height:1.65">Pozdrawiamy,<br/><strong>Zespół Starkit</strong></p>`;
-
-  const { subject, html } = await resolveEmailContent(
-    "order_picked_up",
-    vars,
-    `Sprzęt w drodze! Instrukcja obsługi SK-${displayId}`,
-    fallbackBody
-  );
+    const resolved = await resolveEmailContent("order_picked_up", vars, `Sprzęt w drodze! Instrukcja obsługi SK-${displayId}`, fallbackBody);
+    html = resolved.html;
+    subject = resolved.subject;
+  }
 
   try {
     return await sendAndLog({ to: params.customerEmail, subject, html, orderId: params.orderId, type: "order_picked_up" });
