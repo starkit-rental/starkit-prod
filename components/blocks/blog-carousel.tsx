@@ -48,11 +48,11 @@ export default async function BlogCarousel({
               loop: false,
             }}
           >
-            <CarouselContent>
+            <CarouselContent className="-ml-3 md:-ml-4">
               {latestPosts.map((post) => (
                 <CarouselItem
                   key={post?.slug?.current}
-                  className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3"
+                  className="pl-3 md:pl-4 md:basis-1/2 lg:basis-1/3"
                 >
                   <Link
                     className="flex w-full rounded-3xl ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -75,14 +75,14 @@ export default async function BlogCarousel({
               variant="secondary"
               className="-right-3 md:-right-8 xl:-right-12"
             />
-            <div className="w-full flex justify-center mt-8">
+            <div className="w-full flex justify-center mt-6">
               <CarouselDots />
             </div>
           </Carousel>
         )}
 
         {showViewAllButton && (
-          <div className="flex justify-center mt-12">
+          <div className="flex justify-center mt-8">
             <Button asChild size="lg">
               <Link href="/blog">
                 Zobacz wszystkie
