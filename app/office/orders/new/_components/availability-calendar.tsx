@@ -18,7 +18,6 @@ type AvailabilityCalendarProps = {
   selectedEnd: Date | null;
   onSelectRange: (start: Date, end: Date) => void;
   occupiedRanges?: OccupiedRange[];
-  minDate?: Date;
 };
 
 export function AvailabilityCalendar({
@@ -26,7 +25,6 @@ export function AvailabilityCalendar({
   selectedEnd,
   onSelectRange,
   occupiedRanges = [],
-  minDate = new Date(),
 }: AvailabilityCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
@@ -60,8 +58,7 @@ export function AvailabilityCalendar({
   };
 
   const handleDateClick = (date: Date) => {
-    if (date < minDate || isDateOccupied(date)) return;
-
+    // Allow clicking any date (even occupied) to check pricing
     if (!isSelectingRange) {
       // Start new selection
       setIsSelectingRange(true);
@@ -101,7 +98,6 @@ export function AvailabilityCalendar({
             type="date"
             value={selectedStart ? format(selectedStart, 'yyyy-MM-dd') : ''}
             onChange={(e) => handleManualDateChange('start', e.target.value)}
-            min={format(minDate, 'yyyy-MM-dd')}
             className="w-full h-9 px-3 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
           />
         </div>
@@ -111,7 +107,7 @@ export function AvailabilityCalendar({
             type="date"
             value={selectedEnd ? format(selectedEnd, 'yyyy-MM-dd') : ''}
             onChange={(e) => handleManualDateChange('end', e.target.value)}
-            min={selectedStart ? format(selectedStart, 'yyyy-MM-dd') : format(minDate, 'yyyy-MM-dd')}
+            min={selectedStart ? format(selectedStart, 'yyyy-MM-dd') : ''}
             className="w-full h-9 px-3 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
           />
         </div>
@@ -159,7 +155,6 @@ export function AvailabilityCalendar({
           const isOccupied = isDateOccupied(day);
           const isBuffer = isDateBuffer(day);
           const isSelected = isDateInSelectedRange(day);
-          const isDisabled = day < minDate || isOccupied;
           const isToday = isSameDay(day, new Date());
 
           return (
@@ -168,16 +163,14 @@ export function AvailabilityCalendar({
               onClick={() => handleDateClick(day)}
               onMouseEnter={() => selectedStart && !selectedEnd && setHoverDate(day)}
               onMouseLeave={() => setHoverDate(null)}
-              disabled={isDisabled}
               className={cn(
                 "relative h-9 text-sm rounded-md transition-colors",
                 !isCurrentMonth && "text-slate-300",
-                isCurrentMonth && !isDisabled && "text-slate-700 hover:bg-slate-100",
-                isOccupied && !isBuffer && "bg-red-50 text-red-400 cursor-not-allowed",
-                isBuffer && "bg-amber-50 text-amber-400 cursor-not-allowed",
-                isSelected && !isDisabled && "bg-indigo-600 text-white hover:bg-indigo-700",
-                isToday && !isSelected && "ring-1 ring-indigo-400",
-                isDisabled && "opacity-50 cursor-not-allowed"
+                isCurrentMonth && "text-slate-700 hover:bg-slate-100",
+                isOccupied && !isBuffer && "bg-red-50 text-red-700",
+                isBuffer && "bg-amber-50 text-amber-700",
+                isSelected && "bg-indigo-600 text-white hover:bg-indigo-700",
+                isToday && !isSelected && "ring-1 ring-indigo-400"
               )}
             >
               {format(day, "d")}
