@@ -39,7 +39,7 @@ export default function Cta1({
           {tagLine && (
             <p className={cn(
               "text-sm font-semibold mb-3 tracking-wide uppercase",
-              color === "primary" ? "text-background/80" : "text-primary"
+              color === "primary" ? "text-background/90" : "text-primary"
             )}>
               {tagLine}
             </p>

@@ -17,6 +17,33 @@ export default function OrganizationSchema() {
     image: `${baseUrl}/images/og-image.jpg`,
     description:
       "Wynajem Starlink i Starlink Mini – internet satelitarny bez ograniczeń. Idealne rozwiązanie dla eventów, wesel, budów, działek i miejsc bez infrastruktury sieciowej. Dostawa na terenie całej Polski.",
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: "ul. Cumownicza",
+      addressLocality: "Poznań",
+      addressRegion: "wielkopolskie",
+      postalCode: "61-131",
+      addressCountry: "PL",
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: 52.4064,
+      longitude: 16.9252,
+    },
+    openingHoursSpecification: [
+      {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        opens: "09:00",
+        closes: "18:00",
+      },
+      {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: "Saturday",
+        opens: "09:00",
+        closes: "14:00",
+      },
+    ],
     telephone: "+48453461061",
     email: "kontakt@starkit.pl",
     priceRange: "$$",

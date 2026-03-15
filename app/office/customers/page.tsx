@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
+import { moneyPln } from "@/lib/order-helpers";
 import {
   Search,
   Users,
@@ -43,10 +44,6 @@ type CustomerStat = {
 type SortField = "full_name" | "total_orders" | "total_spent" | "last_order_at";
 type SortDir = "asc" | "desc";
 
-function moneyPln(value: number): string {
-  if (!Number.isFinite(value) || value === 0) return "—";
-  return `${value.toFixed(2)} zł`;
-}
 
 function dateShort(value: string | null): string {
   if (!value) return "—";

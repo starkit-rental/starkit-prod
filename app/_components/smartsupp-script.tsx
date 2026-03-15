@@ -16,7 +16,7 @@ export default function SmartsuppScript() {
     <>
       <Script
         id="smartsupp-config"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
         dangerouslySetInnerHTML={{
           __html: `
 var _smartsupp = _smartsupp || {};

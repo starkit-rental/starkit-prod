@@ -36,7 +36,7 @@ export default function SectionHeader({
           {tagLine && (
             <p className={cn(
               "text-sm font-semibold mb-3 tracking-wide uppercase",
-              color === "primary" ? "text-background/80" : "text-primary"
+              color === "primary" ? "text-background/90" : "text-primary"
             )}>
               {tagLine}
             </p>
@@ -46,7 +46,7 @@ export default function SectionHeader({
         {description && (
           <p className={cn(
             "leading-relaxed text-base md:text-lg max-w-3xl",
-            color === "primary" ? "text-background/70" : "text-muted-foreground"
+            color === "primary" ? "text-background/85" : "text-muted-foreground"
           )}>
             {description}
           </p>

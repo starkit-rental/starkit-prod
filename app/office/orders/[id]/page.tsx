@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { FinanceSection } from "./_components/finance-section";
+import { moneyPln, dateShort, shortOrderNumber, initials, normalizeOne, pillForOrder, pillForPayment } from "@/lib/order-helpers";
 
 import {
   ArrowLeft,
@@ -105,63 +106,6 @@ type OrderRow = {
   order_items?: OrderItemRow[] | null;
 };
 
-function moneyPln(value: unknown): string {
-  const num = typeof value === "number" ? value : Number(String(value));
-  if (!Number.isFinite(num)) return "—";
-  return `${num.toFixed(2)} zł`;
-}
-
-function dateFmt(value: string): string {
-  try {
-    return format(parseISO(value), "dd MMM yyyy");
-  } catch {
-    return value;
-  }
-}
-
-function initials(name: string | null | undefined): string {
-  const n = String(name ?? "").trim();
-  if (!n) return "?";
-  const parts = n.split(/\s+/).filter(Boolean);
-  const a = parts[0]?.[0] ?? "";
-  const b = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? "" : "";
-  return (a + b).toUpperCase();
-}
-
-function shortOrderNumber(orderId: string): string {
-  const hex = orderId.replace(/-/g, "").slice(0, 8);
-  const num = Number.parseInt(hex || "0", 16);
-  const safe = Number.isFinite(num) ? num : 0;
-  return String(1000 + (safe % 9000));
-}
-
-function normalizeOne<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) return null;
-  return Array.isArray(value) ? (value[0] ?? null) : value;
-}
-
-function pillForPayment(status: string | null | undefined) {
-  const s = (status ?? "").toLowerCase();
-  if (s === "paid") return { label: "Opłacone", cls: "bg-emerald-100 text-emerald-700" };
-  if (s === "payment_due") return { label: "Do zapłaty", cls: "bg-amber-100 text-amber-700" };
-  if (s === "pending") return { label: "Oczekuje", cls: "bg-amber-100 text-amber-700" };
-  if (s === "completed") return { label: "Zakończone", cls: "bg-emerald-100 text-emerald-700" };
-  if (s === "deposit_refunded") return { label: "Kaucja zwrócona", cls: "bg-blue-100 text-blue-700" };
-  if (s === "manual") return { label: "Ręczne", cls: "bg-sky-100 text-sky-700" };
-  if (s === "failed") return { label: "Błąd", cls: "bg-rose-100 text-rose-700" };
-  return { label: status || "—", cls: "bg-slate-100 text-slate-500" };
-}
-
-function pillForOrder(status: string | null | undefined) {
-  const s = (status ?? "").toLowerCase();
-  if (s === "pending") return { label: "Nowe", cls: "bg-amber-100 text-amber-700" };
-  if (s === "reserved") return { label: "Zarezerwowane", cls: "bg-blue-100 text-blue-700" };
-  if (s === "ready_for_pickup") return { label: "Gotowe do odbioru", cls: "bg-purple-100 text-purple-700" };
-  if (s === "picked_up") return { label: "Wydane", cls: "bg-orange-100 text-orange-700" };
-  if (s === "returned") return { label: "Zwrócone", cls: "bg-green-100 text-green-700" };
-  if (s === "cancelled" || s === "canceled") return { label: "Anulowane", cls: "bg-rose-100 text-rose-700" };
-  return { label: status || "—", cls: "bg-slate-100 text-slate-500" };
-}
 
 type SiteSettingRow = { key: string; value: string };
 
@@ -793,8 +737,8 @@ export default function OfficeOrderDetailsPage() {
   const depositSafe = Number.isFinite(deposit) ? deposit : 0;
   const total = rentalSafe + depositSafe;
 
-  const pickupDate = order?.start_date ? dateFmt(order.start_date) : "—";
-  const returnDate = order?.end_date ? dateFmt(order.end_date) : "—";
+  const pickupDate = order?.start_date ? dateShort(order.start_date) : "—";
+  const returnDate = order?.end_date ? dateShort(order.end_date) : "—";
   const displayNumber = order?.order_number || (orderId ? shortOrderNumber(String(orderId)) : "—");
 
   const TAB_ITEMS = [
@@ -1721,8 +1665,8 @@ function SendEmailPanel({
         .replace(/\{\{order_number\}\}/g, displayNumber)
         .replace(/\{\{order_id\}\}/g, displayNumber)
         .replace(/\{\{total_amount\}\}/g, moneyPln(order?.total_rental_price ? Number(String(order.total_rental_price)) + Number(String(order.total_deposit ?? 0)) : 0))
-        .replace(/\{\{start_date\}\}/g, order?.start_date ? dateFmt(order.start_date) : "—")
-        .replace(/\{\{end_date\}\}/g, order?.end_date ? dateFmt(order.end_date) : "—")
+        .replace(/\{\{start_date\}\}/g, order?.start_date ? dateShort(order.start_date) : "—")
+        .replace(/\{\{end_date\}\}/g, order?.end_date ? dateShort(order.end_date) : "—")
         // format {zmienna} (legacy)
         .replace(/\{customerName\}/g, customerName)
         .replace(/\{orderId\}/g, displayNumber)
@@ -1776,8 +1720,8 @@ function SendEmailPanel({
           vars: {
             customer_name: customer?.full_name || customer?.company_name || "Kliencie",
             order_number: displayNumber,
-            start_date: order?.start_date ? dateFmt(order.start_date) : "—",
-            end_date: order?.end_date ? dateFmt(order.end_date) : "—",
+            start_date: order?.start_date ? dateShort(order.start_date) : "—",
+            end_date: order?.end_date ? dateShort(order.end_date) : "—",
             total_amount: `${(rental + dep).toFixed(2)} zł`,
             rental_price: `${rental.toFixed(2)} zł`,
             deposit: `${dep.toFixed(2)} zł`,

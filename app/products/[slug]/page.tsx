@@ -186,7 +186,7 @@ export default async function ProductPage({ params }: PageProps) {
               {/* Specs */}
               {product.specs?.length > 0 && (
                 <div className="space-y-3 pt-2">
-                  <h3 className="text-lg font-semibold">Specyfikacja techniczna</h3>
+                  <h2 className="text-lg font-semibold">Specyfikacja techniczna</h2>
                   <div className="rounded-xl border overflow-hidden">
                     {product.specs.map((spec: any, i: number) => (
                       <div
@@ -209,7 +209,7 @@ export default async function ProductPage({ params }: PageProps) {
               {/* Description */}
               {product.description && (
                 <div className="prose prose-gray dark:prose-invert max-w-none">
-                  <h3>Opis produktu</h3>
+                  <h2 className="text-xl font-semibold">Opis produktu</h2>
                   <PortableText value={product.description} />
                 </div>
               )}

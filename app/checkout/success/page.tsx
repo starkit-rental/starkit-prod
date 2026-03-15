@@ -45,6 +45,7 @@ type OrderRow = {
   total_deposit: unknown;
   payment_status: string | null;
   order_status: string | null;
+  delivery_method: string | null;
   inpost_point_id: string | null;
   inpost_point_address: string | null;
   customers?: CustomerRow;
@@ -445,11 +446,15 @@ function SuccessContent() {
                   </CardContent>
                 </Card>
 
-                {/* InPost Map */}
-                <InPostMap
-                  pointId={order.inpost_point_id}
-                  address={order.inpost_point_address}
-                />
+                {/* Delivery info */}
+                {order.delivery_method === "personal_pickup" ? (
+                  <PersonalPickupCard />
+                ) : (
+                  <InPostMap
+                    pointId={order.inpost_point_id}
+                    address={order.inpost_point_address}
+                  />
+                )}
               </div>
 
               {/* Right: Finances + Contact */}
@@ -469,7 +474,7 @@ function SuccessContent() {
                     </div>
                     <div className="px-5 pb-5 space-y-3">
                       <Row label="Email" value="wynajem@starkit.pl" />
-                      <Row label="Godziny pracy" value="Pon–Pt: 9:00–17:00" />
+                      <Row label="Telefon" value="+48 453 461 061" />
                     </div>
                   </CardContent>
                 </Card>

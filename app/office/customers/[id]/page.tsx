@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
+import { moneyPln } from "@/lib/order-helpers";
 import {
   ArrowLeft,
   Building2,
@@ -50,10 +51,6 @@ type Order = {
   payment_status: string | null;
 };
 
-function moneyPln(v: number | null) {
-  if (!v) return "—";
-  return `${v.toFixed(2)} zł`;
-}
 
 function dateFmt(v: string | null) {
   if (!v) return "—";

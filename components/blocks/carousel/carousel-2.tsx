@@ -53,7 +53,7 @@ export default function Carousel2({
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="text-sm font-semibold">{item.name}</h3>
+                          <p className="text-sm font-semibold">{item.name}</p>
                           <p className="text-xs text-muted-foreground">
                             {item.title}
                           </p>

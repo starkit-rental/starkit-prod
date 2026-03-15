@@ -72,7 +72,7 @@ export async function POST(req: Request) {
 
     const { data: updated, error: updateError } = await supabase
       .from("orders")
-      .update({ payment_status: "paid" })
+      .update({ payment_status: "paid", payment_method: "stripe" })
       .eq("id", orderId)
       .select("id,payment_status")
       .maybeSingle();
@@ -159,6 +159,7 @@ export async function POST(req: Request) {
         total_deposit,
         payment_status,
         order_status,
+        delivery_method,
         inpost_point_id,
         inpost_point_address,
         customers:customer_id(

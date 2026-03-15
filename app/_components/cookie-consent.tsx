@@ -116,7 +116,7 @@ export default function CookieConsent() {
                 <Button variant="outline" size="sm" onClick={openSettings} className="flex-1">
                   Dostosuj zgody
                 </Button>
-                <Button variant="ghost" size="sm" onClick={closeBanner}>
+                <Button variant="ghost" size="sm" onClick={closeBanner} aria-label="Zamknij baner cookies">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -137,7 +137,7 @@ export default function CookieConsent() {
               <Cookie className="h-5 w-5 text-muted-foreground" />
               <h3 className="text-base font-semibold text-foreground">Ustawienia cookies</h3>
             </div>
-            <Button variant="ghost" size="sm" onClick={closeSettings}>
+            <Button variant="ghost" size="sm" onClick={closeSettings} aria-label="Zamknij ustawienia cookies">
               <X className="h-4 w-4" />
             </Button>
           </div>

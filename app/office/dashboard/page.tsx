@@ -7,6 +7,7 @@ import { CalendarDays, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { moneyPln } from "@/lib/order-helpers";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Tooltip,
@@ -64,9 +65,6 @@ function toNumber(value: unknown): number {
   return Number.isFinite(num) ? num : 0;
 }
 
-function moneyPln(value: number): string {
-  return `${value.toFixed(2)} zł`;
-}
 
 function rangeDays(start: Date, count: number) {
   return Array.from({ length: count }, (_, i) => addDays(start, i));
