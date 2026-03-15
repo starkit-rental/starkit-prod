@@ -16,6 +16,7 @@ import {
   PlusCircle,
   Menu,
   X,
+  Pencil,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ const navGroups = [
       { href: "/office/settings/pricing", label: "Cennik", icon: Settings },
       { href: "/office/settings/contract", label: "Umowa", icon: FileText },
       { href: "/office/settings/emails", label: "E-maile", icon: Mail },
+      { href: "/studio", label: "CMS", icon: Pencil },
     ],
   },
 ];
