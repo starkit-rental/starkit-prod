@@ -26,7 +26,9 @@ import {
   Save,
   Send,
   Settings,
+  Store,
   Trash2,
+  Truck,
   User,
   X,
   XCircle,
@@ -94,6 +96,7 @@ type OrderRow = {
   payment_status: string | null;
   payment_method: string | null;
   order_status: string | null;
+  delivery_method: string | null;
   notes: string | null;
   invoice_sent: boolean | null;
   inpost_point_id: string | null;
@@ -153,6 +156,7 @@ function pillForOrder(status: string | null | undefined) {
   const s = (status ?? "").toLowerCase();
   if (s === "pending") return { label: "Nowe", cls: "bg-amber-100 text-amber-700" };
   if (s === "reserved") return { label: "Zarezerwowane", cls: "bg-blue-100 text-blue-700" };
+  if (s === "ready_for_pickup") return { label: "Gotowe do odbioru", cls: "bg-purple-100 text-purple-700" };
   if (s === "picked_up") return { label: "Wydane", cls: "bg-orange-100 text-orange-700" };
   if (s === "returned") return { label: "Zwrócone", cls: "bg-green-100 text-green-700" };
   if (s === "cancelled" || s === "canceled") return { label: "Anulowane", cls: "bg-rose-100 text-rose-700" };
@@ -164,12 +168,13 @@ type SiteSettingRow = { key: string; value: string };
 const STATUS_LABELS: Record<string, string> = {
   pending: "Nowe",
   reserved: "Zarezerwowane",
+  ready_for_pickup: "Gotowe do odbioru",
   picked_up: "Wydane",
   returned: "Zwrócone",
   cancelled: "Anulowane",
 };
 
-const EMAIL_STATUSES = ["reserved", "picked_up", "returned", "cancelled"];
+const EMAIL_STATUSES = ["reserved", "ready_for_pickup", "picked_up", "returned", "cancelled"];
 
 // ── ProductsCard ─────────────────────────────────────────────────────────────
 
@@ -524,6 +529,7 @@ export default function OfficeOrderDetailsPage() {
           nip: cust?.nip ?? undefined,
           startDate: snapshot.start_date,
           endDate: snapshot.end_date,
+          deliveryMethod: snapshot.delivery_method ?? "inpost",
           inpostPointId: snapshot.inpost_point_id ?? "",
           inpostPointAddress: snapshot.inpost_point_address ?? "",
           rentalPrice: String(Number(String(snapshot.total_rental_price ?? 0)).toFixed(2)),
@@ -740,7 +746,7 @@ export default function OfficeOrderDetailsPage() {
         const { data: fresh } = await supabase
           .from("orders")
           .select(
-            "id,order_number,start_date,end_date,total_rental_price,total_deposit,payment_status,payment_method,order_status,notes,invoice_sent,inpost_point_id,inpost_point_address,customers:customer_id(id,email,full_name,phone,company_name,nip,address_street,address_city,address_zip),order_items(stock_item_id,stock_items(id,serial_number,products(id,name)))"
+            "id,order_number,start_date,end_date,total_rental_price,total_deposit,payment_status,payment_method,order_status,delivery_method,notes,invoice_sent,inpost_point_id,inpost_point_address,customers:customer_id(id,email,full_name,phone,company_name,nip,address_street,address_city,address_zip),order_items(stock_item_id,stock_items(id,serial_number,products(id,name)))"
           )
           .eq("id", orderId)
           .maybeSingle();
@@ -841,6 +847,7 @@ export default function OfficeOrderDetailsPage() {
               <SelectContent>
                 <SelectItem value="pending">Nowe</SelectItem>
                 <SelectItem value="reserved">Zarezerwowane</SelectItem>
+                <SelectItem value="ready_for_pickup">Gotowe do odbioru</SelectItem>
                 <SelectItem value="picked_up">Wydane</SelectItem>
                 <SelectItem value="returned">Zwrócone</SelectItem>
                 <SelectItem value="cancelled">Anulowane</SelectItem>
@@ -995,7 +1002,19 @@ export default function OfficeOrderDetailsPage() {
                     <Calendar className="h-4 w-4" />
                     Logistyka
                   </CardTitle>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
+                    {order.delivery_method === "personal_pickup" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 gap-1.5 border-purple-200 bg-purple-50 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                        onClick={() => handleStatusChange("ready_for_pickup")}
+                      >
+                        <Store className="h-3.5 w-3.5" />
+                        Gotowe do odbioru
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       size="sm"
@@ -1073,7 +1092,18 @@ export default function OfficeOrderDetailsPage() {
                     </div>
                   )}
                 </div>
-                {order.inpost_point_id && (
+                {order.delivery_method === "personal_pickup" ? (
+                  <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <Store className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-violet-600">Odbiór osobisty</div>
+                        <div className="mt-1 text-sm font-semibold text-violet-900">Poznań, ul. Cumownicza</div>
+                        <div className="mt-0.5 text-xs text-violet-700">Klient odbierze osobiście</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : order.inpost_point_id ? (
                   <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                     <div className="flex items-start gap-3">
                       <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
@@ -1084,6 +1114,13 @@ export default function OfficeOrderDetailsPage() {
                           <div className="mt-0.5 text-xs text-emerald-700">{order.inpost_point_address}</div>
                         )}
                       </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <Truck className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div className="text-xs text-slate-500">Brak informacji o dostawie</div>
                     </div>
                   </div>
                 )}

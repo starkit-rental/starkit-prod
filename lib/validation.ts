@@ -25,6 +25,7 @@ export const productBookingsSchema = z.object({
 export const sendConfirmedEmailSchema = z.object({
   orderId: uuidSchema,
   orderNumber: z.string().max(50).optional(),
+  deliveryMethod: z.enum(["inpost", "personal_pickup"]).optional(),
   customerEmail: emailSchema,
   customerName: z.string().min(1).max(200).optional(),
   customerPhone: z.string().max(50).optional(),
@@ -41,7 +42,7 @@ export const sendConfirmedEmailSchema = z.object({
 
 // Send status email validation
 export const sendStatusEmailRouteSchema = z.object({
-  type: z.enum(["reserved", "picked_up", "returned", "cancelled"]),
+  type: z.enum(["reserved", "picked_up", "returned", "cancelled", "ready_for_pickup"]),
   orderId: uuidSchema,
   orderNumber: z.string().max(50).optional(),
   customerEmail: emailSchema,
@@ -53,6 +54,7 @@ export const sendStatusEmailRouteSchema = z.object({
   endDate: isoDateSchema,
   inpostPointId: z.string().max(100).optional(),
   inpostPointAddress: z.string().max(500).optional(),
+  deliveryMethod: z.enum(["inpost", "personal_pickup"]).optional(),
   rentalPrice: z.string().max(50).optional(),
   deposit: z.string().max(50).optional(),
   totalAmount: z.string().max(50).optional(),
@@ -96,7 +98,7 @@ export const orderPaymentSchema = z.object({
 
 // Send status email validation
 export const sendStatusEmailSchema = z.object({
-  type: z.enum(["reserved", "picked_up", "returned", "cancelled"]),
+  type: z.enum(["reserved", "picked_up", "returned", "cancelled", "ready_for_pickup"]),
   orderId: uuidSchema,
   orderNumber: z.string().min(1).max(50),
   customerEmail: emailSchema,
@@ -140,6 +142,7 @@ export const createCheckoutSchema = z.object({
   nip: z.string().max(50).optional(),
   inpostPointId: z.string().max(100).optional(),
   inpostPointAddress: z.string().max(500).optional(),
+  deliveryMethod: z.enum(["inpost", "personal_pickup"]).optional().default("inpost"),
   termsAcceptedAt: z.string().optional(),
   termsVersion: z.string().optional(),
   successUrl: z.string().url().optional(),

@@ -25,6 +25,7 @@ type OrderRow = {
   total_rental_price: unknown;
   payment_status: string | null;
   order_status: string | null;
+  delivery_method: string | null;
   notes: string | null;
   invoice_sent: boolean | null;
   customers?: CustomerRow | CustomerRow[] | null;
@@ -73,10 +74,16 @@ function pillForOrder(status: string | null | undefined) {
   const s = (status ?? "").toLowerCase();
   if (s === "pending") return { label: "Nowe", cls: "bg-amber-100 text-amber-700" };
   if (s === "reserved") return { label: "Zarezerwowane", cls: "bg-blue-100 text-blue-700" };
+  if (s === "ready_for_pickup") return { label: "Gotowe do odbioru", cls: "bg-purple-100 text-purple-700" };
   if (s === "picked_up") return { label: "Wydane", cls: "bg-orange-100 text-orange-700" };
   if (s === "returned") return { label: "Zwrócone", cls: "bg-green-100 text-green-700" };
   if (s === "cancelled" || s === "canceled") return { label: "Anulowane", cls: "bg-rose-100 text-rose-700" };
   return { label: status || "—", cls: "bg-slate-100 text-slate-500" };
+}
+
+function deliveryBadge(method: string | null | undefined) {
+  if (method === "personal_pickup") return { label: "🏪 Osobisty", cls: "bg-violet-100 text-violet-700" };
+  return { label: "📦 InPost", cls: "bg-sky-100 text-sky-700" };
 }
 
 export default function OfficeOrdersPage() {
@@ -115,7 +122,7 @@ export default function OfficeOrdersPage() {
       const { data, error: fetchError } = await supabase
         .from("orders")
         .select(
-          "id,order_number,start_date,end_date,total_rental_price,payment_status,order_status,notes,invoice_sent,customers:customer_id(id,email,full_name,company_name)"
+          "id,order_number,start_date,end_date,total_rental_price,payment_status,order_status,delivery_method,notes,invoice_sent,customers:customer_id(id,email,full_name,company_name)"
         )
         .order("start_date", { ascending: false });
 
@@ -270,6 +277,7 @@ export default function OfficeOrdersPage() {
                         { key: "end_date", label: "Do", align: "left" },
                         { key: "total_rental_price", label: "Kwota", align: "right" },
                         { key: "payment_status", label: "Płatność", align: "left" },
+                        { key: null, label: "Dostawa", align: "left" },
                       ] as const).map(({ key, label, align }) => (
                         <th
                           key={label}
@@ -328,6 +336,9 @@ export default function OfficeOrdersPage() {
                               {payPill.label}
                             </span>
                           </td>
+                          <td className="px-5 py-3.5">
+                            {(() => { const d = deliveryBadge(o.delivery_method); return <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium", d.cls)}>{d.label}</span>; })()}
+                          </td>
                         </tr>
                       );
                     })}
@@ -374,6 +385,7 @@ export default function OfficeOrdersPage() {
                           <span className="text-[11px] text-slate-400">
                             {dateShort(o.start_date)} → {dateShort(o.end_date)}
                           </span>
+                          {(() => { const d = deliveryBadge(o.delivery_method); return <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium", d.cls)}>{d.label}</span>; })()}
                         </div>
                       </div>
                     </Link>

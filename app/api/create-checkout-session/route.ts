@@ -135,6 +135,7 @@ export async function POST(req: Request) {
     const nipValue = body.nip;
     const inpostPointId = body.inpostPointId;
     const inpostPointAddress = body.inpostPointAddress;
+    const deliveryMethod = body.deliveryMethod ?? "inpost";
     const termsAcceptedAt = body.termsAcceptedAt;
     const termsVersion = body.termsVersion;
 
@@ -267,8 +268,11 @@ export async function POST(req: Request) {
       payment_status: "pending",
       order_status: "pending",
     };
-    if (inpostPointId) orderPayload.inpost_point_id = inpostPointId;
-    if (inpostPointAddress) orderPayload.inpost_point_address = inpostPointAddress;
+    orderPayload.delivery_method = deliveryMethod;
+    if (deliveryMethod === "inpost") {
+      if (inpostPointId) orderPayload.inpost_point_id = inpostPointId;
+      if (inpostPointAddress) orderPayload.inpost_point_address = inpostPointAddress;
+    }
     if (termsAcceptedAt) orderPayload.terms_accepted_at = termsAcceptedAt;
     if (termsVersion) orderPayload.terms_version = termsVersion;
 
@@ -314,8 +318,9 @@ export async function POST(req: Request) {
         ...(customerPhone ? { customerPhone } : {}),
         ...(companyName ? { companyName } : {}),
         ...(nipValue ? { nip: nipValue } : {}),
-        ...(inpostPointId ? { inpostPointId } : {}),
-        ...(inpostPointAddress ? { inpostPointAddress } : {}),
+        deliveryMethod,
+        ...(deliveryMethod === "inpost" && inpostPointId ? { inpostPointId } : {}),
+        ...(deliveryMethod === "inpost" && inpostPointAddress ? { inpostPointAddress } : {}),
         ...(termsAcceptedAt ? { termsAcceptedAt } : {}),
         ...(termsVersion ? { termsVersion } : {}),
         blockedStartDate: availability.blockedStartDate,

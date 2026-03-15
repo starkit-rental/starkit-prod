@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     const { data: orderData } = await supabase
       .from("orders")
       .select(
-        "id,order_number,start_date,end_date,total_rental_price,total_deposit,inpost_point_id,inpost_point_address,customers:customer_id(email,full_name,phone,company_name,nip,address_street,address_city,address_zip)"
+        "id,order_number,start_date,end_date,total_rental_price,total_deposit,delivery_method,inpost_point_id,inpost_point_address,customers:customer_id(email,full_name,phone,company_name,nip,address_street,address_city,address_zip)"
       )
       .eq("id", orderId)
       .maybeSingle();

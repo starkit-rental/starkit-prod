@@ -14,6 +14,7 @@ import {
   renderPickupBox,
   renderInstructionsBox,
   buildAdminNotificationHtml,
+  buildOrderReadyForPickupHtml,
   type OrderVars,
 } from "@/lib/email-template";
 
@@ -209,6 +210,7 @@ interface ConfirmedEmailParams extends StatusEmailParams {
   nip?: string;
   inpostPointId: string;
   inpostPointAddress: string;
+  deliveryMethod?: string;
   rentalPrice: string;
   deposit: string;
 }
@@ -434,6 +436,7 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
     rental_days: String(rentalDays),
     inpost_point_id: params.inpostPointId,
     inpost_point_address: params.inpostPointAddress,
+    delivery_method: params.deliveryMethod ?? "inpost",
   };
 
   const fallbackBody = `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">🎉 Mamy to! Twoja rezerwacja jest potwierdzona</h1>
@@ -528,7 +531,34 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  3. ORDER PICKED UP (status → picked_up)
+//  3. ORDER READY FOR PICKUP (status → ready_for_pickup, personal pickup)
+// ═══════════════════════════════════════════════════════════
+
+export async function sendOrderReadyForPickupEmail(params: StatusEmailParams) {
+  const displayId = params.orderNumber || params.orderId;
+
+  const vars: Record<string, string> = {
+    customer_name: params.customerName,
+    order_number: displayId,
+    start_date: params.startDate,
+    end_date: params.endDate,
+    total_amount: `${params.totalAmount} zł`,
+    delivery_method: "personal_pickup",
+  };
+
+  const subject = `Sprzęt gotowy do odbioru osobistego! SK-${displayId}`;
+  const html = buildOrderReadyForPickupHtml(vars as unknown as OrderVars);
+
+  try {
+    return await sendAndLog({ to: params.customerEmail, subject, html, orderId: params.orderId, type: "order_picked_up" });
+  } catch (error) {
+    await logEmail({ orderId: params.orderId, recipient: params.customerEmail, subject, type: "order_picked_up", status: "failed", errorMessage: error instanceof Error ? error.message : "Unknown error" });
+    throw error;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  4. ORDER PICKED UP (status → picked_up)
 // ═══════════════════════════════════════════════════════════
 
 export async function sendOrderPickedUpEmail(params: StatusEmailParams) {

@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     const {
       orderId,
       orderNumber,
+      deliveryMethod,
       customerEmail,
       customerName,
       customerPhone,
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
     await sendOrderConfirmedEmail({
       orderId,
       orderNumber: orderNumber ?? undefined,
+      deliveryMethod: deliveryMethod ?? "inpost",
       customerEmail,
       customerName: customerName ?? "Kliencie",
       customerPhone: customerPhone ?? undefined,

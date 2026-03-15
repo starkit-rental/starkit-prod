@@ -188,8 +188,13 @@ export function renderReservationDetailsBox(vars: Record<string, string>): strin
     ["Okres wynajmu:", `${vars.start_date || "—"} – ${vars.end_date || "—"}`],
   ];
   if (vars.rental_days) rows.push(["Liczba dni:", `${vars.rental_days} dni`]);
-  if (vars.inpost_point_id) {
-    rows.push(["Paczkomat InPost:", vars.inpost_point_id]);
+  const isPickup = vars.delivery_method === "personal_pickup";
+  if (isPickup) {
+    rows.push(["Dostawa:", "<strong>Odbiór osobisty</strong>"]);
+    rows.push(["Adres odbioru:", "Poznań, ul. Cumownicza"]);
+  } else if (vars.inpost_point_id) {
+    rows.push(["Dostawa:", "Paczkomat InPost"]);
+    rows.push(["Paczkomat:", vars.inpost_point_id]);
     if (vars.inpost_point_address) rows.push(["Adres paczkomatu:", vars.inpost_point_address]);
   }
   return infoBox("📋 Szczegóły rezerwacji", rows);
@@ -317,6 +322,7 @@ export interface OrderVars {
   rental_days?: string;
   inpost_point_id?: string;
   inpost_point_address?: string;
+  delivery_method?: string;
   customer_email?: string;
   customer_phone?: string;
   company_name?: string;
@@ -383,7 +389,44 @@ export function buildOrderPickedUpHtml(v: OrderVars): string {
   return withStarkitTemplate(content, `Sprzęt w drodze! Instrukcja obsługi ${v.order_number}`);
 }
 
-/** 4. Order Returned — potwierdzenie zwrotu */
+const PICKUP_ADDRESS = "Poznań, ul. Cumownicza";
+
+/** 4. Order Ready For Pickup — gotowe do odbioru osobistego */
+export function buildOrderReadyForPickupHtml(v: OrderVars): string {
+  const content = [
+    heading("Twój sprzęt jest gotowy do odbioru!", "🏪"),
+    subtitle(`Zamówienie ${v.order_number} czeka na Ciebie, ${v.customer_name}`),
+    paragraph(`Twój zestaw Starlink jest spakowany i gotowy do odbioru osobistego. Zapraszamy do naszego punktu.`),
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0">
+    <tr><td style="background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:20px 24px">
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="vertical-align:top;padding-right:14px">
+            <span style="font-size:28px;line-height:1">📍</span>
+          </td>
+          <td>
+            <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1e40af">Adres odbioru</p>
+            <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#1a1a2e">${PICKUP_ADDRESS}</p>
+            <p style="margin:8px 0 0;font-size:13px;color:#64748b;line-height:1.5">Godziny otwarcia: pon.–pt. 9:00–18:00, sob. 9:00–14:00</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>`,
+    infoBox("📋 Szczegóły zamówienia", [
+      ["Numer zamówienia:", `<strong>${v.order_number}</strong>`],
+      ["Okres wynajmu:", `${v.start_date} – ${v.end_date}`],
+    ]),
+    renderInstructionsBox(),
+    v.info_box_content ? alertBox(v.info_box_content, "info") : "",
+    paragraph(`Prosimy zabrać ze sobą <strong>dowód osobisty</strong> lub inny dokument tożsamości.`),
+    paragraph(`W razie pytań odpowiedz na tego maila lub zadzwoń: <a href="tel:+48453461061" style="color:#1a1a2e;font-weight:600">+48 453 461 061</a>`),
+    signOff(),
+  ].join("\n");
+  return withStarkitTemplate(content, `Sprzęt gotowy do odbioru! ${v.order_number}`);
+}
+
+/** 5. Order Returned — potwierdzenie zwrotu */
 export function buildOrderReturnedHtml(v: OrderVars): string {
   const content = [
     heading("Dziękujemy za zwrot sprzętu", "✅"),
@@ -398,7 +441,7 @@ export function buildOrderReturnedHtml(v: OrderVars): string {
   return withStarkitTemplate(content, `Potwierdzenie zwrotu sprzętu ${v.order_number}`);
 }
 
-/** 5. Order Cancelled — anulowanie */
+/** 6. Order Cancelled — anulowanie */
 export function buildOrderCancelledHtml(v: OrderVars): string {
   const content = [
     heading("Zamówienie anulowane"),
@@ -413,7 +456,7 @@ export function buildOrderCancelledHtml(v: OrderVars): string {
   return withStarkitTemplate(content, `Informacja o anulowaniu zamówienia ${v.order_number}`);
 }
 
-/** 6. General Purpose — szablon z dynamiczną treścią */
+/** 7. General Purpose — szablon z dynamiczną treścią */
 export function buildGeneralPurposeHtml(v: OrderVars & { custom_content?: string }): string {
   const bodyHtml = v.custom_content
     ? `<div style="font-family:${BRAND.font};font-size:15px;color:#334155;line-height:1.65;white-space:pre-wrap">${v.custom_content}</div>`
@@ -427,7 +470,7 @@ export function buildGeneralPurposeHtml(v: OrderVars & { custom_content?: string
   return withStarkitTemplate(content);
 }
 
-/** 7. Admin Notification — powiadomienie dla admina */
+/** 8. Admin Notification — powiadomienie dla admina */
 export function buildAdminNotificationHtml(v: OrderVars): string {
   const orderUrl = v.order_url || `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl"}/office/orders/${v.order_number}`;
 
@@ -466,6 +509,7 @@ export type EmailTemplateType =
   | "order_received"
   | "order_confirmed"
   | "order_picked_up"
+  | "order_ready_for_pickup"
   | "order_returned"
   | "order_cancelled"
   | "admin_notification"
@@ -475,6 +519,7 @@ const BUILDERS: Record<EmailTemplateType, (v: OrderVars & { custom_content?: str
   order_received: buildOrderReceivedHtml,
   order_confirmed: buildOrderConfirmedHtml,
   order_picked_up: buildOrderPickedUpHtml,
+  order_ready_for_pickup: buildOrderReadyForPickupHtml,
   order_returned: buildOrderReturnedHtml,
   order_cancelled: buildOrderCancelledHtml,
   admin_notification: buildAdminNotificationHtml,
@@ -485,6 +530,7 @@ export const EMAIL_SUBJECTS: Record<EmailTemplateType, string> = {
   order_received: "Otrzymaliśmy Twoją rezerwację Starlink Mini — SK-{{id}}",
   order_confirmed: "Potwierdzenie rezerwacji SK-{{id}}",
   order_picked_up: "Sprzęt w drodze! Instrukcja obsługi SK-{{id}}",
+  order_ready_for_pickup: "Sprzęt gotowy do odbioru osobistego! SK-{{id}}",
   order_returned: "Potwierdzenie zwrotu sprzętu SK-{{id}}",
   order_cancelled: "Informacja o anulowaniu zamówienia SK-{{id}}",
   admin_notification: "Nowe zamówienie SK-{{id}} od {{name}} 💸",

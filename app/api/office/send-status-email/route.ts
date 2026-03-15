@@ -3,12 +3,13 @@ import { requireAuth } from "@/lib/auth-guard";
 import {
   sendOrderConfirmedEmail,
   sendOrderPickedUpEmail,
+  sendOrderReadyForPickupEmail,
   sendOrderReturnedEmail,
   sendOrderCancelledEmail,
 } from "@/lib/email";
 import { sendStatusEmailRouteSchema } from "@/lib/validation";
 
-type StatusType = "reserved" | "picked_up" | "returned" | "cancelled";
+type StatusType = "reserved" | "picked_up" | "ready_for_pickup" | "returned" | "cancelled";
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
       endDate,
       inpostPointId,
       inpostPointAddress,
+      deliveryMethod,
       rentalPrice,
       deposit,
       totalAmount,
@@ -57,6 +59,7 @@ export async function POST(req: NextRequest) {
         endDate,
         inpostPointId: inpostPointId ?? "",
         inpostPointAddress: inpostPointAddress ?? "",
+        deliveryMethod: deliveryMethod ?? "inpost",
         rentalPrice: rentalPrice ?? "0.00",
         deposit: deposit ?? "0.00",
         totalAmount: totalAmount ?? "0.00",
@@ -72,7 +75,9 @@ export async function POST(req: NextRequest) {
         totalAmount: totalAmount ?? "0.00",
       };
 
-      if (statusType === "picked_up") {
+      if (statusType === "ready_for_pickup") {
+        await sendOrderReadyForPickupEmail(simpleParams);
+      } else if (statusType === "picked_up") {
         await sendOrderPickedUpEmail(simpleParams);
       } else if (statusType === "returned") {
         await sendOrderReturnedEmail(simpleParams);

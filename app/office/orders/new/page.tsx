@@ -13,6 +13,8 @@ import {
   Package,
   Save,
   Search,
+  Store,
+  Truck,
   User,
   UserPlus,
   X,
@@ -89,6 +91,10 @@ export default function NewOrderPageV2() {
   const [selectedStart, setSelectedStart] = useState<Date | null>(new Date());
   const [selectedEnd, setSelectedEnd] = useState<Date | null>(addDays(new Date(), 3));
   const [occupiedRanges, setOccupiedRanges] = useState<OccupiedRange[]>([]);
+
+  // Delivery method
+  const [deliveryMethod, setDeliveryMethod] = useState<"inpost" | "personal_pickup">("inpost");
+  const [inpostPointId, setInpostPointId] = useState("");
 
   // Order state
   const [orderCreated, setOrderCreated] = useState(false);
@@ -438,17 +444,22 @@ export default function NewOrderPageV2() {
       if (!customerId) throw new Error("No customer ID");
 
       // Create order
+      const orderInsertPayload: Record<string, unknown> = {
+        customer_id: customerId,
+        start_date: format(selectedStart, "yyyy-MM-dd"),
+        end_date: format(selectedEnd, "yyyy-MM-dd"),
+        payment_status: "manual",
+        order_status: "pending",
+        total_rental_price: totalPricing!.rentalTotal,
+        total_deposit: totalPricing!.deposit,
+        delivery_method: deliveryMethod,
+      };
+      if (deliveryMethod === "inpost" && inpostPointId.trim()) {
+        orderInsertPayload.inpost_point_id = inpostPointId.trim();
+      }
       const { data: order, error: orderErr } = await supabase
         .from("orders")
-        .insert({
-          customer_id: customerId,
-          start_date: format(selectedStart, "yyyy-MM-dd"),
-          end_date: format(selectedEnd, "yyyy-MM-dd"),
-          payment_status: "manual",
-          order_status: "pending",
-          total_rental_price: totalPricing!.rentalTotal,
-          total_deposit: totalPricing!.deposit,
-        })
+        .insert(orderInsertPayload)
         .select("id,order_number")
         .single();
 
@@ -619,6 +630,71 @@ export default function NewOrderPageV2() {
                       Anuluj
                     </Button>
                   </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Delivery Method */}
+            <Card className="bg-white rounded-xl border border-slate-200 shadow-sm">
+              <CardHeader className="pb-3 border-b border-slate-100">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <Truck className="h-4 w-4 text-indigo-500" />
+                  Metoda dostawy
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMethod("inpost")}
+                    disabled={orderCreated}
+                    className={`flex items-center gap-2.5 rounded-lg border p-3 text-left transition-all ${
+                      deliveryMethod === "inpost"
+                        ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200"
+                        : "border-slate-200 bg-slate-50 hover:bg-slate-100"
+                    }`}
+                  >
+                    <Package className="h-4 w-4 shrink-0 text-slate-500" />
+                    <div>
+                      <p className="text-xs font-semibold text-slate-900">Paczkomat InPost</p>
+                      <p className="text-xs text-slate-500">Wysyłka kurierska</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMethod("personal_pickup")}
+                    disabled={orderCreated}
+                    className={`flex items-center gap-2.5 rounded-lg border p-3 text-left transition-all ${
+                      deliveryMethod === "personal_pickup"
+                        ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200"
+                        : "border-slate-200 bg-slate-50 hover:bg-slate-100"
+                    }`}
+                  >
+                    <Store className="h-4 w-4 shrink-0 text-slate-500" />
+                    <div>
+                      <p className="text-xs font-semibold text-slate-900">Odbiór osobisty</p>
+                      <p className="text-xs text-slate-500">Poznań, ul. Cumownicza</p>
+                    </div>
+                  </button>
+                </div>
+                {deliveryMethod === "inpost" && (
+                  <div>
+                    <label className="text-xs text-slate-500">Kod Paczkomatu</label>
+                    <input
+                      type="text"
+                      value={inpostPointId}
+                      onChange={(e) => setInpostPointId(e.target.value.toUpperCase())}
+                      placeholder="np. POZ08M"
+                      disabled={orderCreated}
+                      className="mt-1 block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-mono uppercase tracking-wider focus:border-indigo-400 focus:outline-none"
+                      maxLength={10}
+                    />
+                  </div>
+                )}
+                {deliveryMethod === "personal_pickup" && (
+                  <p className="text-xs text-slate-500 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                    📍 Klient odbierze osóbiście: <strong>Poznań, ul. Cumownicza</strong>
+                  </p>
                 )}
               </CardContent>
             </Card>

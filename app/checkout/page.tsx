@@ -13,6 +13,8 @@ import {
   Loader2,
   MapPin,
   Package,
+  Truck,
+  Store,
   User,
   Building2,
   Phone,
@@ -335,6 +337,9 @@ function CheckoutContent() {
   const [zipCode, setZipCode] = useState("");
   const [city, setCity] = useState("");
 
+  // Delivery method
+  const [deliveryMethod, setDeliveryMethod] = useState<"inpost" | "personal_pickup">("inpost");
+
   // InPost
   const [inpostCode, setInpostCode] = useState("");
   const [inpostAddress, setInpostAddress] = useState("");
@@ -404,12 +409,12 @@ function CheckoutContent() {
     if (!email.includes("@")) return false;
     if (!phone.trim()) return false;
     if (!street.trim() || !houseNumber.trim() || !zipCode.trim() || !city.trim()) return false;
-    if (!inpostCodeValid) return false;
+    if (deliveryMethod === "inpost" && !inpostCodeValid) return false;
     if (!termsAccepted) return false;
     if (wantInvoice && (!companyName.trim() || !nip.trim())) return false;
     if (TURNSTILE_SITE_KEY && !turnstileToken) return false;
     return true;
-  }, [firstName, lastName, email, phone, street, houseNumber, zipCode, city, inpostCodeValid, termsAccepted, wantInvoice, companyName, nip, turnstileToken]);
+  }, [firstName, lastName, email, phone, street, houseNumber, zipCode, city, deliveryMethod, inpostCodeValid, termsAccepted, wantInvoice, companyName, nip, turnstileToken]);
 
   // ── Submit → create checkout session ──
   const handleInpostSelect = useCallback((pt: InpostPointData) => {
@@ -439,8 +444,9 @@ function CheckoutContent() {
           addressCity: city.trim(),
           companyName: wantInvoice ? companyName.trim() : undefined,
           nip: wantInvoice ? nip.trim() : undefined,
-          inpostPointId: inpostCode.trim(),
-          inpostPointAddress: inpostAddress.trim() || undefined,
+          deliveryMethod,
+          inpostPointId: deliveryMethod === "inpost" ? inpostCode.trim() : undefined,
+          inpostPointAddress: deliveryMethod === "inpost" ? (inpostAddress.trim() || undefined) : undefined,
           termsAcceptedAt: new Date().toISOString(),
           termsVersion: TERMS_VERSION,
           // Bot protection fields
@@ -733,21 +739,66 @@ function CheckoutContent() {
               </div>
             </div>
 
-            {/* ── Card B: InPost Delivery ── */}
+            {/* ── Card B: Delivery Method ── */}
             <div className="rounded-2xl border border-border bg-card p-6">
               <div className="mb-5 flex items-center gap-2.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <Truck className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div>
-                  <h2 className="text-base font-semibold text-foreground">
-                    Dostawa — InPost Paczkomat
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Wpisz kod lub wybierz punkt z mapy
-                  </p>
-                </div>
+                <h2 className="text-base font-semibold text-foreground">Dostawa</h2>
               </div>
+
+              {/* Delivery selector */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+                <button
+                  type="button"
+                  onClick={() => setDeliveryMethod("inpost")}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl border p-4 text-left transition-all",
+                    deliveryMethod === "inpost"
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-border bg-muted/40 hover:bg-muted"
+                  )}
+                >
+                  <Package className="h-5 w-5 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Paczkomat InPost</p>
+                    <p className="text-xs text-muted-foreground">Dowolny paczkomat w Polsce</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeliveryMethod("personal_pickup")}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl border p-4 text-left transition-all",
+                    deliveryMethod === "personal_pickup"
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-border bg-muted/40 hover:bg-muted"
+                  )}
+                >
+                  <Store className="h-5 w-5 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Odbiór osobisty</p>
+                    <p className="text-xs text-muted-foreground">Poznań, ul. Cumownicza</p>
+                  </div>
+                </button>
+              </div>
+
+              {deliveryMethod === "personal_pickup" && (
+                <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/50 p-4">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">Adres odbioru osobistego</p>
+                      <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Poznań, ul. Cumownicza</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Pon.–Pt. 9:00–18:00 · Sob. 9:00–14:00</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">Prosimy zabrać dowód tożsamości</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {deliveryMethod === "inpost" && (
 
               <div className="grid gap-4">
                 {/* Manual code input */}
@@ -809,6 +860,7 @@ function CheckoutContent() {
                   </div>
                 )}
               </div>
+              )}
             </div>
 
             {/* ── Terms Checkbox ── */}
@@ -966,7 +1018,7 @@ function CheckoutContent() {
                   {(!street.trim() || !houseNumber.trim() || !zipCode.trim() || !city.trim()) && (
                     <p>• Uzupełnij adres</p>
                   )}
-                  {!inpostCodeValid && <p>• Podaj poprawny kod Paczkomatu</p>}
+                  {deliveryMethod === "inpost" && !inpostCodeValid && <p>• Podaj poprawny kod Paczkomatu</p>}
                   {!termsAccepted && <p>• Zaakceptuj regulamin</p>}
                   {wantInvoice && (!companyName.trim() || !nip.trim()) && (
                     <p>• Uzupełnij dane do faktury</p>
