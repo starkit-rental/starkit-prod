@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 const TRUST_ITEMS = [
-  { icon: Truck, text: "Dostawa 24-48h w całej Polsce" },
+  { icon: Truck, text: "Ekspresowa dostawa w całej Polsce" },
   { icon: Zap, text: "Plug & Play – gotowe w 5 minut" },
   { icon: Headphones, text: "Wsparcie techniczne 7/7" },
   { icon: Shield, text: "Sprawdzony, serwisowany sprzęt" },
