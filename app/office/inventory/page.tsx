@@ -83,6 +83,15 @@ export default function OfficeInventoryPage() {
     buffer_after: "1",
   });
 
+  const [draftEdit, setDraftEdit] = useState<{
+    name: string;
+    sanity_slug: string;
+    base_price_day: string;
+    deposit_amount: string;
+    buffer_before: string;
+    buffer_after: string;
+  } | null>(null);
+
   const [unavailabilityForm, setUnavailabilityForm] = useState({
     unavailable_from: "",
     unavailable_to: "",
@@ -264,6 +273,46 @@ export default function OfficeInventoryPage() {
   }
 
   const productToEdit = showEditProduct ? products.find(p => p.id === showEditProduct) : null;
+
+  // Initialize edit form when opening dialog
+  useEffect(() => {
+    if (productToEdit && !draftEdit) {
+      setDraftEdit({
+        name: productToEdit.name ?? "",
+        sanity_slug: productToEdit.sanity_slug ?? "",
+        base_price_day: toText(productToEdit.base_price_day),
+        deposit_amount: toText(productToEdit.deposit_amount),
+        buffer_before: String(productToEdit.buffer_before ?? 1),
+        buffer_after: String(productToEdit.buffer_after ?? 1),
+      });
+    }
+    if (!productToEdit) {
+      setDraftEdit(null);
+    }
+  }, [productToEdit, draftEdit]);
+
+  async function handleSaveEdit() {
+    if (!productToEdit || !draftEdit) return;
+    setError(null);
+    const { error: updateError } = await supabase
+      .from("products")
+      .update({
+        name: draftEdit.name || null,
+        sanity_slug: draftEdit.sanity_slug || null,
+        base_price_day: Number(draftEdit.base_price_day || 0),
+        deposit_amount: Number(draftEdit.deposit_amount || 0),
+        buffer_before: parseInt(draftEdit.buffer_before, 10) || 1,
+        buffer_after: parseInt(draftEdit.buffer_after, 10) || 1,
+      })
+      .eq("id", productToEdit.id);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    setShowEditProduct(null);
+    setDraftEdit(null);
+    await load();
+  }
   const productToDelete = showDeleteProduct ? products.find(p => p.id === showDeleteProduct) : null;
   const stockToDelete = showDeleteStock ? Object.values(stockItemsByProduct).flat().find(s => s.id === showDeleteStock) : null;
   const stockForUnavailability = showUnavailability ? Object.values(stockItemsByProduct).flat().find(s => s.id === showUnavailability) : null;
@@ -602,15 +651,15 @@ export default function OfficeInventoryPage() {
                 <div className="space-y-2">
                   <Label>Nazwa produktu</Label>
                   <Input
-                    defaultValue={productToEdit.name ?? ""}
-                    onBlur={(e) => updateProduct(productToEdit.id, { name: e.target.value || null })}
+                    value={draftEdit?.name ?? ""}
+                    onChange={(e) => setDraftEdit(prev => prev ? { ...prev, name: e.target.value } : null)}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Sanity Slug</Label>
                   <Input
-                    defaultValue={productToEdit.sanity_slug ?? ""}
-                    onBlur={(e) => updateProduct(productToEdit.id, { sanity_slug: e.target.value || null })}
+                    value={draftEdit?.sanity_slug ?? ""}
+                    onChange={(e) => setDraftEdit(prev => prev ? { ...prev, sanity_slug: e.target.value } : null)}
                   />
                 </div>
               </div>
@@ -620,8 +669,8 @@ export default function OfficeInventoryPage() {
                   <Input
                     type="number"
                     step="0.01"
-                    defaultValue={toText(productToEdit.base_price_day)}
-                    onBlur={(e) => updateProduct(productToEdit.id, { base_price_day: Number(e.target.value || 0) })}
+                    value={draftEdit?.base_price_day ?? ""}
+                    onChange={(e) => setDraftEdit(prev => prev ? { ...prev, base_price_day: e.target.value } : null)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -629,8 +678,8 @@ export default function OfficeInventoryPage() {
                   <Input
                     type="number"
                     step="0.01"
-                    defaultValue={toText(productToEdit.deposit_amount)}
-                    onBlur={(e) => updateProduct(productToEdit.id, { deposit_amount: Number(e.target.value || 0) })}
+                    value={draftEdit?.deposit_amount ?? ""}
+                    onChange={(e) => setDraftEdit(prev => prev ? { ...prev, deposit_amount: e.target.value } : null)}
                   />
                 </div>
               </div>
@@ -641,8 +690,8 @@ export default function OfficeInventoryPage() {
                     type="number"
                     min="0"
                     max="14"
-                    defaultValue={productToEdit.buffer_before ?? 1}
-                    onBlur={(e) => updateProduct(productToEdit.id, { buffer_before: parseInt(e.target.value, 10) || 1 })}
+                    value={draftEdit?.buffer_before ?? "1"}
+                    onChange={(e) => setDraftEdit(prev => prev ? { ...prev, buffer_before: e.target.value } : null)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -651,8 +700,8 @@ export default function OfficeInventoryPage() {
                     type="number"
                     min="0"
                     max="14"
-                    defaultValue={productToEdit.buffer_after ?? 1}
-                    onBlur={(e) => updateProduct(productToEdit.id, { buffer_after: parseInt(e.target.value, 10) || 1 })}
+                    value={draftEdit?.buffer_after ?? "1"}
+                    onChange={(e) => setDraftEdit(prev => prev ? { ...prev, buffer_after: e.target.value } : null)}
                   />
                 </div>
               </div>
@@ -730,8 +779,15 @@ export default function OfficeInventoryPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowEditProduct(null)}>
-                Zamknij
+              <Button variant="outline" onClick={() => {
+                setShowEditProduct(null);
+                setDraftEdit(null);
+              }}>
+                Anuluj
+              </Button>
+              <Button onClick={handleSaveEdit}>
+                <Save className="h-4 w-4 mr-2" />
+                Zapisz zmiany
               </Button>
             </DialogFooter>
           </DialogContent>
