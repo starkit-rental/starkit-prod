@@ -10,6 +10,7 @@ import ProductSchema from "@/components/seo/product-schema";
 import BreadcrumbsSchema from "@/components/seo/breadcrumbs-schema";
 import FAQSchema from "@/components/seo/faq-schema";
 import RentalWidget from "../_components/rental-widget";
+import RelatedPosts from "@/components/blog/related-posts";
 
 export const revalidate = 60;
 
@@ -176,6 +177,9 @@ export default async function ProductPage({ params }: PageProps) {
           <Blocks blocks={product.blocks as any} />
         </section>
       )}
+
+      {/* Related blog posts – internal linking */}
+      <RelatedPosts />
     </>
   );
 }

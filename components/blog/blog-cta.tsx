@@ -15,15 +15,15 @@ export default function BlogCTA() {
               Prosta instalacja i pełne wsparcie techniczne.
             </p>
           </div>
-          <div className="mt-8 flex flex-wrap gap-4 justify-center">
+          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg">
-              <Link href="/products/starlink-mini">
-                Starlink Mini
+              <Link href="/products/starlink-standard">
+                Wynajmij Starlink Standard
               </Link>
             </Button>
             <Button asChild size="lg" variant="secondary">
-              <Link href="/products/starlink-standard">
-                Starlink Standard
+              <Link href="/products/starlink-mini">
+                Wynajmij Starlink Mini
               </Link>
             </Button>
           </div>
