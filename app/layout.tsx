@@ -23,22 +23,38 @@ export const viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { template: "%s | Starkit", default: "Starkit - Wynajem Starlink" },
+  title: { template: "%s | Starkit", default: "Starkit – Wynajem Starlink i Starlink Mini" },
+  description:
+    "Wynajem Starlink i Starlink Mini – internet satelitarny bez ograniczeń. Wypożyczalnia Starlink z dostawą na terenie całej Polski. Idealny na event, wesele, budowę i działkę.",
+  keywords: [
+    "wynajem starlink",
+    "wynajem starlink mini",
+    "wypożyczalnia starlink",
+    "starlink do wynajęcia",
+    "wynajem internetu satelitarnego",
+    "starlink na event",
+    "starlink na budowę",
+    "starlink na wesele",
+  ],
   openGraph: {
     url: siteUrl,
-    images: [{ url: new URL("/images/og-image.jpg", siteUrl).href, width: 1200, height: 630 }],
+    siteName: "Starkit",
+    images: [{ url: new URL("/images/og-image.jpg", siteUrl).href, width: 1200, height: 630, alt: "Starkit – Wynajem Starlink" }],
     locale: "pl_PL",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Starkit - Wynajem Starlink",
-    description: "Internet satelitarny bez ograniczeń - Wynajem Starlink dla eventów, budów i miejsc bez infrastruktury",
+    title: "Starkit – Wynajem Starlink i Starlink Mini",
+    description: "Wypożyczalnia Starlink z dostawą na terenie całej Polski – na event, budowę, wesele lub działkę.",
     images: [new URL("/images/og-image.jpg", siteUrl).href],
   },
   robots: { index: true, follow: true },
   icons: { icon: "/favicon.ico" },
-  alternates: { canonical: siteUrl },
+  alternates: {
+    canonical: siteUrl,
+    languages: { "pl": siteUrl },
+  },
 };
 
 const fontSans = FontSans({

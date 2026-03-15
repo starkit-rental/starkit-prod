@@ -4,15 +4,28 @@ import Image from "next/image";
 import Link from "next/link";
 import Blocks from "@/components/blocks";
 import type { Metadata } from "next";
+import ItemListSchema from "@/components/seo/item-list-schema";
 
 export const revalidate = 60;
 
 // opcjonalne SEO z dokumentu productsPage
 export async function generateMetadata(): Promise<Metadata> {
   const page = await client.fetch(productsPageQuery);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
   return {
-    title: page?.seo?.title || page?.title || "Products",
-    description: page?.seo?.description || undefined,
+    title: page?.meta_title || "Wynajem Starlink i Starlink Mini – ceny, dostawa | Starkit",
+    description:
+      page?.meta_description ||
+      "Wynajmij Starlink lub Starlink Mini na dzień, weekend lub dłużej. Dostawa na terenie całej Polski. Idealny na event, wesele, budowę lub działkę.",
+    alternates: { canonical: `${siteUrl}/products` },
+    openGraph: {
+      title: page?.meta_title || "Wynajem Starlink i Starlink Mini | Starkit",
+      description:
+        page?.meta_description ||
+        "Wynajem Starlink i Starlink Mini – internet satelitarny bez ograniczeń, dostawa na terenie całej Polski.",
+      url: `${siteUrl}/products`,
+      type: "website",
+    },
   };
 }
 
@@ -28,6 +41,7 @@ export default async function ProductsPage() {
 
   return (
     <>
+      <ItemListSchema items={products} />
       {/* Bloki nad listą produktów (Section Header) */}
       {blocksAbove.length > 0 && <Blocks blocks={blocksAbove} />}
 

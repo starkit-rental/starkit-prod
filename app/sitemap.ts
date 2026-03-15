@@ -66,11 +66,27 @@ async function getProductsSitemap(): Promise<MetadataRoute.Sitemap[]> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap[]> {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const [pages, posts, products] = await Promise.all([
     getPagesSitemap(),
     getPostsSitemap(),
     getProductsSitemap(),
   ]);
 
-  return [...pages, ...posts, ...products];
+  const staticPages: MetadataRoute.Sitemap = [
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/products`,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 0.9,
+    },
+  ];
+
+  return [...pages, staticPages, ...posts, ...products];
 }

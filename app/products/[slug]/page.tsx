@@ -8,6 +8,7 @@ import Separator from "@/components/ui/separator";
 import { Metadata } from "next";
 import ProductSchema from "@/components/seo/product-schema";
 import BreadcrumbsSchema from "@/components/seo/breadcrumbs-schema";
+import FAQSchema from "@/components/seo/faq-schema";
 import RentalWidget from "../_components/rental-widget";
 
 export const revalidate = 60;
@@ -24,14 +25,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = product.meta_title || product.title || "Produkt";
-  const description = product.meta_description || product.excerpt || `Wynajmij ${product.title} - najwyższej jakości sprzęt satelitarny od Starkit`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const title = product.meta_title || `Wynajem ${product.title} – cena, dostawa | Starkit`;
+  const description =
+    product.meta_description ||
+    product.excerpt ||
+    `Wynajmij ${product.title} na dzień, weekend lub dłużej. Dostawa na terenie całej Polski. Idealne na event, budowę lub działkę.`;
   const ogImage = product.ogImage?.asset?.url || product.images?.[0];
 
   return {
     title,
     description,
     robots: product.noindex ? { index: false, follow: false } : { index: true, follow: true },
+    alternates: { canonical: `${siteUrl}/products/${product.slug}` },
     openGraph: {
       title,
       description,
@@ -61,6 +67,10 @@ export default async function ProductPage({ params }: PageProps) {
     { label: product.title || "", href: `/products/${product.slug}` },
   ];
 
+  const faqsFromBlocks = product.blocks
+    ?.filter((b: any) => b._type === "faqs")
+    .flatMap((b: any) => b.faqs ?? []) ?? [];
+
   return (
     <>
       <ProductSchema
@@ -74,6 +84,7 @@ export default async function ProductPage({ params }: PageProps) {
         }}
       />
       <BreadcrumbsSchema links={breadcrumbLinks} />
+      {faqsFromBlocks.length > 0 && <FAQSchema faqs={faqsFromBlocks} />}
       {/* Product Detail Section */}
       <section className="w-full py-8 md:py-12 lg:py-16">
         <div className="container">
