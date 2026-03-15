@@ -344,7 +344,7 @@ export const ContractTemplate: React.FC<ContractTemplateProps> = ({
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>NIP:</Text>
-                <Text style={styles.value}>{process.env.OWNER_NIP || "7811234567"}</Text>
+                <Text style={styles.value}>{process.env.OWNER_NIP || "7831780263"}</Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Email:</Text>
