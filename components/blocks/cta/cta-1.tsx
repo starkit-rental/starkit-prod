@@ -37,11 +37,14 @@ export default function Cta1({
           className={cn(color === "primary" ? "text-background" : undefined)}
         >
           {tagLine && (
-            <h1 className="leading-[0] mb-4">
-              <span className="text-base font-semibold">{tagLine}</span>
-            </h1>
+            <p className={cn(
+              "text-sm font-semibold mb-3 tracking-wide uppercase",
+              color === "primary" ? "text-background/80" : "text-primary"
+            )}>
+              {tagLine}
+            </p>
           )}
-          <h2 className="mb-4">{title}</h2>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">{title}</h2>
           {body && <PortableTextRenderer value={body} />}
         </div>
         {links && links.length > 0 && (

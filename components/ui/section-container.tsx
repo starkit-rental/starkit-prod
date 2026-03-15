@@ -14,12 +14,18 @@ export default function SectionContainer({
   children,
   className,
 }: SectionContainerProps) {
+  const hasExplicitPadding = padding?.top || padding?.bottom;
+
   return (
     <div
       className={cn(
         `bg-${color} relative`,
-        padding?.top ? "pt-16 xl:pt-20" : undefined,
-        padding?.bottom ? "pb-16 xl:pb-20" : undefined,
+        hasExplicitPadding
+          ? cn(
+              padding?.top ? "pt-16 xl:pt-20" : undefined,
+              padding?.bottom ? "pb-16 xl:pb-20" : undefined
+            )
+          : "py-12 xl:py-16",
         className
       )}
     >

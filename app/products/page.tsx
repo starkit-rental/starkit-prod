@@ -7,22 +7,7 @@ import type { Metadata } from "next";
 import ItemListSchema from "@/components/seo/item-list-schema";
 import FAQSchema from "@/components/seo/faq-schema";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowRight,
-  Truck,
-  Shield,
-  Clock,
-  Wifi,
-  Zap,
-  Weight,
-  Monitor,
-  MapPin,
-  CheckCircle2,
-  Headphones,
-  PackageCheck,
-  CalendarCheck,
-  Settings,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export const revalidate = 60;
 
@@ -54,107 +39,34 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const TRUST_ITEMS = [
-  { icon: Truck, label: "Dostawa 24-48h", sub: "kurierem w całej Polsce" },
-  { icon: CalendarCheck, label: "Wynajem od 1 dnia", sub: "bez umów i zobowiązań" },
-  { icon: Wifi, label: "Do 250 Mbps", sub: "internet satelitarny" },
-  { icon: Headphones, label: "Wsparcie 7/7", sub: "telefon, mail, chat" },
-];
-
-const COMPARISON = [
-  { label: "Prędkość pobierania", standard: "do 250 Mbps", mini: "do 100 Mbps" },
-  { label: "Prędkość wysyłania", standard: "do 40 Mbps", mini: "do 10 Mbps" },
-  { label: "Zasięg Wi-Fi", standard: "do 185 m²", mini: "do 90 m²" },
-  { label: "Max urządzeń", standard: "128", mini: "128" },
-  { label: "Waga anteny", standard: "~2,9 kg", mini: "~1,1 kg" },
-  { label: "Zasilanie", standard: "230V AC", mini: "USB-C / 230V" },
-  { label: "Najlepszy na", standard: "Event, wesele, budowa", mini: "Podróż, kamper, działka" },
-];
-
-const USP_ITEMS = [
-  {
-    icon: Truck,
-    title: "Dostawa kurierem w 24-48h",
-    desc: "Zamawiasz online, a zestaw Starlink dostarczamy kurierem pod wskazany adres w całej Polsce. Zwrot równie prosty.",
-  },
-  {
-    icon: Settings,
-    title: "Plug & Play – gotowe w 5 minut",
-    desc: "Każdy zestaw jest fabrycznie skonfigurowany. Wystarczy postawić antenę i podłączyć zasilanie. Dołączamy instrukcję.",
-  },
-  {
-    icon: CalendarCheck,
-    title: "Elastyczny wynajem bez umów",
-    desc: "Wynajmij na weekend, tydzień lub miesiąc. Bez długoterminowych umów, zobowiązań i ukrytych kosztów.",
-  },
-  {
-    icon: Headphones,
-    title: "Wsparcie techniczne 7/7",
-    desc: "Nasz zespół jest dostępny telefonicznie i mailowo 7 dni w tygodniu. Pomożemy z konfiguracją i rozwiążemy każdy problem.",
-  },
-  {
-    icon: PackageCheck,
-    title: "Sprawdzony sprzęt",
-    desc: "Wszystkie zestawy są regularnie serwisowane i testowane. Dostajesz sprzęt w idealnym stanie z aktualnym oprogramowaniem.",
-  },
-  {
-    icon: MapPin,
-    title: "Cała Polska",
-    desc: "Dostarczamy na terenie całego kraju – od dużych miast po odległe lokalizacje, gdzie Starlink jest najbardziej potrzebny.",
-  },
-];
-
 export default async function ProductsPage() {
   const [pageData, products] = await Promise.all([
     client.fetch(productsPageQuery),
     client.fetch(allProductsQuery),
   ]);
 
-  // Only the section-header (first block) goes above products
-  const blocksAbove = pageData?.blocks?.slice(0, 1) || [];
+  const allBlocks = pageData?.blocks ?? [];
 
-  // Filter: skip rich-body blocks, keep structured blocks (faqs, cta-1, blog-carousel)
-  const structuredBlocks =
-    pageData?.blocks?.filter(
-      (b: any) => b._type !== "rich-body" && b._type !== "section-header"
-    ) || [];
+  // First block (section-header) renders above product cards
+  const blocksAbove = allBlocks.slice(0, 1);
+  // Remaining blocks render below product cards
+  const blocksBelow = allBlocks.slice(1);
 
   // Extract FAQs for schema
-  const faqsFromBlocks =
-    pageData?.blocks
-      ?.filter((b: any) => b._type === "faqs")
-      .flatMap((b: any) => b.faqs ?? []) ?? [];
+  const faqsFromBlocks = allBlocks
+    .filter((b: any) => b._type === "faqs")
+    .flatMap((b: any) => b.faqs ?? []);
 
   return (
     <>
       <ItemListSchema items={products} />
       {faqsFromBlocks.length > 0 && <FAQSchema faqs={faqsFromBlocks} />}
 
-      {/* ── Hero / Section Header ── */}
+      {/* ── Section Header (Sanity) ── */}
       {blocksAbove.length > 0 && <Blocks blocks={blocksAbove} />}
 
-      {/* ── Trust Bar ── */}
-      <section className="container pb-12 pt-2">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          {TRUST_ITEMS.map((item) => (
-            <div
-              key={item.label}
-              className="flex items-center gap-3 p-4 md:p-5 rounded-2xl border bg-card"
-            >
-              <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-                <item.icon className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm leading-tight">{item.label}</p>
-                <p className="text-xs text-muted-foreground">{item.sub}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Product Cards (2-col) ── */}
-      <section className="container py-8 md:py-14">
+      {/* ── Product Cards ── */}
+      <section className="container py-10 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
           {products.map((p: any) => (
             <article
@@ -215,97 +127,8 @@ export default async function ProductsPage() {
         </div>
       </section>
 
-      {/* ── Comparison Table ── */}
-      <section className="bg-muted/40 py-16 md:py-20">
-        <div className="container max-w-4xl">
-          <div className="text-center mb-10">
-            <p className="text-sm font-semibold text-primary mb-2">Porównanie zestawów</p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Starlink Standard vs Starlink Mini
-            </h2>
-            <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-              Wybierz zestaw dopasowany do Twoich potrzeb. Porównaj kluczowe parametry obu modeli.
-            </p>
-          </div>
-          <div className="rounded-2xl border bg-card overflow-hidden">
-            {/* Table header */}
-            <div className="grid grid-cols-3 bg-muted/60">
-              <div className="p-4 md:p-5 font-semibold text-sm text-muted-foreground">
-                Parametr
-              </div>
-              <div className="p-4 md:p-5 font-semibold text-sm text-center border-l">
-                Starlink Standard
-              </div>
-              <div className="p-4 md:p-5 font-semibold text-sm text-center border-l">
-                Starlink Mini
-              </div>
-            </div>
-            {/* Table rows */}
-            {COMPARISON.map((row, i) => (
-              <div
-                key={row.label}
-                className={`grid grid-cols-3 ${i % 2 === 0 ? "" : "bg-muted/20"} ${
-                  i < COMPARISON.length - 1 ? "border-b" : ""
-                }`}
-              >
-                <div className="p-4 md:p-5 text-sm font-medium">{row.label}</div>
-                <div className="p-4 md:p-5 text-sm text-center border-l text-muted-foreground">
-                  {row.standard}
-                </div>
-                <div className="p-4 md:p-5 text-sm text-center border-l text-muted-foreground">
-                  {row.mini}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-            <Button asChild size="lg">
-              <Link href="/products/starlink-standard">
-                Wynajmij Standard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/products/starlink-mini">
-                Wynajmij Mini
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── USP Grid: Dlaczego Starkit? ── */}
-      <section className="container py-16 md:py-20">
-        <div className="text-center mb-12">
-          <p className="text-sm font-semibold text-primary mb-2">Dlaczego my?</p>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Dlaczego warto wynająć Starlink w Starkit?
-          </h2>
-          <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-            Profesjonalna wypożyczalnia Starlink z pełnym wsparciem i dostawą na terenie całej Polski.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {USP_ITEMS.map((item) => (
-            <div
-              key={item.title}
-              className="flex flex-col p-6 rounded-2xl border bg-card hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 mb-4">
-                <item.icon className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {item.desc}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Structured Sanity Blocks: FAQ, CTA, Blog Carousel ── */}
-      {structuredBlocks.length > 0 && <Blocks blocks={structuredBlocks} />}
+      {/* ── All remaining Sanity Blocks (editable in Studio) ── */}
+      {blocksBelow.length > 0 && <Blocks blocks={blocksBelow} />}
     </>
   );
 }
