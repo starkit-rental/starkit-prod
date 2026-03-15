@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { fetchSanityPosts } from "@/sanity/lib/fetch";
 import { urlFor } from "@/sanity/lib/image";
 
+export const revalidate = 60;
+
 export const metadata: Metadata = {
   title: "Blog – Wynajem Starlink, porady i aktualności | Starkit",
   description:
