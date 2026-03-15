@@ -21,29 +21,14 @@ const nextConfig = {
     ]
   },
   async headers() {
-    const csp = [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://cdn.sanity.io https://www.google-analytics.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://www.google-analytics.com https://analytics.google.com https://xcahfs5n.api.sanity.io https://xcahfs5n.apicdn.sanity.io",
-      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
-      "frame-ancestors 'self'",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "upgrade-insecure-requests",
-    ].join('; ');
-
+    // NOTE: Content-Security-Policy is managed exclusively in netlify.toml
+    // to avoid conflicts between Next.js and Netlify CDN headers.
+    // The netlify.toml CSP is the authoritative source and includes all
+    // required domains (InPost, Smartsupp, Turnstile, Stripe, Sanity, etc.).
     return [
       {
         source: '/:path*',
         headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: csp,
-          },
           {
             key: 'X-Frame-Options',
             value: 'SAMEORIGIN',

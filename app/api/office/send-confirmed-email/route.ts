@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { sendOrderConfirmedEmail } from "@/lib/email";
+import { sendConfirmedEmailSchema } from "@/lib/validation";
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const body = await req.json();
+    const rawBody = await req.json();
+    const validation = sendConfirmedEmailSchema.safeParse(rawBody);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: validation.error.format() },
+        { status: 400 }
+      );
+    }
 
     const {
       orderId,
@@ -24,14 +32,7 @@ export async function POST(req: NextRequest) {
       rentalPrice,
       deposit,
       totalAmount,
-    } = body;
-
-    if (!orderId || !customerEmail || !startDate || !endDate) {
-      return NextResponse.json(
-        { error: "Missing required fields: orderId, customerEmail, startDate, endDate" },
-        { status: 400 }
-      );
-    }
+    } = validation.data;
 
     await sendOrderConfirmedEmail({
       orderId,

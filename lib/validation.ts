@@ -6,6 +6,72 @@ export const uuidSchema = z.string().uuid();
 // Email schema
 export const emailSchema = z.string().email().min(3).max(255);
 
+// ISO date string YYYY-MM-DD
+const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD");
+
+// Check availability validation
+export const checkAvailabilitySchema = z.object({
+  productId: uuidSchema,
+  startDate: isoDateSchema,
+  endDate: isoDateSchema,
+});
+
+// Product bookings validation
+export const productBookingsSchema = z.object({
+  productId: uuidSchema,
+});
+
+// Send confirmed email validation
+export const sendConfirmedEmailSchema = z.object({
+  orderId: uuidSchema,
+  orderNumber: z.string().max(50).optional(),
+  customerEmail: emailSchema,
+  customerName: z.string().min(1).max(200).optional(),
+  customerPhone: z.string().max(50).optional(),
+  companyName: z.string().max(200).optional(),
+  nip: z.string().max(50).optional(),
+  startDate: isoDateSchema,
+  endDate: isoDateSchema,
+  inpostPointId: z.string().max(100).optional(),
+  inpostPointAddress: z.string().max(500).optional(),
+  rentalPrice: z.string().max(50).optional(),
+  deposit: z.string().max(50).optional(),
+  totalAmount: z.string().max(50).optional(),
+});
+
+// Send status email validation
+export const sendStatusEmailRouteSchema = z.object({
+  type: z.enum(["reserved", "picked_up", "returned", "cancelled"]),
+  orderId: uuidSchema,
+  orderNumber: z.string().max(50).optional(),
+  customerEmail: emailSchema,
+  customerName: z.string().min(1).max(200).optional(),
+  customerPhone: z.string().max(50).optional(),
+  companyName: z.string().max(200).optional(),
+  nip: z.string().max(50).optional(),
+  startDate: isoDateSchema,
+  endDate: isoDateSchema,
+  inpostPointId: z.string().max(100).optional(),
+  inpostPointAddress: z.string().max(500).optional(),
+  rentalPrice: z.string().max(50).optional(),
+  deposit: z.string().max(50).optional(),
+  totalAmount: z.string().max(50).optional(),
+});
+
+// Pricing tier item
+const pricingTierItemSchema = z.object({
+  tier_days: z.number().int().min(1).max(3650),
+  multiplier: z.number().min(0).max(100),
+  label: z.string().max(100).optional(),
+});
+
+// Pricing tiers POST validation
+export const pricingTiersPostSchema = z.object({
+  productId: uuidSchema,
+  tiers: z.array(pricingTierItemSchema).max(50),
+  autoIncrementMultiplier: z.number().min(0).max(100).optional(),
+});
+
 // Send email validation
 export const sendEmailSchema = z.object({
   orderId: uuidSchema,
@@ -81,4 +147,5 @@ export const createCheckoutSchema = z.object({
   // Bot protection fields
   formTimestamp: z.string().optional(), // When form was opened (ISO timestamp)
   _honeypot: z.string().optional(), // Hidden field - bots will fill it
+  turnstileToken: z.string().optional(), // Cloudflare Turnstile CAPTCHA token
 });

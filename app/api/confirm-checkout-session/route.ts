@@ -145,7 +145,9 @@ export async function POST(req: Request) {
       }
     }
 
-    // Fetch full order details for Success Center
+    // Fetch order details for Success Center — only non-sensitive fields
+    // phone and nip are NOT included: they are PII that must not be
+    // returned to an unauthenticated public endpoint.
     const { data: orderDetails } = await supabase
       .from("orders")
       .select(`
@@ -160,12 +162,9 @@ export async function POST(req: Request) {
         inpost_point_id,
         inpost_point_address,
         customers:customer_id(
-          id,
           full_name,
           email,
-          phone,
-          company_name,
-          nip
+          company_name
         )
       `)
       .eq("id", updated.id)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { publicLimiter, getClientIp } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/auth-guard";
+import { pricingTiersPostSchema } from "@/lib/validation";
 
 function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -75,15 +76,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json();
-    const { productId, tiers, autoIncrementMultiplier } = body;
-
-    if (!productId || !Array.isArray(tiers)) {
+    const rawBody = await req.json();
+    const validation = pricingTiersPostSchema.safeParse(rawBody);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "productId and tiers array required" },
+        { error: "Invalid input", details: validation.error.format() },
         { status: 400 }
       );
     }
+    const { productId, tiers, autoIncrementMultiplier } = validation.data;
 
     // Update autoIncrementMultiplier in products table
     if (autoIncrementMultiplier !== undefined) {

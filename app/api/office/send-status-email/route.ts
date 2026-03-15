@@ -6,16 +6,24 @@ import {
   sendOrderReturnedEmail,
   sendOrderCancelledEmail,
 } from "@/lib/email";
+import { sendStatusEmailRouteSchema } from "@/lib/validation";
 
-const ALLOWED_TYPES = ["reserved", "picked_up", "returned", "cancelled"] as const;
-type StatusType = (typeof ALLOWED_TYPES)[number];
+type StatusType = "reserved" | "picked_up" | "returned" | "cancelled";
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const body = await req.json();
+    const rawBody = await req.json();
+    const validation = sendStatusEmailRouteSchema.safeParse(rawBody);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: validation.error.format() },
+        { status: 400 }
+      );
+    }
+
     const {
       type,
       orderId,
@@ -32,21 +40,7 @@ export async function POST(req: NextRequest) {
       rentalPrice,
       deposit,
       totalAmount,
-    } = body;
-
-    if (!type || !ALLOWED_TYPES.includes(type)) {
-      return NextResponse.json(
-        { error: `Invalid type. Allowed: ${ALLOWED_TYPES.join(", ")}` },
-        { status: 400 }
-      );
-    }
-
-    if (!orderId || !customerEmail || !startDate || !endDate) {
-      return NextResponse.json(
-        { error: "Missing required fields: orderId, customerEmail, startDate, endDate" },
-        { status: 400 }
-      );
-    }
+    } = validation.data;
 
     const statusType = type as StatusType;
 

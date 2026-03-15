@@ -32,6 +32,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing invoice PDF" }, { status: 400 });
     }
 
+    const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+    if (pdfFile.size > MAX_SIZE_BYTES) {
+      return NextResponse.json({ error: "File too large. Maximum size is 10 MB." }, { status: 400 });
+    }
+
+    const allowedMimeTypes = ["application/pdf"];
+    if (!allowedMimeTypes.includes(pdfFile.type)) {
+      return NextResponse.json({ error: "Invalid file type. Only PDF files are accepted." }, { status: 400 });
+    }
+
     const supabase = createSupabaseAdmin();
 
     // Fetch order with customer details

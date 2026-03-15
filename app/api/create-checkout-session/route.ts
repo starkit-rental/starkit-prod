@@ -9,7 +9,7 @@ import {
 } from "@/lib/rental-engine";
 import { createCheckoutSchema } from "@/lib/validation";
 import { checkoutLimiter, getClientIp } from "@/lib/rate-limit";
-import { detectHoneypot, validateFormTiming } from "@/lib/turnstile";
+import { detectHoneypot, validateFormTiming, verifyTurnstileToken } from "@/lib/turnstile";
 
 type CreateCheckoutSessionRequestBody = {
   productId: string;
@@ -98,6 +98,26 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Please take your time filling out the form" },
         { status: 400 }
+      );
+    }
+
+    // 5. BOT PROTECTION - Cloudflare Turnstile CAPTCHA verification
+    // Skipped automatically when TURNSTILE_SECRET_KEY is not set (dev mode).
+    if (body.turnstileToken !== undefined) {
+      const turnstileOk = await verifyTurnstileToken(body.turnstileToken);
+      if (!turnstileOk) {
+        console.warn(`[Bot Protection] Turnstile verification failed for IP: ${clientIp}`);
+        return NextResponse.json(
+          { error: "CAPTCHA verification failed. Please refresh and try again." },
+          { status: 403 }
+        );
+      }
+    } else if (process.env.TURNSTILE_SECRET_KEY) {
+      // Token expected but not provided
+      console.warn(`[Bot Protection] Turnstile token missing for IP: ${clientIp}`);
+      return NextResponse.json(
+        { error: "CAPTCHA token missing. Please refresh and try again." },
+        { status: 403 }
       );
     }
 

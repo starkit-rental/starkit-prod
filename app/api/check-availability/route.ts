@@ -3,12 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { checkAvailability } from "@/lib/rental-engine";
 import { availabilityLimiter, getClientIp } from "@/lib/rate-limit";
-
-type Body = {
-  productId: string;
-  startDate: string;
-  endDate: string;
-};
+import { checkAvailabilitySchema } from "@/lib/validation";
 
 function assertEnv(value: string | undefined, name: string): string {
   if (!value) throw new Error(`Missing environment variable: ${name}`);
@@ -34,10 +29,15 @@ export async function POST(req: Request) {
       "NEXT_PUBLIC_SUPABASE_ANON_KEY"
     );
 
-    const body = (await req.json()) as Partial<Body>;
-    if (!body.productId || !body.startDate || !body.endDate) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    const rawBody = await req.json();
+    const validation = checkAvailabilitySchema.safeParse(rawBody);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: validation.error.format() },
+        { status: 400 }
+      );
     }
+    const body = validation.data;
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: { persistSession: false },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireAuth } from "@/lib/auth-guard";
+import { uuidSchema } from "@/lib/validation";
 
 function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -13,10 +14,12 @@ export async function GET(req: NextRequest) {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const orderId = req.nextUrl.searchParams.get("orderId");
-    if (!orderId) {
-      return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
+    const orderIdRaw = req.nextUrl.searchParams.get("orderId");
+    const parsed = uuidSchema.safeParse(orderIdRaw);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid or missing orderId" }, { status: 400 });
     }
+    const orderId = parsed.data;
 
     const supabase = createAdminClient();
   const { data, error } = await supabase

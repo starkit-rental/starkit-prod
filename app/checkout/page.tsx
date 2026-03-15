@@ -30,9 +30,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Turnstile } from "@marsidev/react-turnstile";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { calculatePrice } from "@/lib/rental-engine";
 import { cn } from "@/lib/utils";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 /* ───────────────────────────── constants ───────────────────────────── */
 
@@ -349,6 +352,7 @@ function CheckoutContent() {
 
   // Bot protection
   const [formTimestamp] = useState(() => new Date().toISOString());
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   // ── Load product by ID ──
   useEffect(() => {
@@ -403,8 +407,9 @@ function CheckoutContent() {
     if (!inpostCodeValid) return false;
     if (!termsAccepted) return false;
     if (wantInvoice && (!companyName.trim() || !nip.trim())) return false;
+    if (TURNSTILE_SITE_KEY && !turnstileToken) return false;
     return true;
-  }, [firstName, lastName, email, phone, street, houseNumber, zipCode, city, inpostCodeValid, termsAccepted, wantInvoice, companyName, nip]);
+  }, [firstName, lastName, email, phone, street, houseNumber, zipCode, city, inpostCodeValid, termsAccepted, wantInvoice, companyName, nip, turnstileToken]);
 
   // ── Submit → create checkout session ──
   const handleInpostSelect = useCallback((pt: InpostPointData) => {
@@ -441,6 +446,7 @@ function CheckoutContent() {
           // Bot protection fields
           formTimestamp,
           _honeypot: "", // Hidden field - bots will fill it
+          ...(turnstileToken ? { turnstileToken } : {}),
         }),
       });
       const json = await res.json();
@@ -907,6 +913,18 @@ function CheckoutContent() {
                 aria-hidden="true"
               />
 
+              {/* Turnstile CAPTCHA - only rendered when site key is configured */}
+              {TURNSTILE_SITE_KEY && (
+                <div className="mt-4">
+                  <Turnstile
+                    siteKey={TURNSTILE_SITE_KEY}
+                    onSuccess={(token) => setTurnstileToken(token)}
+                    onExpire={() => setTurnstileToken(null)}
+                    onError={() => setTurnstileToken(null)}
+                    options={{ theme: "auto", language: "pl" }}
+                  />
+                </div>
+              )}
 
               {/* Submit CTA */}
               <Button

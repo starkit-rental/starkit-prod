@@ -10,7 +10,6 @@ import ProductSchema from "@/components/seo/product-schema";
 import BreadcrumbsSchema from "@/components/seo/breadcrumbs-schema";
 import FAQSchema from "@/components/seo/faq-schema";
 import RentalWidget from "../_components/rental-widget";
-import RelatedPosts from "@/components/blog/related-posts";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -262,8 +261,6 @@ export default async function ProductPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Related blog posts – internal linking */}
-      <RelatedPosts />
     </>
   );
 }

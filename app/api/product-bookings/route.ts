@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { availabilityLimiter, getClientIp } from "@/lib/rate-limit";
-
-type Body = {
-  productId: string;
-};
+import { productBookingsSchema } from "@/lib/validation";
 
 function assertEnv(value: string | undefined, name: string): string {
   if (!value) throw new Error(`Missing environment variable: ${name}`);
@@ -31,11 +28,15 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY ??
       assertEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
-    const body = (await req.json()) as Partial<Body>;
-
-    if (!body.productId) {
-      return NextResponse.json({ error: "Missing productId" }, { status: 400 });
+    const rawBody = await req.json();
+    const validation = productBookingsSchema.safeParse(rawBody);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: validation.error.format() },
+        { status: 400 }
+      );
     }
+    const body = validation.data;
 
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false },

@@ -261,10 +261,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Get signed URL (valid for 7 days)
+    // Get signed URL (valid for 1 hour — PDFs contain PII, keep window short)
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from("contracts")
-      .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+      .createSignedUrl(storagePath, 60 * 60);
 
     const publicUrl = signedUrlData?.signedUrl || null;
     if (signedUrlError) {
