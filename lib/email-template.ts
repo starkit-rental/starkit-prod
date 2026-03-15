@@ -245,7 +245,7 @@ export function renderPdfBox(): string {
 
 /**
  * {{pickup_box}} — InPost point details with map-style blue card.
- * Used in: Order Picked Up
+ * Used in: Order Picked Up (InPost)
  */
 export function renderPickupBox(vars: Record<string, string>): string {
   const pointId = vars.inpost_point_id || "—";
@@ -262,6 +262,30 @@ export function renderPickupBox(vars: Record<string, string>): string {
             <p style="margin:0 0 2px;font-size:16px;font-weight:700;color:${BRAND.dark}">${pointId}</p>
             ${pointAddr ? `<p style="margin:0;font-size:13px;color:#3b82f6;line-height:1.4">${pointAddr}</p>` : ""}
             <p style="margin:10px 0 0;font-size:12px;color:#64748b;line-height:1.5">Otrzymasz osobne powiadomienie SMS od InPost z kodem odbioru.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>`;
+}
+
+/**
+ * renderPersonalPickedUpBox — personal pickup dispatched box.
+ * Used in: Order Picked Up (personal_pickup)
+ */
+export function renderPersonalPickedUpBox(): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0">
+    <tr><td style="background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:20px 24px">
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="vertical-align:top;padding-right:14px">
+            <span style="font-size:28px;line-height:1">🏪</span>
+          </td>
+          <td>
+            <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1e40af">Odbiór osobisty</p>
+            <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#1a1a2e">Poznań, ul. Cumownicza</p>
+            <p style="margin:8px 0 0;font-size:13px;color:#64748b;line-height:1.5">Prosimy zadzwonić przed odbiorem: <strong>+48 453 461 061</strong></p>
+            <p style="margin:4px 0 0;font-size:12px;color:#64748b;line-height:1.5">Prosimy zabrać dowód tożsamości.</p>
           </td>
         </tr>
       </table>
@@ -363,7 +387,7 @@ export function buildOrderConfirmedHtml(v: OrderVars): string {
     `<ul style="margin:0 0 16px;padding-left:20px;color:#334155;font-size:14px;line-height:1.8">
 <li>Sprzęt odbierzesz w dniu <strong>${v.start_date}</strong></li>
 <li>Zwrot do końca dnia <strong>${v.end_date}</strong></li>
-<li>Kod odbioru otrzymasz SMS-em od InPost</li>
+${vars.delivery_method === "personal_pickup" ? "<li>Prosimy zadzwonić przed odbiorem: <strong>+48 453 461 061</strong></li>" : "<li>Kod odbioru otrzymasz SMS-em od InPost</li>"}
 <li>W razie pytań — odpowiedz na tego maila</li>
 </ul>`,
     paragraph(`Dziękujemy za wybór Starkit i życzymy udanego wynajmu!`),
@@ -372,10 +396,22 @@ export function buildOrderConfirmedHtml(v: OrderVars): string {
   return withStarkitTemplate(content, `Potwierdzenie rezerwacji ${v.order_number}`);
 }
 
-/** 3. Order Picked Up — sprzęt wysłany */
+/** 3. Order Picked Up — sprzęt wysłany / wydany */
 export function buildOrderPickedUpHtml(v: OrderVars): string {
   const vars: Record<string, string> = { ...v } as unknown as Record<string, string>;
-  const content = [
+  const isPersonalPickup = v.delivery_method === "personal_pickup";
+
+  const content = isPersonalPickup ? [
+    heading("Sprzęt wydany!", "✅"),
+    subtitle(`Zamówienie ${v.order_number}, ${v.customer_name}`),
+    paragraph(`Potwierdzamy wydanie zestawu Starlink Mini z zamówienia <strong>${v.order_number}</strong>. Sprzęt jest już w Twoich rękach — miłego korzystania!`),
+    renderPersonalPickedUpBox(),
+    renderInstructionsBox(),
+    v.info_box_content ? alertBox(v.info_box_content, "info") : "",
+    paragraph(`<strong>Okres wynajmu:</strong> ${v.start_date} – ${v.end_date}`),
+    paragraph(`Jeśli napotkasz jakiekolwiek problemy z uruchomieniem, odpowiedz na tego maila lub zadzwoń: <a href="tel:+48453461061" style="color:#1a1a2e;font-weight:600">+48 453 461 061</a>`),
+    signOff(),
+  ].join("\n") : [
     heading("Sprzęt jest już w drodze!", "🚀"),
     subtitle(`Zamówienie ${v.order_number} zostało wysłane, ${v.customer_name}`),
     paragraph(`Twój zestaw Starlink Mini został nadany i wkrótce będzie gotowy do odbioru. Poniżej znajdziesz dane punktu odbioru oraz instrukcję uruchomienia.`),
@@ -386,7 +422,11 @@ export function buildOrderPickedUpHtml(v: OrderVars): string {
     paragraph(`Jeśli napotkasz jakiekolwiek problemy z uruchomieniem, odpowiedz na tego maila — pomożemy!`),
     signOff(),
   ].join("\n");
-  return withStarkitTemplate(content, `Sprzęt w drodze! Instrukcja obsługi ${v.order_number}`);
+
+  const subject = isPersonalPickup
+    ? `Potwierdzenie wydania sprzętu ${v.order_number}`
+    : `Sprzęt w drodze! Instrukcja obsługi ${v.order_number}`;
+  return withStarkitTemplate(content, subject);
 }
 
 const PICKUP_ADDRESS = "Poznań, ul. Cumownicza";
@@ -407,7 +447,7 @@ export function buildOrderReadyForPickupHtml(v: OrderVars): string {
           <td>
             <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1e40af">Adres odbioru</p>
             <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#1a1a2e">${PICKUP_ADDRESS}</p>
-            <p style="margin:8px 0 0;font-size:13px;color:#64748b;line-height:1.5">Godziny otwarcia: pon.–pt. 9:00–18:00, sob. 9:00–14:00</p>
+            <p style="margin:8px 0 0;font-size:13px;color:#64748b;line-height:1.5">Prosimy zadzwonić przed odbiorem: <strong>+48 453 461 061</strong></p>
           </td>
         </tr>
       </table>

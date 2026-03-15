@@ -791,7 +791,7 @@ function CheckoutContent() {
                     <div>
                       <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">Adres odbioru osobistego</p>
                       <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Poznań, ul. Cumownicza</p>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Pon.–Pt. 9:00–18:00 · Sob. 9:00–14:00</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Prosimy zadzwonić przed odbiorem: <strong>+48 453 461 061</strong></p>
                       <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">Prosimy zabrać dowód tożsamości</p>
                     </div>
                   </div>

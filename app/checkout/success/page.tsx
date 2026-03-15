@@ -213,6 +213,32 @@ function InPostMap({
   );
 }
 
+/* ── Personal Pickup Card ────────────────────────────── */
+function PersonalPickupCard() {
+  return (
+    <Card className="overflow-hidden border-border">
+      <CardContent className="p-0">
+        <div className="flex items-center gap-2 px-5 pt-5 pb-3">
+          <MapPin className="h-5 w-5" style={{ color: GOLD }} />
+          <h3 className="text-base font-semibold text-foreground">Odbiór osobisty</h3>
+        </div>
+        <div className="px-5 pb-5 space-y-3">
+          <div className="rounded-lg p-3" style={{ backgroundColor: `${GOLD}15` }}>
+            <p className="text-sm font-semibold text-foreground">Poznań, ul. Cumownicza</p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Prosimy skontaktować się z nami przed odbiorem pod numerem{" "}
+            <a href="tel:+48453461061" className="font-semibold text-foreground hover:underline">
+              +48 453 461 061
+            </a>
+          </p>
+          <p className="text-xs text-muted-foreground">Prosimy zabrać dowód tożsamości.</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ── Financial Summary ───────────────────────────────── */
 function FinancialSummary({
   rentalPrice,
