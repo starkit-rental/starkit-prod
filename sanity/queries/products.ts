@@ -101,20 +101,7 @@ export const productsPageQuery = groq`
       ${featureCarouselQuery},
       ${blogCarouselQuery},
     },
-    meta_title,
-    meta_description,
-    noindex,
-    ogImage {
-      asset->{
-        _id,
-        url,
-        metadata {
-          dimensions {
-            width,
-            height
-          }
-        }
-      },
-    }
+    "meta_title": seo.title,
+    "meta_description": seo.description,
   }
 `;
