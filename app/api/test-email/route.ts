@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendOrderReceivedEmail, sendOrderConfirmedEmail } from "@/lib/email";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await req.json();
     const { type, email, ...params } = body;

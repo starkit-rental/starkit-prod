@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuth } from "@/lib/auth-guard";
 
 /**
  * Diagnostic endpoint: tests email_logs insert capability.
@@ -22,7 +23,10 @@ function createAdmin() {
   };
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
+
   const diagnostics: Record<string, unknown> = {};
 
   try {
@@ -116,7 +120,10 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const { hasServiceKey, client } = createAdmin();
 

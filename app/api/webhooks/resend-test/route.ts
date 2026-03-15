@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { render } from "@react-email/components";
 import { getResendClient } from "@/lib/resend";
 import RentalConfirmation from "@/emails/RentalConfirmation";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuth } from "@/lib/auth-guard";
 
 /**
  * Test webhook for Resend email sending
@@ -18,7 +19,10 @@ function assertEnv(value: string | undefined, name: string): string {
   return value;
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const supabaseUrl = assertEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL");
     const supabaseServiceRoleKey = assertEnv(
