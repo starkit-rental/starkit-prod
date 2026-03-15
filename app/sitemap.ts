@@ -65,7 +65,7 @@ async function getProductsSitemap(): Promise<MetadataRoute.Sitemap[]> {
   return data;
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap[]> {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const [pages, posts, products] = await Promise.all([
     getPagesSitemap(),
@@ -88,5 +88,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap[]> {
     },
   ];
 
-  return [...pages, staticPages, ...posts, ...products];
+  return [...pages, ...staticPages, ...posts, ...products].flat();
 }
