@@ -42,53 +42,55 @@ export default async function BlogCarousel({
         )}
 
         {latestPosts && latestPosts.length > 0 && (
-          <Carousel
-            opts={{
-              align: "start",
-              loop: false,
-            }}
-          >
-            <CarouselContent className="-ml-3 md:-ml-4">
-              {latestPosts.map((post) => (
-                <CarouselItem
-                  key={post?.slug?.current}
-                  className="pl-3 md:pl-4 md:basis-1/2 lg:basis-1/3"
-                >
-                  <Link
-                    className="flex w-full rounded-3xl ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    href={`/blog/${post?.slug?.current}`}
+          <div className="flex flex-col">
+            <Carousel
+              opts={{
+                align: "start",
+                loop: false,
+              }}
+            >
+              <CarouselContent className="-ml-3 md:-ml-4">
+                {latestPosts.map((post) => (
+                  <CarouselItem
+                    key={post?.slug?.current}
+                    className="pl-3 md:pl-4 md:basis-1/2 lg:basis-1/3"
                   >
-                    <PostCard
-                      title={post?.title ?? ""}
-                      excerpt={post?.excerpt ?? ""}
-                      image={post?.image ?? null}
-                    />
-                  </Link>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious
-              variant="secondary"
-              className="-left-3 md:-left-8 xl:-left-12"
-            />
-            <CarouselNext
-              variant="secondary"
-              className="-right-3 md:-right-8 xl:-right-12"
-            />
-            <div className="w-full flex justify-center mt-6">
-              <CarouselDots />
-            </div>
-          </Carousel>
-        )}
+                    <Link
+                      className="flex w-full rounded-3xl ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      href={`/blog/${post?.slug?.current}`}
+                    >
+                      <PostCard
+                        title={post?.title ?? ""}
+                        excerpt={post?.excerpt ?? ""}
+                        image={post?.image ?? null}
+                      />
+                    </Link>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious
+                variant="secondary"
+                className="-left-3 md:-left-8 xl:-left-12"
+              />
+              <CarouselNext
+                variant="secondary"
+                className="-right-3 md:-right-8 xl:-right-12"
+              />
+              <div className="w-full flex justify-center mt-5">
+                <CarouselDots />
+              </div>
+            </Carousel>
 
-        {showViewAllButton && (
-          <div className="flex justify-center mt-8">
-            <Button asChild size="lg">
-              <Link href="/blog">
-                Zobacz wszystkie
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            {showViewAllButton && (
+              <div className="flex justify-center mt-6">
+                <Button asChild size="lg">
+                  <Link href="/blog">
+                    Zobacz wszystkie
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
