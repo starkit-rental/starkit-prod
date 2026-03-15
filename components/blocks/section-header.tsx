@@ -34,13 +34,23 @@ export default function SectionHeader({
           className={cn(color === "primary" ? "text-background" : undefined)}
         >
           {tagLine && (
-            <h1 className="leading-[0] mb-4">
-              <span className="text-base font-semibold">{tagLine}</span>
-            </h1>
+            <p className={cn(
+              "text-sm font-semibold mb-3 tracking-wide uppercase",
+              color === "primary" ? "text-background/80" : "text-primary"
+            )}>
+              {tagLine}
+            </p>
           )}
-          <h2 className="text-3xl md:text-5xl mb-4">{title}</h2>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">{title}</h2>
         </div>
-        <p>{description}</p>
+        {description && (
+          <p className={cn(
+            "leading-relaxed text-base md:text-lg max-w-3xl",
+            color === "primary" ? "text-background/70" : "text-muted-foreground"
+          )}>
+            {description}
+          </p>
+        )}
       </div>
     </SectionContainer>
   );

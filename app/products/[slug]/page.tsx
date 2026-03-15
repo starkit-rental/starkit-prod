@@ -1,5 +1,5 @@
 import { client } from "@/sanity/lib/client";
-import { singleProductQuery } from "@/sanity/queries/products";
+import { singleProductQuery, allProductsQuery } from "@/sanity/queries/products";
 import { PortableText } from "@portabletext/react";
 import Blocks from "@/components/blocks";
 import { ProductGallery } from "../_components/product-gallery";
@@ -11,6 +11,17 @@ import BreadcrumbsSchema from "@/components/seo/breadcrumbs-schema";
 import FAQSchema from "@/components/seo/faq-schema";
 import RentalWidget from "../_components/rental-widget";
 import RelatedPosts from "@/components/blog/related-posts";
+import Link from "next/link";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import {
+  ArrowRight,
+  Truck,
+  Shield,
+  Headphones,
+  CheckCircle2,
+  Zap,
+} from "lucide-react";
 
 export const revalidate = 60;
 
@@ -53,19 +64,32 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
+const TRUST_ITEMS = [
+  { icon: Truck, text: "Dostawa 24-48h w całej Polsce" },
+  { icon: Zap, text: "Plug & Play – gotowe w 5 minut" },
+  { icon: Headphones, text: "Wsparcie techniczne 7/7" },
+  { icon: Shield, text: "Sprawdzony, serwisowany sprzęt" },
+];
+
 export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params;
-  const product = await client.fetch(singleProductQuery, { slug });
+  const [product, allProducts] = await Promise.all([
+    client.fetch(singleProductQuery, { slug }),
+    client.fetch(allProductsQuery),
+  ]);
 
   if (!product) {
     return <div className="container py-12 md:py-16">Produkt nie znaleziony.</div>;
   }
 
+  // Cross-link: find the OTHER product
+  const otherProduct = allProducts?.find((p: any) => p.slug !== slug);
+
   // Breadcrumbs data
   const breadcrumbLinks = [
     { label: "Strona główna", href: "/" },
-    { label: "Produkty", href: "/products" },
-    { label: product.title || "", href: `/products/${product.slug}` },
+    { label: "Oferta", href: "/products" },
+    { label: `Wynajem ${product.title}` || "", href: `/products/${product.slug}` },
   ];
 
   const faqsFromBlocks = product.blocks
@@ -86,13 +110,14 @@ export default async function ProductPage({ params }: PageProps) {
       />
       <BreadcrumbsSchema links={breadcrumbLinks} />
       {faqsFromBlocks.length > 0 && <FAQSchema faqs={faqsFromBlocks} />}
+
       {/* Product Detail Section */}
       <section className="w-full py-8 md:py-12 lg:py-16">
         <div className="container">
           {/* Breadcrumbs */}
           <Breadcrumbs links={breadcrumbLinks} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14">
 
             {/* Left Column - Gallery */}
             <div className="w-full">
@@ -102,7 +127,15 @@ export default async function ProductPage({ params }: PageProps) {
             </div>
 
             {/* Right Column - Content */}
-            <div className="w-full space-y-6">
+            <div className="w-full space-y-5">
+
+              {/* Status badge */}
+              {product.status === "available" && (
+                <span className="inline-flex items-center gap-1.5 bg-green-500/10 text-green-700 dark:text-green-400 text-xs font-semibold px-3 py-1.5 rounded-full border border-green-500/20">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Dostępny do wynajmu
+                </span>
+              )}
 
               {/* Title */}
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
@@ -112,7 +145,8 @@ export default async function ProductPage({ params }: PageProps) {
               {/* Price */}
               {product.pricePerDay && (
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-primary">
+                  <p className="text-xs text-muted-foreground mb-0.5">Cena od</p>
+                  <span className="text-3xl font-bold text-primary">
                     {product.pricePerDay} zł
                   </span>
                   <span className="text-muted-foreground">/ dzień</span>
@@ -121,35 +155,49 @@ export default async function ProductPage({ params }: PageProps) {
 
               {/* Excerpt */}
               {product.excerpt && (
-                <p className="text-lg text-muted-foreground leading-relaxed">
+                <p className="text-base text-muted-foreground leading-relaxed">
                   {product.excerpt}
                 </p>
               )}
 
               {/* Deposit Info */}
               {product.deposit && (
-                <div className="p-4 rounded-lg bg-muted/50 border">
+                <div className="p-4 rounded-xl bg-muted/50 border">
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="font-medium">Kaucja:</span>
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Kaucja zwrotna:</span>
                     <span>{product.deposit} zł</span>
                   </div>
                 </div>
               )}
 
+              {/* Rental Widget */}
               <RentalWidget sanitySlug={product.slug} productTitle={product.title || "Produkt"} />
+
+              {/* Trust signals */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                {TRUST_ITEMS.map((item) => (
+                  <div key={item.text} className="flex items-center gap-2.5 text-sm">
+                    <item.icon className="h-4 w-4 text-primary flex-shrink-0" />
+                    <span className="text-muted-foreground">{item.text}</span>
+                  </div>
+                ))}
+              </div>
 
               {/* Specs */}
               {product.specs?.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-lg font-semibold">Specyfikacja</h3>
-                  <div className="space-y-2">
+                <div className="space-y-3 pt-2">
+                  <h3 className="text-lg font-semibold">Specyfikacja techniczna</h3>
+                  <div className="rounded-xl border overflow-hidden">
                     {product.specs.map((spec: any, i: number) => (
                       <div
                         key={i}
-                        className="flex justify-between py-2 border-b border-border/50 last:border-0"
+                        className={`flex justify-between px-4 py-3 text-sm ${
+                          i % 2 === 0 ? "bg-muted/30" : ""
+                        } ${i < product.specs.length - 1 ? "border-b" : ""}`}
                       >
                         <span className="text-muted-foreground">{spec.label}</span>
-                        <span className="font-medium">{spec.value}</span>
+                        <span className="font-medium text-right">{spec.value}</span>
                       </div>
                     ))}
                   </div>
@@ -171,10 +219,46 @@ export default async function ProductPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* Additional Blocks */}
+      {/* Additional Blocks from Sanity */}
       {product.blocks?.length > 0 && (
-        <section className="w-full py-12 md:py-16">
-          <Blocks blocks={product.blocks as any} />
+        <Blocks blocks={product.blocks as any} />
+      )}
+
+      {/* Cross-link to other product */}
+      {otherProduct && (
+        <section className="bg-muted/40 py-12 md:py-16">
+          <div className="container max-w-4xl">
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
+              {otherProduct.image && (
+                <div className="relative w-full md:w-56 aspect-[4/3] rounded-2xl overflow-hidden flex-shrink-0 bg-muted">
+                  <Image
+                    src={otherProduct.image}
+                    alt={`Wynajem ${otherProduct.title}`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 224px"
+                  />
+                </div>
+              )}
+              <div className="flex-1 text-center md:text-left">
+                <p className="text-sm font-semibold text-primary mb-1">Sprawdź również</p>
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">
+                  Wynajem {otherProduct.title}
+                </h2>
+                {otherProduct.excerpt && (
+                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                    {otherProduct.excerpt}
+                  </p>
+                )}
+                <Button asChild>
+                  <Link href={`/products/${otherProduct.slug}`}>
+                    Zobacz {otherProduct.title}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
         </section>
       )}
 

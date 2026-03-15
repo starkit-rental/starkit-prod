@@ -34,7 +34,7 @@ export function ProductGallery({ images }: { images: string[] }) {
           <CarouselContent>
             {images.map((src, i) => (
               <CarouselItem key={i}>
-                <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted/30">
+                <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-muted/30 border">
                   <Image
                     src={src}
                     alt={`Zdjęcie ${i + 1}`}
@@ -55,14 +55,16 @@ export function ProductGallery({ images }: { images: string[] }) {
       </div>
 
       {/* miniatury */}
-      <div className="mt-4 flex gap-2 overflow-x-auto">
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
         {images.map((src, i) => (
           <button
             key={i}
             aria-label={`Pokaż zdjęcie ${i + 1}`}
             onClick={() => api?.scrollTo(i)}
-            className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-md border transition ${
-              current === i ? "ring-2 ring-primary" : "opacity-80 hover:opacity-100"
+            className={`relative h-18 w-22 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+              current === i
+                ? "border-primary ring-1 ring-primary/30 opacity-100"
+                : "border-transparent opacity-60 hover:opacity-100"
             }`}
           >
             <Image
@@ -70,7 +72,7 @@ export function ProductGallery({ images }: { images: string[] }) {
               alt={`Miniatura ${i + 1}`}
               fill
               className="object-cover"
-              sizes="80px"
+              sizes="88px"
             />
           </button>
         ))}
