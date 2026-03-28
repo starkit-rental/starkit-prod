@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
+import { pl } from "date-fns/locale";
 import { FinanceSection } from "./_components/finance-section";
 import { moneyPln, dateShort, shortOrderNumber, initials, normalizeOne, pillForOrder, pillForPayment } from "@/lib/order-helpers";
 
@@ -1143,7 +1144,8 @@ export default function OfficeOrderDetailsPage() {
                       const typeLabel = typeLabels[log.type] || log.type;
                       const sentDate = format(
                         parseISO(log.sent_at),
-                        "dd.MM.yyyy, HH:mm"
+                        "dd.MM.yyyy, HH:mm",
+                        { locale: pl }
                       );
 
                       return (
@@ -1416,7 +1418,7 @@ export default function OfficeOrderDetailsPage() {
                 <p className="text-sm font-semibold text-slate-900 truncate">{previewLog.subject}</p>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Do: {previewLog.recipient} &bull;{" "}
-                  {format(parseISO(previewLog.sent_at), "dd.MM.yyyy, HH:mm")}
+                  {format(parseISO(previewLog.sent_at), "dd.MM.yyyy, HH:mm", { locale: pl })}
                 </p>
               </div>
               <button

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
+import { pl } from "date-fns/locale";
 import { moneyPln } from "@/lib/order-helpers";
 import {
   Search,
@@ -48,7 +49,7 @@ type SortDir = "asc" | "desc";
 function dateShort(value: string | null): string {
   if (!value) return "—";
   try {
-    return format(parseISO(value), "dd MMM yyyy");
+    return format(parseISO(value), "dd MMM yyyy", { locale: pl });
   } catch {
     return value;
   }

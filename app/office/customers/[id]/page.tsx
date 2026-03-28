@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
+import { pl } from "date-fns/locale";
 import { moneyPln } from "@/lib/order-helpers";
 import {
   ArrowLeft,
@@ -54,7 +55,7 @@ type Order = {
 
 function dateFmt(v: string | null) {
   if (!v) return "—";
-  try { return format(parseISO(v), "dd MMM yyyy"); } catch { return v; }
+  try { return format(parseISO(v), "dd MMM yyyy", { locale: pl }); } catch { return v; }
 }
 
 function pillOrder(status: string | null) {

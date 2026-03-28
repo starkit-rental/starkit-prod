@@ -1,4 +1,5 @@
 import { format, parseISO } from "date-fns";
+import { pl } from "date-fns/locale";
 
 // ═══════════════════════════════════════════════════════════
 //  Shared helpers for office order pages
@@ -17,7 +18,7 @@ export function moneyPln(value: unknown): string {
 
 export function dateShort(value: string): string {
   try {
-    return format(parseISO(value), "dd MMM yyyy");
+    return format(parseISO(value), "dd MMM yyyy", { locale: pl });
   } catch {
     return value;
   }

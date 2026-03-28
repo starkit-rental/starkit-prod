@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { format, addDays, parseISO } from "date-fns";
+import { addDays, differenceInDays, isSameDay, parseISO, format, startOfDay } from "date-fns";
+import { pl } from "date-fns/locale";
 import {
   ArrowLeft,
   Calendar,
@@ -752,8 +753,8 @@ export default function NewOrderPageV2() {
                   <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
                     <p className="text-xs text-slate-500 mb-1">Wybrany okres:</p>
                     <p className="text-sm font-semibold text-slate-900">
-                      {format(selectedStart, "dd MMM yyyy")} →{" "}
-                      {format(selectedEnd, "dd MMM yyyy")}
+                      {format(selectedStart, "dd MMM yyyy", { locale: pl })} →{" "}
+                      {format(selectedEnd, "dd MMM yyyy", { locale: pl })}
                     </p>
                     <p className="text-xs text-slate-500 mt-1">
                       {totalPricing?.days} dni wynajmu
