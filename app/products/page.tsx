@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
     "Wynajem Starlink i Starlink Mini – oferta, ceny, dostawa | Starkit";
   const description =
     page?.meta_description ||
-    "Profesjonalny wynajem Starlink Standard i Starlink Mini od 1 dnia. Dostawa kurierem w 24-48h w całej Polsce. Na event, wesele, budowę, działkę i pracę zdalną.";
+    "Profesjonalny wynajem Starlink Standard i Starlink Mini od 3 dni. Dostawa kurierem w 24-48h w całej Polsce. Na event, wesele, budowę, działkę i pracę zdalną.";
 
   return {
     title,

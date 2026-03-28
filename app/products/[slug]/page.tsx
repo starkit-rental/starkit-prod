@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description =
     product.meta_description ||
     product.excerpt ||
-    `Wynajmij ${product.title} na dzień, weekend lub dłużej. Dostawa na terenie całej Polski. Idealne na event, budowę lub działkę.`;
+    `Wynajmij ${product.title} na minimum 3 dni. Dostawa na terenie całej Polski. Idealne na event, budowę lub działkę.`;
   const ogImage = product.ogImage?.asset?.url || product.images?.[0];
 
   return {

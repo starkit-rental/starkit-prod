@@ -92,6 +92,7 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
   const [available, setAvailable] = useState<boolean | null>(null);
 
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const MIN_RENTAL_DAYS = 3;
 
   // ── Load product ──
   useEffect(() => {
@@ -245,6 +246,17 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
   const startDate = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "";
   const endDate = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "";
   const rangeValid = !!(dateRange?.from && dateRange?.to && dateRange.to > dateRange.from);
+  
+  // Check if selected range meets minimum days requirement
+  const meetsMinimumDays = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to) return false;
+    try {
+      const days = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
+      return days.length >= MIN_RENTAL_DAYS;
+    } catch {
+      return false;
+    }
+  }, [dateRange, MIN_RENTAL_DAYS]);
 
   // ── Calculate pricing ──
   const pricing = useMemo(() => {
@@ -314,6 +326,7 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
 
     if (!product) { setCheckoutError("Brak produktu"); return; }
     if (!rangeValid) { setCheckoutError("Wybierz poprawny zakres dat"); return; }
+    if (!meetsMinimumDays) { setCheckoutError(`Minimalny okres wynajmu to ${MIN_RENTAL_DAYS} dni`); return; }
     if (available !== true) { setCheckoutError("Wybrany termin jest niedostępny"); return; }
 
     const params = new URLSearchParams({
@@ -362,7 +375,7 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
           {/* ── Date Picker ── */}
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Okres wynajmu
+              Okres wynajmu (minimum {MIN_RENTAL_DAYS} dni)
             </label>
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
@@ -425,8 +438,22 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
             </Popover>
           </div>
 
+          {/* ── Minimum days warning ── */}
+          {rangeValid && !meetsMinimumDays && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
+              <div className="flex items-start gap-2">
+                <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <span className="font-semibold">Minimalny okres wynajmu to {MIN_RENTAL_DAYS} dni.</span>
+                  <br />
+                  Wybierz dłuższy zakres dat, aby kontynuować.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── Summary Card ── */}
-          {rangeValid && pricing && (
+          {rangeValid && meetsMinimumDays && pricing && (
             <div className="rounded-xl border border-border bg-muted p-4">
               <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Podsumowanie
@@ -459,7 +486,7 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
           )}
 
           {/* ── Availability indicator ── */}
-          {rangeValid && (
+          {rangeValid && meetsMinimumDays && (
             <div className="flex items-center gap-2 text-sm">
               {checking ? (
                 <>
@@ -486,7 +513,7 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
           )}
 
           {/* ── CTA Button ── */}
-          {rangeValid && available === true && (
+          {rangeValid && meetsMinimumDays && available === true && (
             <Button
               onClick={onContinue}
               className="w-full rounded-xl bg-primary py-6 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/25 active:scale-[0.98]"
