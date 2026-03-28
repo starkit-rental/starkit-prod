@@ -342,9 +342,16 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
   const isDateDisabled = useCallback(
     (date: Date) => {
       if (isBefore(date, today)) return true;
+      
+      // If start date is selected, disable dates less than MIN_RENTAL_DAYS from start
+      if (dateRange?.from && !dateRange?.to) {
+        const minEndDate = addDays(startOfDay(dateRange.from), MIN_RENTAL_DAYS - 1);
+        if (isBefore(date, minEndDate)) return true;
+      }
+      
       return allBlockedKeys.has(format(date, "yyyy-MM-dd"));
     },
-    [allBlockedKeys, today],
+    [allBlockedKeys, today, dateRange, MIN_RENTAL_DAYS],
   );
 
   const displayName = product?.name ?? productTitle;
