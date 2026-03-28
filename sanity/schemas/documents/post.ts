@@ -6,6 +6,7 @@ export default defineType({
   title: "Post",
   type: "document",
   icon: FileText,
+  liveEdit: false,
   groups: [
     {
       name: "content",
@@ -80,6 +81,11 @@ export default defineType({
       title: "Body",
       type: "block-content",
       group: "content",
+      options: {
+        // Don't load full content in list view for performance
+        // @ts-ignore
+        disablePreview: true,
+      },
     }),
     defineField({
       name: "faqs",
@@ -125,12 +131,17 @@ export default defineType({
   preview: {
     select: {
       title: "title",
-      author: "author.name",
+      excerpt: "excerpt",
       media: "image",
+      // Don't resolve author reference in list for performance
     },
     prepare(selection) {
-      const { author } = selection;
-      return { ...selection, subtitle: author && `by ${author}` };
+      const { title, excerpt } = selection;
+      return { 
+        title,
+        subtitle: excerpt ? excerpt.slice(0, 60) + (excerpt.length > 60 ? '...' : '') : undefined,
+        media: selection.media,
+      };
     },
   },
 });
