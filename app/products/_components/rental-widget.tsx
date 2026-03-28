@@ -415,7 +415,18 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
                 <Calendar
                   mode="range"
                   selected={dateRange}
-                  onSelect={(range) => setDateRange(range)}
+                  onSelect={(range) => {
+                    // Enforce minimum rental period
+                    if (range?.from && range?.to) {
+                      const days = eachDayOfInterval({ start: range.from, end: range.to });
+                      if (days.length < MIN_RENTAL_DAYS) {
+                        // Reset selection if less than minimum days
+                        setDateRange({ from: range.from, to: undefined });
+                        return;
+                      }
+                    }
+                    setDateRange(range);
+                  }}
                   numberOfMonths={2}
                   disabled={isDateDisabled}
                   locale={plRdp}
