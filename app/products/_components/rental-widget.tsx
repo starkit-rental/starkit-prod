@@ -86,6 +86,15 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const [checking, setChecking] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
@@ -411,7 +420,7 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
                   )}
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start" sideOffset={8}>
+              <PopoverContent className="w-auto p-0 max-w-[min(calc(100vw-2rem),800px)]" align="start" sideOffset={8}>
                 <Calendar
                   mode="range"
                   selected={dateRange}
@@ -427,7 +436,7 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
                     }
                     setDateRange(range);
                   }}
-                  numberOfMonths={2}
+                  numberOfMonths={isMobile ? 1 : 2}
                   disabled={isDateDisabled}
                   locale={plRdp}
                   modifiers={{
