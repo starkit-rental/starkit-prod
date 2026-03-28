@@ -9,6 +9,7 @@ import CookieConsent from "./_components/cookie-consent";
 import OrganizationSchema from "@/components/seo/organization-schema";
 import WebsiteSchema from "@/components/seo/website-schema";
 import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
+import Script from "next/script";
 
 const isProduction = process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
 
@@ -89,6 +90,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <>
           <GoogleTagManager gtmId="GTM-MQXCK4RC" />
           <GoogleAnalytics gaId="G-TFV3MF7EEF" />
+          <Script
+            id="google-ads"
+            strategy="afterInteractive"
+            src="https://www.googletagmanager.com/gtag/js?id=AW-18046741285"
+          />
+          <Script id="google-ads-config" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'AW-18046741285');
+            `}
+          </Script>
         </>
       )}
     </html>
