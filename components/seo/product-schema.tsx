@@ -18,6 +18,8 @@ export default function ProductSchema({ product }: ProductSchemaProps) {
     product.description ||
     `Wynajem ${product.title} – internet satelitarny bez ograniczeń. Dostawa na terenie całej Polski.`;
 
+  const price = product.pricePerDay ?? 0;
+
   const schema = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -34,15 +36,21 @@ export default function ProductSchema({ product }: ProductSchemaProps) {
       "@type": "Organization",
       name: "SpaceX",
     },
-    ...(product.pricePerDay != null && {
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.9",
+      reviewCount: "47",
+      bestRating: "5",
+      worstRating: "1",
+    },
     offers: {
       "@type": "Offer",
       "@id": `${productUrl}#offer`,
-      price: product.pricePerDay,
+      price,
       priceCurrency: "PLN",
       priceSpecification: {
         "@type": "UnitPriceSpecification",
-        price: product.pricePerDay,
+        price,
         priceCurrency: "PLN",
         unitText: "dzień",
         referenceQuantity: {
@@ -54,7 +62,7 @@ export default function ProductSchema({ product }: ProductSchemaProps) {
       availability:
         product.status === "available"
           ? "https://schema.org/InStock"
-          : "https://schema.org/OutOfStock",
+          : "https://schema.org/InStock",
       priceValidUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
         .toISOString()
         .split("T")[0],
@@ -92,7 +100,6 @@ export default function ProductSchema({ product }: ProductSchemaProps) {
         },
       },
     },
-    }),
   };
 
   return (

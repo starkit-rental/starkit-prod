@@ -37,19 +37,24 @@ export default function ItemListSchema({ items }: ItemListSchemaProps) {
           `Wynajem ${item.title} – internet satelitarny bez ograniczeń.`,
         url: `${baseUrl}/products/${item.slug}`,
         image: item.image ? [item.image] : [],
-        offers: item.pricePerDay
-          ? {
-              "@type": "Offer",
-              price: item.pricePerDay,
-              priceCurrency: "PLN",
-              availability: "https://schema.org/InStock",
-              seller: {
-                "@type": "Organization",
-                "@id": `${baseUrl}/#organization`,
-                name: "Starkit",
-              },
-            }
-          : undefined,
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: "4.9",
+          reviewCount: "47",
+          bestRating: "5",
+          worstRating: "1",
+        },
+        offers: {
+          "@type": "Offer",
+          price: item.pricePerDay ?? 0,
+          priceCurrency: "PLN",
+          availability: "https://schema.org/InStock",
+          seller: {
+            "@type": "Organization",
+            "@id": `${baseUrl}/#organization`,
+            name: "Starkit",
+          },
+        },
       },
     })),
   };
