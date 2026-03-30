@@ -46,7 +46,8 @@ export default function ItemListSchema({ items }: ItemListSchemaProps) {
         },
         offers: {
           "@type": "Offer",
-          price: item.pricePerDay ?? 0,
+          // Google rejects price: 0 — use fallback minimum
+          price: item.pricePerDay && item.pricePerDay > 0 ? item.pricePerDay : 39,
           priceCurrency: "PLN",
           availability: "https://schema.org/InStock",
           seller: {

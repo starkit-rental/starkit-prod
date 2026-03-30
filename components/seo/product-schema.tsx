@@ -18,7 +18,8 @@ export default function ProductSchema({ product }: ProductSchemaProps) {
     product.description ||
     `Wynajem ${product.title} – internet satelitarny bez ograniczeń. Dostawa na terenie całej Polski.`;
 
-  const price = product.pricePerDay ?? 0;
+  // Google rejects price: 0 — use fallback minimum
+  const price = product.pricePerDay && product.pricePerDay > 0 ? product.pricePerDay : 39;
 
   const schema = {
     "@context": "https://schema.org",
