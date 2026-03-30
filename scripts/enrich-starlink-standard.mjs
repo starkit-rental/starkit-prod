@@ -58,8 +58,8 @@ async function run() {
 
   // ── 1. Add more specs ──
   const newSpecs = [
-    { _key: rk(), label: "Prędkość pobierania", value: "do 250 Mbps" },
-    { _key: rk(), label: "Prędkość wysyłania", value: "do 40 Mbps" },
+    { _key: rk(), label: "Prędkość pobierania", value: "do 350 Mbps" },
+    { _key: rk(), label: "Prędkość wysyłania", value: "~35 Mbps" },
     { _key: rk(), label: "Zasięg Wi-Fi", value: "do 185 m²" },
     { _key: rk(), label: "Max urządzeń", value: "128 jednocześnie" },
     { _key: rk(), label: "Waga anteny", value: "~2,9 kg" },

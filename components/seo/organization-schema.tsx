@@ -68,7 +68,7 @@ export default function OrganizationSchema() {
             "@type": "Service",
             name: "Wynajem Starlink Standard",
             description:
-              "Wynajem zestawu Starlink Standard – internet satelitarny do 250 Mbps. Dostawa na terenie całej Polski.",
+              "Wynajem zestawu Starlink Standard – internet satelitarny do 350 Mbps download, ~35 Mbps upload. Dostawa na terenie całej Polski.",
             url: `${baseUrl}/products/starlink-standard`,
           },
         },
@@ -78,7 +78,7 @@ export default function OrganizationSchema() {
             "@type": "Service",
             name: "Wynajem Starlink Mini",
             description:
-              "Wynajem zestawu Starlink Mini – kompaktowy internet satelitarny do 100 Mbps. Idealny dla podróżników i pracy zdalnej.",
+              "Wynajem zestawu Starlink Mini – kompaktowy internet satelitarny do 350 Mbps download, ~30 Mbps upload. Idealny dla podróżników i pracy zdalnej.",
             url: `${baseUrl}/products/starlink-mini`,
           },
         },

@@ -51,7 +51,7 @@ async function run() {
       _type: "faq",
       title: "Jaką prędkość oferuje Starlink Standard?",
       body: [
-        pt("Starlink Standard zapewnia prędkość pobierania do 250 Mbps i wysyłania do 40 Mbps. To idealna opcja dla wymagających zastosowań: streamingu 4K, wideokonferencji, dużych teamów na evencie lub tymczasowego biura."),
+        pt("Starlink Standard zapewnia prędkość pobierania do 350 Mbps i wysyłania ~35 Mbps. To idealna opcja dla wymagających zastosowań: streamingu 4K, wideokonferencji, dużych teamów na evencie lub tymczasowego biura."),
       ],
     },
     {
@@ -99,7 +99,7 @@ async function run() {
       _type: "faq",
       title: "Kiedy wybrać Starlink Standard zamiast Mini?",
       body: [
-        pt("Wybierz Standard gdy potrzebujesz maksymalnej prędkości (250 Mbps vs 100 Mbps w Mini), większego zasięgu Wi-Fi (185 m² vs 90 m²) lub obsługi wielu urządzeń jednocześnie. Standard to lepszy wybór na eventy, wesela, budowy i biura tymczasowe."),
+        pt("Wybierz Standard gdy potrzebujesz większego zasięgu Wi-Fi (185 m² vs 90 m²), wyższego uploadu (35 Mbps vs 30 Mbps) lub obsługi wielu urządzeń jednocześnie. Standard to lepszy wybór na eventy, wesela, budowy i biura tymczasowe."),
       ],
     },
   ];
@@ -127,7 +127,7 @@ async function run() {
       _type: "faq",
       title: "Jaką prędkość oferuje Starlink Mini?",
       body: [
-        pt("Starlink Mini osiąga prędkość pobierania do 100 Mbps i wysyłania do 10 Mbps. To więcej niż wystarczy do pracy zdalnej, wideokonferencji, streamingu Full HD i przeglądania internetu w kamperze czy na działce."),
+        pt("Starlink Mini osiąga prędkość pobierania do 350 Mbps i wysyłania ~30 Mbps. To więcej niż wystarczy do pracy zdalnej, wideokonferencji, streamingu 4K i przeglądania internetu w kamperze czy na działce."),
       ],
     },
     {
