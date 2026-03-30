@@ -12,6 +12,8 @@ import BlogCTA from "@/components/blog/blog-cta";
 import BlogPostSchema from "@/components/seo/blog-post-schema";
 import FAQSchema from "@/components/seo/faq-schema";
 
+export const revalidate = 60;
+
 export async function generateStaticParams() {
   const posts = await fetchSanityPostsStaticParams();
 
