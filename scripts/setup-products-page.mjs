@@ -249,7 +249,7 @@ async function setupProductsPage() {
     seo: {
       title: "Wynajem Starlink i Starlink Mini – oferta, ceny, dostawa | Starkit",
       description:
-        "Profesjonalny wynajem Starlink Standard i Starlink Mini od 1 dnia. Ceny od 49 zł/dzień. Dostawa kurierem w 24-48h w całej Polsce. Na event, wesele, budowę, działkę i pracę zdalną.",
+        "Profesjonalny wynajem Starlink Standard i Starlink Mini od 1 dnia. Ceny od 39 zł/dzień. Dostawa kurierem w 24-48h w całej Polsce. Na event, wesele, budowę, działkę i pracę zdalną.",
     },
   };
 

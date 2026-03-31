@@ -239,7 +239,7 @@ const newPosts = [
       p("Cały proces trwa dosłownie kilka minut, a sprzęt dociera gotowy do użycia – wystarczy postawić antenę i podłączyć zasilanie. Zero konfiguracji, zero wizyt technika."),
       
       h2("Ile kosztuje wynajem Starlink na wakacje?"),
-      p("Wynajem Starlink Mini zaczyna się od 39 zł/dzień, a Starlink Standard od 49 zł/dzień. Im dłuższy okres wynajmu, tym niższa stawka dzienna. Na dwutygodniowe wakacje koszt jest ułamkiem ceny zakupu zestawu. Do ceny doliczana jest zwrotna kaucja."),
+      p("Wynajem Starlink Mini zaczyna się od 39 zł/dzień, a Starlink Standard od 59 zł/dzień. Im dłuższy okres wynajmu, tym niższa stawka dzienna. Na dwutygodniowe wakacje koszt jest ułamkiem ceny zakupu zestawu. Do ceny doliczana jest zwrotna kaucja."),
       
       h2("Podsumowanie"),
       p("Wynajem Starlink na wakacje 2026 to najwygodniejszy sposób na szybki internet w miejscach, gdzie tradycyjne łącza zawodzą. Niezależnie czy jedziesz nad morze, w góry, na Mazury czy w głąb Roztocza – Starlink zapewni Ci komfort połączenia wszędzie. Zamów na starkit.pl i ciesz się wakacjami bez cyfrowego odcięcia."),
@@ -295,7 +295,7 @@ const newPosts = [
       ]),
       
       h2("Koszty i dostępność"),
-      p("Wynajem Starlink Mini od Starkit to koszt od 39 zł/dzień, Standard od 49 zł/dzień. Przy wielodniowych produkcjach stawka dzienna jest jeszcze niższa. Dostarczamy sprzęt kurierem w całej Polsce – zwykle 1-2 dni robocze. Dla stałych klientów z branży kreatywnej oferujemy elastyczne warunki."),
+      p("Wynajem Starlink Mini od Starkit to koszt od 39 zł/dzień, Standard od 59 zł/dzień. Przy wielodniowych produkcjach stawka dzienna jest jeszcze niższa. Dostarczamy sprzęt kurierem w całej Polsce – zwykle 1-2 dni robocze. Dla stałych klientów z branży kreatywnej oferujemy elastyczne warunki."),
       
       h2("Podsumowanie"),
       p("Wynajem Starlink dla fotografów i filmowców to inwestycja w efektywność pracy i profesjonalizm. Szybki internet w plenerze pozwala skrócić czas dostarczenia materiałów, poprawić komunikację z klientem i wyeliminować stres związany z brakiem łączności. Zamów na starkit.pl – sprzęt dotrze gotowy do użycia."),
