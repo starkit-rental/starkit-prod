@@ -114,6 +114,13 @@ export default defineType({
       group: "seo",
     }),
     defineField({
+      name: "publishAt",
+      title: "Publish Date",
+      type: "datetime",
+      group: "settings",
+      description: "Post will be visible on the blog only after this date. Leave empty to publish immediately.",
+    }),
+    defineField({
       name: "noindex",
       title: "No Index",
       type: "boolean",
