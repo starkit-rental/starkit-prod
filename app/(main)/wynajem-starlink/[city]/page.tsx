@@ -67,18 +67,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 const HERO_IMAGES: Record<string, string> = {
-  poznan: "https://images.unsplash.com/photo-1565008576549-57569a49371d?w=1400&h=700&fit=crop&q=80",
-  warszawa: "https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=1400&h=700&fit=crop&q=80",
-  krakow: "https://images.unsplash.com/photo-1558489580-fad2ed2ed1be?w=1400&h=700&fit=crop&q=80",
-  wroclaw: "https://images.unsplash.com/photo-1573505457879-57f73383abe7?w=1400&h=700&fit=crop&q=80",
-  gdansk: "https://images.unsplash.com/photo-1607427293702-036707eee315?w=1400&h=700&fit=crop&q=80",
-  katowice: "https://images.unsplash.com/photo-KQS0YJZu05o?w=1400&h=700&fit=crop&q=80",
-  lodz: "https://images.unsplash.com/photo-awbmzuG7JkQ?w=1400&h=700&fit=crop&q=80",
-  szczecin: "https://images.unsplash.com/photo-sEnlURu3SCs?w=1400&h=700&fit=crop&q=80",
-  lublin: "https://images.unsplash.com/photo-MgFsXWc8Al8?w=1400&h=700&fit=crop&q=80",
-  bydgoszcz: "https://images.unsplash.com/photo-Urx3pQgIVNE?w=1400&h=700&fit=crop&q=80",
-  rzeszow: "https://images.unsplash.com/photo-oXSTFDdhF7g?w=1400&h=700&fit=crop&q=80",
-  torun: "https://images.unsplash.com/photo-9LtSeCBOV1M?w=1400&h=700&fit=crop&q=80",
+  poznan: '/images/cities/poznan.jpg',
+  warszawa: '/images/cities/warszawa.jpg',
+  krakow: '/images/cities/krakow.jpg',
+  wroclaw: '/images/cities/wroclaw.jpg',
+  gdansk: '/images/cities/gdansk.jpg',
+  katowice: '/images/cities/katowice.jpg',
+  lodz: '/images/cities/lodz.jpg',
+  szczecin: '/images/cities/szczecin.jpg',
+  lublin: '/images/cities/lublin.jpg',
+  bydgoszcz: '/images/cities/bydgoszcz.jpg',
+  rzeszow: '/images/cities/rzeszow.jpg',
+  torun: '/images/cities/torun.jpg',
 };
 
 const DEFAULT_HERO = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&h=700&fit=crop&q=80";
