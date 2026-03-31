@@ -187,13 +187,15 @@ export default async function ProductPage({ params }: PageProps) {
               {/* Rental Widget */}
               <RentalWidget sanitySlug={product.slug} productTitle={product.title || "Produkt"} />
 
-              {/* Static pricing preview (SSR - visible to Google) */}
+              {/* SEO-visible static pricing (hidden from users, visible to search engines) */}
               {product.pricePerDay && (
-                <PricingPreview
-                  pricePerDay={product.pricePerDay}
-                  productTitle={product.title}
-                  deposit={product.deposit}
-                />
+                <div className="absolute w-px h-px overflow-hidden whitespace-nowrap" style={{ clip: "rect(0,0,0,0)" }}>
+                  <PricingPreview
+                    pricePerDay={product.pricePerDay}
+                    productTitle={product.title || ""}
+                    deposit={product.deposit}
+                  />
+                </div>
               )}
 
               {/* Trust signals */}
