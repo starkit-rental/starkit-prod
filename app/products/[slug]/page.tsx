@@ -267,7 +267,7 @@ export default async function ProductPage({ params }: PageProps) {
             ].map((c) => (
               <Link
                 key={c.slug}
-                href={`/wynajem-starlink-${c.slug}`}
+                href={`/wynajem-starlink/${c.slug}`}
                 className="rounded-lg border px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors text-center"
               >
                 {c.city}

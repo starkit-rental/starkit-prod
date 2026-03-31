@@ -68,7 +68,7 @@ async function getProductsSitemap(): Promise<MetadataRoute.Sitemap[]> {
 async function getCityPagesSitemap(): Promise<MetadataRoute.Sitemap[]> {
   const cityQuery = groq`
     *[_type == 'cityPage' && defined(slug)] | order(city asc) {
-      'url': $baseUrl + '/wynajem-starlink-' + slug.current,
+      'url': $baseUrl + '/wynajem-starlink/' + slug.current,
       'lastModified': _updatedAt,
       'changeFrequency': 'weekly',
       'priority': 0.8

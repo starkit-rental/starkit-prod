@@ -76,23 +76,23 @@ export default async function Footer() {
             <div>
               <p className="font-semibold text-foreground/80 mb-2">Wynajem wg miast</p>
               <ul className="space-y-1.5">
-                <li><Link href="/wynajem-starlink-warszawa" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Warszawa</Link></li>
-                <li><Link href="/wynajem-starlink-krakow" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Kraków</Link></li>
-                <li><Link href="/wynajem-starlink-wroclaw" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Wrocław</Link></li>
-                <li><Link href="/wynajem-starlink-gdansk" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Gdańsk</Link></li>
-                <li><Link href="/wynajem-starlink-poznan" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Poznań</Link></li>
-                <li><Link href="/wynajem-starlink-katowice" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Katowice</Link></li>
+                <li><Link href="/wynajem-starlink/warszawa" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Warszawa</Link></li>
+                <li><Link href="/wynajem-starlink/krakow" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Kraków</Link></li>
+                <li><Link href="/wynajem-starlink/wroclaw" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Wrocław</Link></li>
+                <li><Link href="/wynajem-starlink/gdansk" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Gdańsk</Link></li>
+                <li><Link href="/wynajem-starlink/poznan" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Poznań</Link></li>
+                <li><Link href="/wynajem-starlink/katowice" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Katowice</Link></li>
               </ul>
             </div>
             <div>
               <p className="font-semibold text-foreground/80 mb-2">Więcej miast</p>
               <ul className="space-y-1.5">
-                <li><Link href="/wynajem-starlink-lodz" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Łódź</Link></li>
-                <li><Link href="/wynajem-starlink-szczecin" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Szczecin</Link></li>
-                <li><Link href="/wynajem-starlink-lublin" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Lublin</Link></li>
-                <li><Link href="/wynajem-starlink-bydgoszcz" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Bydgoszcz</Link></li>
-                <li><Link href="/wynajem-starlink-rzeszow" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Rzeszów</Link></li>
-                <li><Link href="/wynajem-starlink-torun" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Toruń</Link></li>
+                <li><Link href="/wynajem-starlink/lodz" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Łódź</Link></li>
+                <li><Link href="/wynajem-starlink/szczecin" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Szczecin</Link></li>
+                <li><Link href="/wynajem-starlink/lublin" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Lublin</Link></li>
+                <li><Link href="/wynajem-starlink/bydgoszcz" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Bydgoszcz</Link></li>
+                <li><Link href="/wynajem-starlink/rzeszow" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Rzeszów</Link></li>
+                <li><Link href="/wynajem-starlink/torun" className="text-foreground/50 hover:text-foreground/80 transition-colors">Starlink Toruń</Link></li>
               </ul>
             </div>
           </div>
