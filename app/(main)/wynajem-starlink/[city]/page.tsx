@@ -268,7 +268,7 @@ export default async function CityPage({ params }: PageProps) {
                   <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">Popularny</span>
                 </div>
                 <p className="text-3xl font-bold">39 zł<span className="text-base font-normal text-muted-foreground">/dzień</span></p>
-                <p className="text-xs text-muted-foreground mt-1">Minimalny wynajem 3 dni = 340 zł</p>
+                <p className="text-xs text-muted-foreground mt-1">Minimalny wynajem 3 dni = 240 zł</p>
               </div>
               <div className="p-6">
                 <ul className="space-y-2.5 text-sm mb-5">
