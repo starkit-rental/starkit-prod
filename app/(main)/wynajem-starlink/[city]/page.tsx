@@ -17,7 +17,6 @@ import {
   Wifi,
   Zap,
   Clock,
-  Shield,
 } from "lucide-react";
 import {
   Accordion,
@@ -68,21 +67,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 const HERO_IMAGES: Record<string, string> = {
-  poznan: "https://images.unsplash.com/photo-1565008576549-57569a49371d?w=1200&h=600&fit=crop&q=80",
-  warszawa: "https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=1200&h=600&fit=crop&q=80",
-  krakow: "https://images.unsplash.com/photo-1558489580-fad2ed2ed1be?w=1200&h=600&fit=crop&q=80",
-  wroclaw: "https://images.unsplash.com/photo-1573505457879-57f73383abe7?w=1200&h=600&fit=crop&q=80",
-  gdansk: "https://images.unsplash.com/photo-1607427293702-036707eee315?w=1200&h=600&fit=crop&q=80",
-  katowice: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=600&fit=crop&q=80",
-  lodz: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=600&fit=crop&q=80",
-  szczecin: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=600&fit=crop&q=80",
-  lublin: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=600&fit=crop&q=80",
-  bydgoszcz: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=600&fit=crop&q=80",
-  rzeszow: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=600&fit=crop&q=80",
-  torun: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=600&fit=crop&q=80",
+  poznan: "https://images.unsplash.com/photo-1565008576549-57569a49371d?w=1400&h=700&fit=crop&q=80",
+  warszawa: "https://images.unsplash.com/photo-1519197924294-4ba991a11128?w=1400&h=700&fit=crop&q=80",
+  krakow: "https://images.unsplash.com/photo-1558489580-fad2ed2ed1be?w=1400&h=700&fit=crop&q=80",
+  wroclaw: "https://images.unsplash.com/photo-1573505457879-57f73383abe7?w=1400&h=700&fit=crop&q=80",
+  gdansk: "https://images.unsplash.com/photo-1607427293702-036707eee315?w=1400&h=700&fit=crop&q=80",
+  katowice: "https://images.unsplash.com/photo-KQS0YJZu05o?w=1400&h=700&fit=crop&q=80",
+  lodz: "https://images.unsplash.com/photo-awbmzuG7JkQ?w=1400&h=700&fit=crop&q=80",
+  szczecin: "https://images.unsplash.com/photo-sEnlURu3SCs?w=1400&h=700&fit=crop&q=80",
+  lublin: "https://images.unsplash.com/photo-MgFsXWc8Al8?w=1400&h=700&fit=crop&q=80",
+  bydgoszcz: "https://images.unsplash.com/photo-Urx3pQgIVNE?w=1400&h=700&fit=crop&q=80",
+  rzeszow: "https://images.unsplash.com/photo-oXSTFDdhF7g?w=1400&h=700&fit=crop&q=80",
+  torun: "https://images.unsplash.com/photo-9LtSeCBOV1M?w=1400&h=700&fit=crop&q=80",
 };
 
-const DEFAULT_HERO = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=600&fit=crop&q=80";
+const DEFAULT_HERO = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&h=700&fit=crop&q=80";
 
 export default async function CityPage({ params }: PageProps) {
   const { city } = await params;
@@ -181,9 +180,9 @@ export default async function CityPage({ params }: PageProps) {
         </div>
         <div className="relative container max-w-5xl py-16 md:py-24 lg:py-32">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/20 border border-primary/30 px-4 py-1.5 mb-5">
-              <MapPin className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">{page.city}{page.region ? `, ${page.region}` : ""}</span>
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/25 px-3.5 py-1.5 mb-5 backdrop-blur-sm">
+              <MapPin className="h-3.5 w-3.5 text-white/80" />
+              <span className="text-sm font-medium text-white/90">{page.city}{page.region ? `, ${page.region}` : ""}</span>
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-5">
               {page.headline || `Wynajem Starlink ${page.city}`}
@@ -213,10 +212,9 @@ export default async function CityPage({ params }: PageProps) {
       {/* Trust bar */}
       <section className="border-b bg-muted/40">
         <div className="container max-w-5xl py-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {[
               { icon: Clock, text: "Dostawa 24-48h" },
-              { icon: Shield, text: "Ubezpieczony sprzęt" },
               { icon: Wifi, text: "Do 350 Mbps" },
               { icon: Zap, text: "Plug & Play" },
             ].map((item) => (
@@ -235,7 +233,7 @@ export default async function CityPage({ params }: PageProps) {
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-6">
             Dostawa Starlink do {page.city}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className={`grid grid-cols-1 gap-4 ${isPickup ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
             {isPickup && (
               <div className="group relative rounded-2xl border bg-card p-6 transition-shadow hover:shadow-md">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 mb-4">

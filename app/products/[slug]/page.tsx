@@ -249,10 +249,10 @@ export default async function ProductPage({ params }: PageProps) {
       )}
 
       {/* Internal links for SEO */}
-      <section className="py-10 md:py-14">
+      <section className="py-8 border-t">
         <div className="container max-w-4xl">
-          <h2 className="text-xl font-bold mb-4">Wynajem Starlink w Twoim mieście</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground/60 mb-3">Wynajem Starlink w Polsce</p>
+          <div className="flex flex-wrap gap-x-1 gap-y-1">
             {[
               { city: "Warszawa", slug: "warszawa" },
               { city: "Kraków", slug: "krakow" },
@@ -266,20 +266,22 @@ export default async function ProductPage({ params }: PageProps) {
               { city: "Bydgoszcz", slug: "bydgoszcz" },
               { city: "Rzeszów", slug: "rzeszow" },
               { city: "Toruń", slug: "torun" },
-            ].map((c) => (
-              <Link
-                key={c.slug}
-                href={`/wynajem-starlink/${c.slug}`}
-                className="rounded-lg border px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors text-center"
-              >
-                {c.city}
-              </Link>
+            ].map((c, i, arr) => (
+              <span key={c.slug} className="inline-flex items-center">
+                <Link
+                  href={`/wynajem-starlink/${c.slug}`}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {c.city}
+                </Link>
+                {i < arr.length - 1 && <span className="mx-1 text-muted-foreground/30">·</span>}
+              </span>
             ))}
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link href="/ile-kosztuje-wynajem-starlink" className="text-sm text-primary hover:underline">Cennik wynajmu →</Link>
-            <Link href="/starlink-mini-vs-standard" className="text-sm text-primary hover:underline">Mini vs Standard →</Link>
-            <Link href="/jak-dziala-wynajem-starlink" className="text-sm text-primary hover:underline">Jak działa wynajem? →</Link>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+            <Link href="/ile-kosztuje-wynajem-starlink" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cennik wynajmu →</Link>
+            <Link href="/starlink-mini-vs-standard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Mini vs Standard →</Link>
+            <Link href="/jak-dziala-wynajem-starlink" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Jak działa wynajem? →</Link>
           </div>
         </div>
       </section>
