@@ -27,7 +27,7 @@ async function getPagesSitemap(): Promise<MetadataRoute.Sitemap[]> {
 
 async function getPostsSitemap(): Promise<MetadataRoute.Sitemap[]> {
   const postsQuery = groq`
-    *[_type == 'post'] | order(_updatedAt desc) {
+    *[_type == 'post' && (!defined(publishAt) || publishAt <= now())] | order(_updatedAt desc) {
       'url': $baseUrl + '/blog/' + slug.current,
       'lastModified': _updatedAt,
       'changeFrequency': 'weekly',
@@ -65,12 +65,33 @@ async function getProductsSitemap(): Promise<MetadataRoute.Sitemap[]> {
   return data;
 }
 
+async function getCityPagesSitemap(): Promise<MetadataRoute.Sitemap[]> {
+  const cityQuery = groq`
+    *[_type == 'cityPage' && defined(slug)] | order(city asc) {
+      'url': $baseUrl + '/wynajem-starlink-' + slug.current,
+      'lastModified': _updatedAt,
+      'changeFrequency': 'weekly',
+      'priority': 0.8
+    }
+  `;
+
+  const { data } = await sanityFetch({
+    query: cityQuery,
+    params: {
+      baseUrl: process.env.NEXT_PUBLIC_SITE_URL,
+    },
+  });
+
+  return data;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  const [pages, posts, products] = await Promise.all([
+  const [pages, posts, products, cityPages] = await Promise.all([
     getPagesSitemap(),
     getPostsSitemap(),
     getProductsSitemap(),
+    getCityPagesSitemap(),
   ]);
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -88,5 +109,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  return [...pages, ...staticPages, ...posts, ...products].flat();
+  return [...pages, ...staticPages, ...posts, ...products, ...cityPages].flat();
 }

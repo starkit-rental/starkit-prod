@@ -10,6 +10,7 @@ import {
   Boxes,
   Tags,
   LayoutTemplate,
+  MapPin,
 } from "lucide-react";
 
 export const structure = (S: any, context: any) =>
@@ -89,6 +90,16 @@ export const structure = (S: any, context: any) =>
         S,
         context,
       }),
+
+      // --- City Landing Pages ---
+      S.listItem()
+        .title("City Landing Pages")
+        .icon(MapPin)
+        .child(
+          S.documentTypeList("cityPage")
+            .title("City Landing Pages")
+            .defaultOrdering([{ field: "city", direction: "asc" }])
+        ),
 
       // --- separator global ---
       S.divider({ title: "Global" }),

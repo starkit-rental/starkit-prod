@@ -44,6 +44,9 @@ export const singleProductQuery = groq`
     "images": images[].asset->url,
     "category": category->{ title, "slug": slug.current },
     specs,
+    "testimonials": *[_type == "testimonial"] | order(orderRank) {
+      _id, name, title, rating, "bodyText": pt::text(body)
+    },
     blocks[]{
       ${hero1Query},
       ${hero2Query},

@@ -12,6 +12,7 @@ import settings from "./schemas/documents/settings";
 import product from "./schemas/documents/product";
 import productCategory from "./schemas/documents/product-category";
 import productsPage from "./schemas/documents/productsPage";
+import cityPage from "./schemas/documents/cityPage";
 
 // ========== SHARED OBJECTS ==========
 import blockContent from "./schemas/blocks/shared/block-content";
@@ -61,6 +62,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     settings,
     product,
     productCategory,
+    cityPage,
 
     // ---------- Shared Objects ----------
     blockContent,

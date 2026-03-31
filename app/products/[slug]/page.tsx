@@ -9,7 +9,9 @@ import { Metadata } from "next";
 import ProductSchema from "@/components/seo/product-schema";
 import BreadcrumbsSchema from "@/components/seo/breadcrumbs-schema";
 import FAQSchema from "@/components/seo/faq-schema";
+import ReviewSchema from "@/components/seo/review-schema";
 import RentalWidget from "../_components/rental-widget";
+import PricingPreview from "../_components/pricing-preview";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -109,6 +111,18 @@ export default async function ProductPage({ params }: PageProps) {
       />
       <BreadcrumbsSchema links={breadcrumbLinks} />
       {faqsFromBlocks.length > 0 && <FAQSchema faqs={faqsFromBlocks} />}
+      {product.testimonials?.length > 0 && (
+        <ReviewSchema
+          productName={product.title}
+          productSlug={product.slug}
+          reviews={product.testimonials.map((t: any) => ({
+            name: t.name || "Klient",
+            title: t.title,
+            rating: t.rating || 5,
+            bodyText: t.bodyText,
+          }))}
+        />
+      )}
 
       {/* Product Detail Section */}
       <section className="w-full py-8 md:py-12 lg:py-16">
@@ -173,6 +187,15 @@ export default async function ProductPage({ params }: PageProps) {
               {/* Rental Widget */}
               <RentalWidget sanitySlug={product.slug} productTitle={product.title || "Produkt"} />
 
+              {/* Static pricing preview (SSR - visible to Google) */}
+              {product.pricePerDay && (
+                <PricingPreview
+                  pricePerDay={product.pricePerDay}
+                  productTitle={product.title}
+                  deposit={product.deposit}
+                />
+              )}
+
               {/* Trust signals */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
                 {TRUST_ITEMS.map((item) => (
@@ -222,6 +245,42 @@ export default async function ProductPage({ params }: PageProps) {
       {product.blocks?.length > 0 && (
         <Blocks blocks={product.blocks as any} />
       )}
+
+      {/* Internal links for SEO */}
+      <section className="py-10 md:py-14">
+        <div className="container max-w-4xl">
+          <h2 className="text-xl font-bold mb-4">Wynajem Starlink w Twoim mieście</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {[
+              { city: "Warszawa", slug: "warszawa" },
+              { city: "Kraków", slug: "krakow" },
+              { city: "Wrocław", slug: "wroclaw" },
+              { city: "Gdańsk", slug: "gdansk" },
+              { city: "Poznań", slug: "poznan" },
+              { city: "Katowice", slug: "katowice" },
+              { city: "Łódź", slug: "lodz" },
+              { city: "Szczecin", slug: "szczecin" },
+              { city: "Lublin", slug: "lublin" },
+              { city: "Bydgoszcz", slug: "bydgoszcz" },
+              { city: "Rzeszów", slug: "rzeszow" },
+              { city: "Toruń", slug: "torun" },
+            ].map((c) => (
+              <Link
+                key={c.slug}
+                href={`/wynajem-starlink-${c.slug}`}
+                className="rounded-lg border px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors text-center"
+              >
+                {c.city}
+              </Link>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href="/ile-kosztuje-wynajem-starlink" className="text-sm text-primary hover:underline">Cennik wynajmu →</Link>
+            <Link href="/starlink-mini-vs-standard" className="text-sm text-primary hover:underline">Mini vs Standard →</Link>
+            <Link href="/jak-dziala-wynajem-starlink" className="text-sm text-primary hover:underline">Jak działa wynajem? →</Link>
+          </div>
+        </div>
+      </section>
 
       {/* Cross-link to other product */}
       {otherProduct && (
