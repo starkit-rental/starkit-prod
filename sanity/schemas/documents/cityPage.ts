@@ -46,6 +46,15 @@ export default defineType({
       rows: 3,
     }),
     defineField({
+      name: "heroImage",
+      title: "Hero Background Image",
+      type: "image",
+      group: "content",
+      options: {
+        hotspot: true,
+      },
+    }),
+    defineField({
       name: "body",
       title: "Main Content",
       type: "block-content",

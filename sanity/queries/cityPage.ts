@@ -10,6 +10,9 @@ export const cityPageQuery = groq`
     region,
     headline,
     excerpt,
+    heroImage {
+      ${imageQuery}
+    },
     body[]{
       ${bodyQuery}
     },

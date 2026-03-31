@@ -66,23 +66,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-const HERO_IMAGES: Record<string, string> = {
-  poznan: '/images/cities/poznan.jpg',
-  warszawa: '/images/cities/warszawa.jpg',
-  krakow: '/images/cities/krakow.jpg',
-  wroclaw: '/images/cities/wroclaw.jpg',
-  gdansk: '/images/cities/gdansk.jpg',
-  katowice: '/images/cities/katowice.jpg',
-  lodz: '/images/cities/lodz.jpg',
-  szczecin: '/images/cities/szczecin.jpg',
-  lublin: '/images/cities/lublin.jpg',
-  bydgoszcz: '/images/cities/bydgoszcz.jpg',
-  rzeszow: '/images/cities/rzeszow.jpg',
-  torun: '/images/cities/torun.jpg',
-};
-
-const DEFAULT_HERO = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&h=700&fit=crop&q=80";
-
 export default async function CityPage({ params }: PageProps) {
   const { city } = await params;
   const page = await client.fetch(cityPageQuery, { slug: city });
@@ -99,7 +82,7 @@ export default async function CityPage({ params }: PageProps) {
   ];
 
   const isPickup = page.deliveryMethod === "pickup_and_shipping";
-  const heroImage = HERO_IMAGES[page.slug] || DEFAULT_HERO;
+  const heroImage = page.heroImage?.url || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&h=700&fit=crop&q=80";
 
   const faqsForSchema = page.faqs?.map((f: any) => ({
     question: f.question,
@@ -285,7 +268,7 @@ export default async function CityPage({ params }: PageProps) {
                   <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">Popularny</span>
                 </div>
                 <p className="text-3xl font-bold">39 zł<span className="text-base font-normal text-muted-foreground">/dzień</span></p>
-                <p className="text-xs text-muted-foreground mt-1">Minimalny wynajem 3 dni = 117 zł</p>
+                <p className="text-xs text-muted-foreground mt-1">Minimalny wynajem 3 dni = 340 zł</p>
               </div>
               <div className="p-6">
                 <ul className="space-y-2.5 text-sm mb-5">
@@ -294,7 +277,6 @@ export default async function CityPage({ params }: PageProps) {
                     "Zasięg WiFi ok. 90 m²",
                     "Waga 1,1 kg – mieści się w plecaku",
                     "Zasilanie USB-C / powerbank",
-                    "Idealne dla 1-10 osób",
                   ].map((f) => (
                     <li key={f} className="flex items-start gap-2.5">
                       <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -315,7 +297,7 @@ export default async function CityPage({ params }: PageProps) {
                   <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-semibold text-white">Najszybszy</span>
                 </div>
                 <p className="text-3xl font-bold">59 zł<span className="text-base font-normal text-muted-foreground">/dzień</span></p>
-                <p className="text-xs text-muted-foreground mt-1">Minimalny wynajem 3 dni = 177 zł</p>
+                <p className="text-xs text-muted-foreground mt-1">Minimalny wynajem 3 dni = 360 zł</p>
               </div>
               <div className="p-6">
                 <ul className="space-y-2.5 text-sm mb-5">
