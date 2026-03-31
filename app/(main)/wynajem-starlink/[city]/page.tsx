@@ -3,7 +3,6 @@ import { cityPageQuery, allCityPagesQuery } from "@/sanity/queries/cityPage";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PortableTextRenderer from "@/components/portable-text-renderer";
-import Breadcrumbs from "@/components/ui/breadcrumbs";
 import BreadcrumbsSchema from "@/components/seo/breadcrumbs-schema";
 import ReviewSchema from "@/components/seo/review-schema";
 import Link from "next/link";
@@ -15,7 +14,6 @@ import {
   Truck,
   Package,
   CheckCircle2,
-  Star,
   Wifi,
   Zap,
   Clock,
@@ -27,6 +25,18 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  CarouselDots,
+} from "@/components/ui/carousel";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
+import { StarRating } from "@/components/ui/star-rating";
+import { urlFor } from "@/sanity/lib/image";
 
 export const dynamicParams = false;
 
@@ -124,7 +134,7 @@ export default async function CityPage({ params }: PageProps) {
             name: t.name || "Klient",
             title: t.title,
             rating: t.rating || 5,
-            bodyText: t.bodyText,
+            bodyText: t.body ? t.body.map((b: any) => b.children?.map((c: any) => c.text ?? "").join("") ?? "").join(" ") : "",
           }))}
         />
       )}
@@ -170,11 +180,10 @@ export default async function CityPage({ params }: PageProps) {
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-transparent" />
         </div>
         <div className="relative container max-w-5xl py-16 md:py-24 lg:py-32">
-          <Breadcrumbs links={breadcrumbLinks} />
-          <div className="mt-6 max-w-3xl">
+          <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/20 border border-primary/30 px-4 py-1.5 mb-5">
               <MapPin className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">{page.city}, {page.region}</span>
+              <span className="text-sm font-medium text-primary">{page.city}{page.region ? `, ${page.region}` : ""}</span>
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-5">
               {page.headline || `Wynajem Starlink ${page.city}`}
@@ -191,7 +200,7 @@ export default async function CityPage({ params }: PageProps) {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="text-base border-slate-500 text-white hover:bg-white/10">
+              <Button size="lg" variant="secondary" asChild className="text-base">
                 <Link href="/products/starlink-standard">
                   Starlink Standard – od 59 zł/dzień
                 </Link>
@@ -208,7 +217,7 @@ export default async function CityPage({ params }: PageProps) {
             {[
               { icon: Clock, text: "Dostawa 24-48h" },
               { icon: Shield, text: "Ubezpieczony sprzęt" },
-              { icon: Wifi, text: "Do 250 Mbps" },
+              { icon: Wifi, text: "Do 350 Mbps" },
               { icon: Zap, text: "Plug & Play" },
             ].map((item) => (
               <div key={item.text} className="flex items-center gap-2.5 text-sm">
@@ -251,7 +260,7 @@ export default async function CityPage({ params }: PageProps) {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 mb-4">
                 <Truck className="h-5 w-5 text-primary" />
               </div>
-              <h3 className="font-semibold mb-1">Kurier DPD / InPost</h3>
+              <h3 className="font-semibold mb-1">Kurier InPost</h3>
               <p className="text-sm text-muted-foreground">
                 Dostawa pod wskazany adres w {page.city}. Czas dostawy: 24-48h. Etykieta zwrotna w zestawie.
               </p>
@@ -271,67 +280,65 @@ export default async function CityPage({ params }: PageProps) {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Mini card */}
-            <Link href="/products/starlink-mini" className="group">
-              <div className="relative rounded-2xl border bg-card overflow-hidden transition-shadow hover:shadow-lg">
-                <div className="relative h-48 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-900">
-                  <Image
-                    src="https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=600&h=300&fit=crop&q=80"
-                    alt="Starlink Mini - kompaktowy internet satelitarny"
-                    fill
-                    className="object-cover opacity-80 group-hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                  />
-                  <div className="absolute top-3 left-3">
-                    <span className="inline-block rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-                      Popularny
-                    </span>
-                  </div>
+            <div className="rounded-2xl border bg-card overflow-hidden">
+              <div className="px-6 pt-6 pb-5 border-b bg-gradient-to-br from-blue-500/8 to-indigo-500/8">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">Starlink Mini</span>
+                  <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">Popularny</span>
                 </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold mb-1">Starlink Mini</h3>
-                  <p className="text-2xl font-bold text-primary mb-3">od 39 zł<span className="text-sm font-normal text-muted-foreground">/dzień</span></p>
-                  <ul className="space-y-2 text-sm text-muted-foreground mb-4">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Do 100 Mbps, zasięg 90 m²</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Waga 1,1 kg – mieści się w plecaku</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Zasilanie USB-C / powerbank</li>
-                  </ul>
-                  <span className="inline-flex items-center text-sm font-medium text-primary group-hover:gap-2 transition-all">
-                    Zamów teraz <ArrowRight className="ml-1 h-4 w-4" />
-                  </span>
-                </div>
+                <p className="text-3xl font-bold">39 zł<span className="text-base font-normal text-muted-foreground">/dzień</span></p>
+                <p className="text-xs text-muted-foreground mt-1">Minimalny wynajem 3 dni = 117 zł</p>
               </div>
-            </Link>
+              <div className="p-6">
+                <ul className="space-y-2.5 text-sm mb-5">
+                  {[
+                    "Do 350 Mbps download",
+                    "Zasięg WiFi ok. 90 m²",
+                    "Waga 1,1 kg – mieści się w plecaku",
+                    "Zasilanie USB-C / powerbank",
+                    "Idealne dla 1-10 osób",
+                  ].map((f) => (
+                    <li key={f} className="flex items-start gap-2.5">
+                      <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button className="w-full" asChild>
+                  <Link href="/products/starlink-mini">Zamów Starlink Mini <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                </Button>
+              </div>
+            </div>
             {/* Standard card */}
-            <Link href="/products/starlink-standard" className="group">
-              <div className="relative rounded-2xl border bg-card overflow-hidden transition-shadow hover:shadow-lg">
-                <div className="relative h-48 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950 dark:to-teal-900">
-                  <Image
-                    src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=300&fit=crop&q=80"
-                    alt="Starlink Standard - profesjonalny internet satelitarny"
-                    fill
-                    className="object-cover opacity-80 group-hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                  />
-                  <div className="absolute top-3 left-3">
-                    <span className="inline-block rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white">
-                      Najszybszy
-                    </span>
-                  </div>
+            <div className="rounded-2xl border bg-card overflow-hidden">
+              <div className="px-6 pt-6 pb-5 border-b bg-gradient-to-br from-emerald-500/8 to-teal-500/8">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Starlink Standard</span>
+                  <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-semibold text-white">Najszybszy</span>
                 </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold mb-1">Starlink Standard</h3>
-                  <p className="text-2xl font-bold text-primary mb-3">od 59 zł<span className="text-sm font-normal text-muted-foreground">/dzień</span></p>
-                  <ul className="space-y-2 text-sm text-muted-foreground mb-4">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Do 250 Mbps, zasięg 185 m²</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Idealny na eventy i budowy</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /> Do 128 urządzeń jednocześnie</li>
-                  </ul>
-                  <span className="inline-flex items-center text-sm font-medium text-primary group-hover:gap-2 transition-all">
-                    Zamów teraz <ArrowRight className="ml-1 h-4 w-4" />
-                  </span>
-                </div>
+                <p className="text-3xl font-bold">59 zł<span className="text-base font-normal text-muted-foreground">/dzień</span></p>
+                <p className="text-xs text-muted-foreground mt-1">Minimalny wynajem 3 dni = 177 zł</p>
               </div>
-            </Link>
+              <div className="p-6">
+                <ul className="space-y-2.5 text-sm mb-5">
+                  {[
+                    "Do 350 Mbps download",
+                    "Zasięg WiFi ok. 185 m²",
+                    "Do 128 urządzeń jednocześnie",
+                    "Zasilanie 230V – eventy i budowy",
+                    "Idealne na duże grupy i imprezy",
+                  ].map((f) => (
+                    <li key={f} className="flex items-start gap-2.5">
+                      <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button className="w-full" variant="secondary" asChild>
+                  <Link href="/products/starlink-standard">Zamów Starlink Standard <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -347,37 +354,49 @@ export default async function CityPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Testimonials */}
+      {/* Testimonials – Carousel */}
       {page.testimonials?.length > 0 && (
-        <section className="py-12 md:py-16 bg-muted/30">
+        <section className="py-12 md:py-16 bg-muted/40 border-y">
           <div className="container max-w-5xl">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">Opinie klientów</h2>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">Opinie klientów</h2>
             <p className="text-muted-foreground mb-8">Co mówią nasi klienci o wynajmie Starlink</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {page.testimonials.map((t: any) => (
-                <div key={t._id} className="rounded-2xl border bg-card p-5">
-                  <div className="flex items-center gap-1 mb-3">
-                    {Array.from({ length: t.rating || 5 }).map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  {t.bodyText && (
-                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                      &ldquo;{t.bodyText}&rdquo;
-                    </p>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                      {t.name?.charAt(0) || "K"}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{t.name}</p>
-                      {t.title && <p className="text-xs text-muted-foreground">{t.title}</p>}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Carousel>
+              <CarouselContent>
+                {page.testimonials.map((t: any) => (
+                  <CarouselItem key={t._id} className="pl-2 md:pl-4 md:basis-1/3">
+                    <Card className="h-full">
+                      <CardContent className="flex flex-col p-5 h-full">
+                        <div className="flex items-center gap-3 mb-3">
+                          <Avatar className="w-10 h-10">
+                            {t.image?.asset && (
+                              <AvatarImage src={urlFor(t.image).width(80).url()} alt={t.name ?? ""} />
+                            )}
+                            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                              {t.name?.slice(0, 2) ?? "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-semibold leading-tight">{t.name}</p>
+                            {t.title && <p className="text-xs text-muted-foreground">{t.title}</p>}
+                          </div>
+                        </div>
+                        <StarRating rating={t.rating ?? 5} />
+                        {t.body && (
+                          <div className="text-sm mt-3 text-muted-foreground leading-relaxed line-clamp-5">
+                            <PortableTextRenderer value={t.body} />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious variant="secondary" className="-left-3 md:-left-8" />
+              <CarouselNext variant="secondary" className="-right-3 md:-right-8" />
+              <div className="w-full flex justify-center mt-6">
+                <CarouselDots />
+              </div>
+            </Carousel>
           </div>
         </section>
       )}
@@ -409,7 +428,7 @@ export default async function CityPage({ params }: PageProps) {
       )}
 
       {/* Final CTA */}
-      <section className="py-16 md:py-20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+      <section className="py-16 md:py-20 border-t bg-muted/30">
         <div className="container max-w-3xl text-center">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">
             Zamów Starlink do {page.city}
@@ -425,7 +444,7 @@ export default async function CityPage({ params }: PageProps) {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="secondary" asChild>
               <Link href="/products/starlink-standard">
                 Starlink Standard – od 59 zł/dzień
               </Link>

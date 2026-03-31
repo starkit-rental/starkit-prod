@@ -1,5 +1,6 @@
 import { groq } from "next-sanity";
 import { bodyQuery } from "./shared/body";
+import { imageQuery } from "./shared/image";
 
 export const cityPageQuery = groq`
   *[_type == "cityPage" && slug.current == $slug][0] {
@@ -15,7 +16,9 @@ export const cityPageQuery = groq`
     deliveryMethod,
     faqs,
     testimonials[]->{
-      _id, name, title, rating, "bodyText": pt::text(body)
+      _id, name, title, rating,
+      image{ ${imageQuery} },
+      body[]{ ${bodyQuery} },
     },
     meta_title,
     meta_description,
