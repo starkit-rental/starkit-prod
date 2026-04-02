@@ -384,10 +384,16 @@ export function buildOrderConfirmedHtml(v: OrderVars): string {
     renderFinancialBox(vars),
     v.info_box_content ? alertBox(v.info_box_content, "info") : "",
     paragraph(`<strong>Ważne informacje:</strong>`),
-    `<ul style="margin:0 0 16px;padding-left:20px;color:#334155;font-size:14px;line-height:1.8">
+    vars.delivery_method === "personal_pickup" ? `<ul style="margin:0 0 16px;padding-left:20px;color:#334155;font-size:14px;line-height:1.8">
 <li>Sprzęt odbierzesz w dniu <strong>${v.start_date}</strong></li>
 <li>Zwrot do końca dnia <strong>${v.end_date}</strong></li>
-${vars.delivery_method === "personal_pickup" ? "<li>Prosimy zadzwonić przed odbiorem: <strong>+48 453 461 061</strong></li>" : "<li>Kod odbioru otrzymasz SMS-em od InPost</li>"}
+<li>Prosimy zadzwonić przed odbiorem: <strong>+48 453 461 061</strong></li>
+<li>Prosimy zabrać dowód tożsamości</li>
+<li>W razie pytań — odpowiedz na tego maila</li>
+</ul>` : `<ul style="margin:0 0 16px;padding-left:20px;color:#334155;font-size:14px;line-height:1.8">
+<li>Sprzęt odbierzesz w dniu <strong>${v.start_date}</strong></li>
+<li>Zwrot do końca dnia <strong>${v.end_date}</strong></li>
+<li>Kod odbioru otrzymasz SMS-em od InPost</li>
 <li>W razie pytań — odpowiedz na tego maila</li>
 </ul>`,
     paragraph(`Dziękujemy za wybór Starkit i życzymy udanego wynajmu!`),

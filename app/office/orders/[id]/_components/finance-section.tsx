@@ -84,8 +84,12 @@ export function FinanceSection({
     setSavingPayment(true);
     setError(null);
     const { error: err } = await supabase.from("orders").update({ payment_method: method }).eq("id", orderId);
+    if (err) { 
+      setError(err.message); 
+      setSavingPayment(false);
+      return; 
+    }
     setSavingPayment(false);
-    if (err) { setError(err.message); return; }
     onUpdate();
   }
 
