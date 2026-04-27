@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
       total_rental_price: unknown;
       payment_status: string | null;
       order_status: string | null;
-      customers: Array<{ full_name: string | null; company_name: string | null }> | null;
+      customers: { full_name: string | null; company_name: string | null } | null;
     }>;
 
     const todayStr = today.toISOString();
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     for (const o of typedOrders) {
       const start = startOfDay(parseISO(o.start_date));
       const end = startOfDay(parseISO(o.end_date));
-      const customerName = o.customers?.[0]?.full_name ?? o.customers?.[0]?.company_name ?? null;
+      const customerName = o.customers?.full_name ?? o.customers?.company_name ?? null;
 
       const summary: OrderSummary = {
         id: o.id,
