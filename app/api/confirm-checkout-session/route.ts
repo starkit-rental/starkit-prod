@@ -70,10 +70,12 @@ export async function POST(req: Request) {
       auth: { persistSession: false },
     });
 
+    // Only update if not already paid — this prevents duplicate emails on page refresh
     const { data: updated, error: updateError } = await supabase
       .from("orders")
       .update({ payment_status: "paid", payment_method: "stripe" })
       .eq("id", orderId)
+      .neq("payment_status", "paid")
       .select("id,payment_status")
       .maybeSingle();
 
@@ -81,8 +83,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    if (!updated) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    // If updated is null the order was already marked paid — skip emails
+    const justConfirmed = !!updated;
+
+    // If neither updated nor existing order, it doesn't exist
+    if (!justConfirmed) {
+      // Verify order exists at all
+      const { data: existing } = await supabase
+        .from("orders")
+        .select("id,payment_status")
+        .eq("id", orderId)
+        .maybeSingle();
+      if (!existing) {
+        return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      }
     }
 
     // Fetch full order details for email
@@ -94,8 +108,8 @@ export async function POST(req: Request) {
       .eq("id", orderId)
       .maybeSingle();
 
-    // Send emails (don't block response if emails fail)
-    if (orderData) {
+    // Send emails only on first confirmation (don't block response if emails fail)
+    if (justConfirmed && orderData) {
       const customer = Array.isArray(orderData.customers)
         ? orderData.customers[0]
         : orderData.customers;
@@ -168,7 +182,7 @@ export async function POST(req: Request) {
           company_name
         )
       `)
-      .eq("id", updated.id)
+      .eq("id", orderId)
       .single();
 
     return NextResponse.json(
