@@ -381,17 +381,18 @@ export async function sendOrderReceivedEmail(params: StatusEmailParams) {
 <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Jeśli masz pytania, śmiało odpowiedz na tego maila lub napisz na <a href="mailto:wynajem@starkit.pl" style="color:#1a1a2e;font-weight:600">wynajem@starkit.pl</a>.</p>
 <p style="margin:24px 0 0;font-size:15px;color:#334155;line-height:1.65">Pozdrawiamy,<br/><strong>Zespół Starkit</strong></p>`;
 
-  const { subject, html } = await resolveEmailContent(
-    "order_received",
-    vars,
-    `Otrzymaliśmy Twoją rezerwację Starlink Mini — ${displayId}`,
-    fallbackBody
-  );
+  const fallbackSubject = `Otrzymaliśmy Twoją rezerwację Starlink Mini — ${displayId}`;
 
   try {
+    const { subject, html } = await resolveEmailContent(
+      "order_received",
+      vars,
+      fallbackSubject,
+      fallbackBody
+    );
     return await sendAndLog({ to: params.customerEmail, subject, html, orderId: params.orderId, type: "order_received" });
   } catch (error) {
-    await logEmail({ orderId: params.orderId, recipient: params.customerEmail, subject, type: "order_received", status: "failed", errorMessage: error instanceof Error ? error.message : "Unknown error" });
+    await logEmail({ orderId: params.orderId, recipient: params.customerEmail, subject: fallbackSubject, type: "order_received", status: "failed", errorMessage: error instanceof Error ? error.message : "Unknown error" });
     throw error;
   }
 }
