@@ -6,7 +6,6 @@ const nextConfig = {
   poweredByHeader: false,
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', 'embla-carousel-react', 'next-themes'],
-    optimizeCss: true,
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
