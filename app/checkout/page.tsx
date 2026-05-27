@@ -321,6 +321,8 @@ function CheckoutContent() {
   const [product, setProduct] = useState<ProductRow | null>(null);
   const [loadingProduct, setLoadingProduct] = useState(true);
   const [productError, setProductError] = useState<string | null>(null);
+  const [pricingTiers, setPricingTiers] = useState<{ tier_days: number; multiplier: number; label?: string }[]>([]);
+  const [autoIncrementMultiplier, setAutoIncrementMultiplier] = useState<number>(1.0);
 
   // ── Form state ──
   const [firstName, setFirstName] = useState("");
@@ -386,6 +388,29 @@ function CheckoutContent() {
     };
   }, [productId, supabase]);
 
+  // ── Load pricing tiers once product is known (matches rental-widget) ──
+  useEffect(() => {
+    if (!product?.id) return;
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/pricing-tiers?productId=${product.id}`);
+        const json = await res.json();
+        if (!active) return;
+        setPricingTiers(json?.tiers ?? []);
+        setAutoIncrementMultiplier(json?.autoIncrementMultiplier ?? 1.0);
+      } catch {
+        if (active) {
+          setPricingTiers([]);
+          setAutoIncrementMultiplier(1.0);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [product?.id]);
+
   // ── Pricing ──
   const pricing = useMemo(() => {
     if (!product || !fromDate || !toDate) return null;
@@ -397,11 +422,13 @@ function CheckoutContent() {
         endDate: toDate,
         dailyRateCents: Math.round(daily * 100),
         depositCents: Math.round(dep * 100),
+        pricingTiers: pricingTiers.length > 0 ? pricingTiers : undefined,
+        autoIncrementMultiplier,
       });
     } catch {
       return null;
     }
-  }, [product, fromDate, toDate]);
+  }, [product, fromDate, toDate, pricingTiers, autoIncrementMultiplier]);
 
   // ── Validation ──
   const formValid = useMemo(() => {
