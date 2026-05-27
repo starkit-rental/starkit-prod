@@ -154,33 +154,26 @@ export default function OfficeInventoryPage() {
   async function createProduct() {
     setError(null);
 
-    const payload: any = {
-      sanity_slug: draftNew.sanity_slug || null,
-      name: draftNew.name || null,
-      base_price_day: draftNew.base_price_day ? Number(draftNew.base_price_day) : 0,
-      deposit_amount: draftNew.deposit_amount ? Number(draftNew.deposit_amount) : 0,
-      buffer_before: parseInt(draftNew.buffer_before, 10) || 1,
-      buffer_after: parseInt(draftNew.buffer_after, 10) || 1,
-    };
-
-    const { error: insertError } = await supabase.from("products").insert(payload);
-    if (insertError) {
-      setError(insertError.message);
+    const res = await fetch("/api/office/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sanity_slug: draftNew.sanity_slug || null,
+        name: draftNew.name || null,
+        base_price_day: draftNew.base_price_day ? Number(draftNew.base_price_day) : 0,
+        deposit_amount: draftNew.deposit_amount ? Number(draftNew.deposit_amount) : 0,
+        buffer_before: parseInt(draftNew.buffer_before, 10) || 1,
+        buffer_after: parseInt(draftNew.buffer_after, 10) || 1,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error || "Nie udało się utworzyć produktu");
       return;
     }
 
     setDraftNew({ sanity_slug: "", name: "", base_price_day: "", deposit_amount: "", buffer_before: "1", buffer_after: "1" });
     setShowAddProduct(false);
-    await load();
-  }
-
-  async function updateProduct(productId: string, patch: Partial<ProductRow> & Record<string, any>) {
-    setError(null);
-    const { error: updateError } = await supabase.from("products").update(patch).eq("id", productId);
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
     await load();
   }
 
@@ -198,12 +191,17 @@ export default function OfficeInventoryPage() {
 
   async function addStockItem(productId: string, serial: string) {
     setError(null);
-    const { error: insertError } = await supabase.from("stock_items").insert({
-      product_id: productId,
-      serial_number: serial || null,
+    const res = await fetch("/api/office/stock-items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_id: productId,
+        serial_number: serial || null,
+      }),
     });
-    if (insertError) {
-      setError(insertError.message);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error || "Nie udało się dodać egzemplarza");
       return;
     }
     await load();
@@ -211,9 +209,14 @@ export default function OfficeInventoryPage() {
 
   async function updateStockItem(stockItemId: string, patch: Partial<StockItemRow>) {
     setError(null);
-    const { error: updateError } = await supabase.from("stock_items").update(patch).eq("id", stockItemId);
-    if (updateError) {
-      setError(updateError.message);
+    const res = await fetch(`/api/office/stock-items/${stockItemId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error || "Nie udało się zaktualizować egzemplarza");
       return;
     }
     await load();
@@ -221,9 +224,10 @@ export default function OfficeInventoryPage() {
 
   async function deleteStockItem(stockItemId: string) {
     setError(null);
-    const { error: deleteError } = await supabase.from("stock_items").delete().eq("id", stockItemId);
-    if (deleteError) {
-      setError(deleteError.message);
+    const res = await fetch(`/api/office/stock-items/${stockItemId}`, { method: "DELETE" });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error || "Nie udało się usunąć egzemplarza");
       return;
     }
     setShowDeleteStock(null);
@@ -232,15 +236,18 @@ export default function OfficeInventoryPage() {
 
   async function setUnavailability(stockItemId: string) {
     setError(null);
-    const patch: any = {
-      unavailable_from: unavailabilityForm.unavailable_from || null,
-      unavailable_to: unavailabilityForm.unavailable_to || null,
-      unavailable_reason: unavailabilityForm.unavailable_reason || null,
-    };
-    
-    const { error: updateError } = await supabase.from("stock_items").update(patch).eq("id", stockItemId);
-    if (updateError) {
-      setError(updateError.message);
+    const res = await fetch(`/api/office/stock-items/${stockItemId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        unavailable_from: unavailabilityForm.unavailable_from || null,
+        unavailable_to: unavailabilityForm.unavailable_to || null,
+        unavailable_reason: unavailabilityForm.unavailable_reason || null,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error || "Nie udało się ustawić niedostępności");
       return;
     }
     
@@ -251,14 +258,18 @@ export default function OfficeInventoryPage() {
 
   async function clearUnavailability(stockItemId: string) {
     setError(null);
-    const { error: updateError } = await supabase.from("stock_items").update({
-      unavailable_from: null,
-      unavailable_to: null,
-      unavailable_reason: null,
-    }).eq("id", stockItemId);
-    
-    if (updateError) {
-      setError(updateError.message);
+    const res = await fetch(`/api/office/stock-items/${stockItemId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        unavailable_from: null,
+        unavailable_to: null,
+        unavailable_reason: null,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error || "Nie udało się wyczyścić niedostępności");
       return;
     }
     

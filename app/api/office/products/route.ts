@@ -158,3 +158,37 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
+
+  try {
+    const body = await req.json();
+    const supabase = createSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("products")
+      .insert({
+        sanity_slug: body.sanity_slug || null,
+        name: body.name || null,
+        base_price_day: body.base_price_day ?? 0,
+        deposit_amount: body.deposit_amount ?? 0,
+        buffer_before: body.buffer_before ?? 1,
+        buffer_after: body.buffer_after ?? 1,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ product: data });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 }
+    );
+  }
+}
