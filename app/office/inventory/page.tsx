@@ -186,19 +186,12 @@ export default function OfficeInventoryPage() {
 
   async function deleteProduct(productId: string) {
     setError(null);
-
-    const { error: stockDeleteError } = await supabase.from("stock_items").delete().eq("product_id", productId);
-    if (stockDeleteError) {
-      setError(stockDeleteError.message);
+    const res = await fetch(`/api/office/products/${productId}`, { method: "DELETE" });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error || "Nie udało się usunąć produktu");
       return;
     }
-
-    const { error: deleteError } = await supabase.from("products").delete().eq("id", productId);
-    if (deleteError) {
-      setError(deleteError.message);
-      return;
-    }
-
     setShowDeleteProduct(null);
     await load();
   }
@@ -294,19 +287,21 @@ export default function OfficeInventoryPage() {
   async function handleSaveEdit() {
     if (!productToEdit || !draftEdit) return;
     setError(null);
-    const { error: updateError } = await supabase
-      .from("products")
-      .update({
+    const res = await fetch(`/api/office/products/${productToEdit.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         name: draftEdit.name || null,
         sanity_slug: draftEdit.sanity_slug || null,
         base_price_day: Number(draftEdit.base_price_day || 0),
         deposit_amount: Number(draftEdit.deposit_amount || 0),
         buffer_before: parseInt(draftEdit.buffer_before, 10) || 1,
         buffer_after: parseInt(draftEdit.buffer_after, 10) || 1,
-      })
-      .eq("id", productToEdit.id);
-    if (updateError) {
-      setError(updateError.message);
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json?.error || "Nie udało się zapisać produktu");
       return;
     }
     setShowEditProduct(null);
