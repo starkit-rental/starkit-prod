@@ -10,8 +10,9 @@ import ProductSchema from "@/components/seo/product-schema";
 import BreadcrumbsSchema from "@/components/seo/breadcrumbs-schema";
 import FAQSchema from "@/components/seo/faq-schema";
 import ReviewSchema from "@/components/seo/review-schema";
+import ServiceSchema from "@/components/seo/service-schema";
+import HowToSchema from "@/components/seo/howto-schema";
 import RentalWidget from "../_components/rental-widget";
-import PricingPreview from "../_components/pricing-preview";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -39,11 +40,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
-  const title = product.meta_title || `Wynajem ${product.title} – cena, dostawa | Starkit`;
+  const title = product.meta_title || `Wynajem ${product.title} – cena od ${product.pricePerDay || 39} zł/dzień, dostawa 24h | Starkit.pl`;
   const description =
     product.meta_description ||
     product.excerpt ||
-    `Wynajmij ${product.title} na minimum 3 dni. Dostawa na terenie całej Polski. Idealne na event, budowę lub działkę.`;
+    `Wynajmij ${product.title} – internet satelitarny bez limitu. Dostawa w 24h w całej Polsce. Na event, budowę, wesele, działkę i pracę zdalną. Zamów online na Starkit.pl.`;
   const ogImage = product.ogImage?.asset?.url || product.images?.[0];
 
   return {
@@ -107,6 +108,10 @@ export default async function ProductPage({ params }: PageProps) {
           pricePerDay: product.pricePerDay,
           images: product.images,
           status: product.status,
+          reviewCount: product.testimonials?.length || 0,
+          avgRating: product.testimonials?.length
+            ? product.testimonials.reduce((sum: number, t: any) => sum + (t.rating || 5), 0) / product.testimonials.length
+            : 0,
         }}
       />
       <BreadcrumbsSchema links={breadcrumbLinks} />
@@ -123,6 +128,16 @@ export default async function ProductPage({ params }: PageProps) {
           }))}
         />
       )}
+      <ServiceSchema
+        productName={product.title}
+        productSlug={product.slug}
+        pricePerDay={product.pricePerDay}
+        description={product.excerpt}
+      />
+      <HowToSchema
+        productName={product.title}
+        productSlug={product.slug}
+      />
 
       {/* Product Detail Section */}
       <section className="w-full py-8 md:py-12 lg:py-16">
@@ -187,16 +202,6 @@ export default async function ProductPage({ params }: PageProps) {
               {/* Rental Widget */}
               <RentalWidget sanitySlug={product.slug} productTitle={product.title || "Produkt"} />
 
-              {/* SEO-visible static pricing (hidden from users, visible to search engines) */}
-              {product.pricePerDay && (
-                <div className="absolute w-px h-px overflow-hidden whitespace-nowrap" style={{ clip: "rect(0,0,0,0)" }}>
-                  <PricingPreview
-                    pricePerDay={product.pricePerDay}
-                    productTitle={product.title || ""}
-                    deposit={product.deposit}
-                  />
-                </div>
-              )}
 
               {/* Trust signals */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">

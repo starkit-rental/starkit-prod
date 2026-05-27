@@ -1,0 +1,174 @@
+# Starkit.pl – Pełna dokumentacja usługi wynajmu Starlink
+
+> Starkit.pl to profesjonalna wypożyczalnia internetu satelitarnego Starlink w Polsce. Wynajem Starlink Standard i Starlink Mini z dostawą kurierem lub do paczkomatu w 24-48 godzin.
+
+## O firmie
+
+Starkit to polska firma specjalizująca się w wynajmie sprzętu Starlink – systemu internetu satelitarnego opracowanego przez SpaceX. Działamy na terenie całej Polski, dostarczając zestawy gotowe do użycia. Nasi klienci to organizatorzy eventów, firmy budowlane, podróżnicy, osoby pracujące zdalnie i wszyscy, którzy potrzebują szybkiego internetu tam, gdzie tradycyjne sieci nie docierają.
+
+Siedziba: Poznań, ul. Cumownicza, 61-131
+Email: kontakt@starkit.pl
+Telefon: +48 453 461 061
+Godziny pracy: Pon-Pt 9:00-18:00, Sob 9:00-14:00
+
+---
+
+## Produkty do wynajmu
+
+### Starlink Mini
+- **URL:** https://www.starkit.pl/products/starlink-mini
+- **Cena:** od 39 zł/dzień (minimum 3 dni)
+- **Prędkość:** do 350 Mbps download, ~30 Mbps upload
+- **Waga:** 1,1 kg (mieści się w plecaku)
+- **Zasięg WiFi:** ok. 90 m²
+- **Zasilanie:** USB-C / powerbank / 12V / 230V
+- **Idealny do:** kamper, podróże, praca zdalna, łódź/jacht, domek letniskowy, small events
+- **Konfiguracja:** Plug & Play – gotowy w 5 minut
+
+### Starlink Standard
+- **URL:** https://www.starkit.pl/products/starlink-standard
+- **Cena:** od 59 zł/dzień (minimum 3 dni)
+- **Prędkość:** do 350 Mbps download, ~35 Mbps upload
+- **Liczba urządzeń:** do 128 jednocześnie
+- **Zasięg WiFi:** ok. 185 m²
+- **Zasilanie:** 230V
+- **Idealny do:** eventy, wesela, koncerty, budowy, firmy, biura tymczasowe, duże grupy
+- **Konfiguracja:** Plug & Play – gotowy w 5 minut
+
+---
+
+## Cennik szczegółowy
+
+### Starlink Mini
+| Okres | Cena/dzień | Cena łączna |
+|---|---|---|
+| 3 dni (minimum) | 39 zł | 240 zł |
+| 7 dni | 39 zł | 273 zł |
+| 14 dni | 39 zł | 546 zł |
+| 30 dni | 39 zł | 1170 zł |
+
+### Starlink Standard
+| Okres | Cena/dzień | Cena łączna |
+|---|---|---|
+| 3 dni (minimum) | 59 zł | 360 zł |
+| 7 dni | 59 zł | 413 zł |
+| 14 dni | 59 zł | 826 zł |
+| 30 dni | 59 zł | 1770 zł |
+
+*Im dłuższy wynajem, tym niższa stawka dzienna. Dokładne ceny kalkulowane na stronie produktu.*
+
+Dodatkowe informacje:
+- Kaucja zwrotna (zwracana po oddaniu sprawnego sprzętu)
+- Darmowa dostawa kurierem / paczkomatem
+- Brak abonamentu i umów długoterminowych
+- Płatność kartą lub przelewem
+
+---
+
+## Jak działa wynajem?
+
+1. **Wybierz zestaw i termin** – na stronie produktu (starlink-mini lub starlink-standard) wybierz daty wynajmu
+2. **Złóż rezerwację online** – podaj dane kontaktowe, adres dostawy, opłać zamówienie
+3. **Odbierz sprzęt w 24-48h** – wysyłamy kurierem InPost lub do paczkomatu
+4. **Podłącz i korzystaj** – Plug & Play: postaw antenę, podłącz zasilanie, internet gotowy w 5 minut
+5. **Zwróć sprzęt** – po zakończeniu wynajmu odeślij zestaw tą samą paczką (etykieta zwrotna w zestawie)
+
+---
+
+## Zastosowania wynajmu Starlink
+
+### Eventy i wesela
+Internet na event, koncert, festiwal lub wesele. Starlink Standard obsługuje do 128 urządzeń jednocześnie, zapewniając streaming, social media i komunikację bez przerw.
+
+### Place budowy
+Internet na budowie bez kabli i infrastruktury. Idealne dla firm budowlanych, które potrzebują dostępu do dokumentacji, systemów ERP i wideokonferencji.
+
+### Kampery i podróże
+Starlink Mini waży tylko 1,1 kg i mieści się w plecaku. Zasilanie z powerbanku lub 12V – idealny towarzysz podróży, vanlife i campingu.
+
+### Działki i domki letniskowe
+Internet satelitarny bez umów i kabli. Wynajem na weekend, tydzień lub cały sezon letni.
+
+### Praca zdalna
+Stabilne łącze do wideokonferencji i pracy z dowolnego miejsca w Polsce. Niskie opóźnienia, wysokie prędkości.
+
+### Produkcje filmowe i TV
+Szybki internet na planie zdjęciowym. Transfer dużych plików, streaming podglądu, komunikacja z ekipą.
+
+### Jachty i łodzie
+Starlink Mini działa na wodzie. Internet satelitarny na jachcie, łodzi żaglowej czy motorówce.
+
+### Rolnictwo i farmy
+Monitoring, drony, systemy GPS i zarządzanie gospodarstwem z internetu satelitarnego.
+
+---
+
+## Dostawa
+
+Dostarczamy na terenie całej Polski:
+- **Kurier InPost** – dostawa pod wskazany adres w 24-48h
+- **Paczkomat InPost** – dostawa do wybranego paczkomatu w 24-48h
+- **Odbiór osobisty** – w Poznaniu (ul. Cumownicza)
+
+Zwrot: etykieta zwrotna dołączona do zestawu. Wystarczy zapakować i nadać.
+
+---
+
+## Starlink Mini vs Starlink Standard – porównanie
+
+| Cecha | Starlink Mini | Starlink Standard |
+|---|---|---|
+| Cena od | 39 zł/dzień | 59 zł/dzień |
+| Prędkość | do 350 Mbps | do 350 Mbps |
+| Upload | ~30 Mbps | ~35 Mbps |
+| Zasięg WiFi | ~90 m² | ~185 m² |
+| Urządzenia | do 32 | do 128 |
+| Waga | 1,1 kg | ~9 kg |
+| Zasilanie | USB-C/12V/230V | 230V |
+| Najlepszy do | podróże, kamper, 1-2 osoby | eventy, budowy, grupy |
+
+---
+
+## FAQ
+
+### Ile kosztuje wynajem Starlink?
+Wynajem Starlink Mini zaczyna się od 39 zł/dzień, Starlink Standard od 59 zł/dzień. Minimalne zamówienie to 3 dni. Im dłuższy wynajem, tym niższa stawka dzienna.
+
+### Jak szybko dotrze sprzęt?
+Wysyłamy w ciągu 24 godzin od zamówienia. Dostawa kurierem lub do paczkomatu trwa 24-48 godzin.
+
+### Czy Starlink działa w całej Polsce?
+Tak, Starlink działa na terenie całej Polski – również w miejscach bez zasięgu LTE czy światłowodu.
+
+### Czy potrzebuję umowy lub abonamentu?
+Nie. Wynajem jest bez umowy i abonamentu. Płacisz tylko za faktyczny okres użytkowania.
+
+### Czy Starlink działa za granicą?
+Starlink Mini może działać w większości krajów europejskich. Szczegóły ustalamy indywidualnie.
+
+### Jak skonfigurować Starlink?
+Konfiguracja to Plug & Play. Stawiasz antenę na otwartej przestrzeni, podłączasz zasilanie i internet jest gotowy w ciągu 5 minut. Nie wymaga specjalistycznej wiedzy.
+
+### Jak zwrócić sprzęt?
+Etykieta zwrotna jest dołączona do zestawu. Pakujesz sprzęt w oryginalne opakowanie i nadajesz paczkomatem lub kurierem.
+
+---
+
+## Blog i poradniki
+
+Regularnie publikujemy artykuły o wynajmie Starlink:
+- https://www.starkit.pl/blog
+
+Tematy: wynajem Starlink na event, budowę, wesele, podróże, porównania z LTE/5G, poradniki konfiguracji, zastosowania w różnych branżach.
+
+---
+
+## Linki
+
+- Strona główna: https://www.starkit.pl
+- Starlink Mini: https://www.starkit.pl/products/starlink-mini
+- Starlink Standard: https://www.starkit.pl/products/starlink-standard
+- Blog: https://www.starkit.pl/blog
+- Cennik: https://www.starkit.pl/ile-kosztuje-wynajem-starlink
+- Jak działa wynajem: https://www.starkit.pl/jak-dziala-wynajem-starlink
+- Mini vs Standard: https://www.starkit.pl/starlink-mini-vs-standard

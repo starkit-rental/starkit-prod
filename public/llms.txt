@@ -1,0 +1,51 @@
+# Starkit – Wynajem Starlink w Polsce
+
+> Starkit.pl to profesjonalna wypożyczalnia Starlink działająca na terenie całej Polski. Oferujemy wynajem Starlink Standard oraz Starlink Mini – internet satelitarny od SpaceX.
+
+## Usługi
+
+- Wynajem Starlink Mini – od 39 zł/dzień
+- Wynajem Starlink Standard – od 59 zł/dzień
+- Dostawa kurierem lub do paczkomatu w 24-48h
+- Wsparcie techniczne 7 dni w tygodniu
+
+## Strony produktowe
+
+- [Wynajem Starlink Mini](https://www.starkit.pl/products/starlink-mini): Kompaktowy zestaw (1,1 kg), do 350 Mbps, zasilanie USB-C, idealny na kampera, podróże i pracę zdalną.
+- [Wynajem Starlink Standard](https://www.starkit.pl/products/starlink-standard): Pełnowymiarowy zestaw, do 350 Mbps, obsługa 128 urządzeń, idealny na eventy, wesela i budowy.
+
+## Cennik
+
+- Starlink Mini: od 39 zł/dzień (min. 3 dni = 240 zł)
+- Starlink Standard: od 59 zł/dzień (min. 3 dni = 360 zł)
+- Im dłuższy wynajem, tym niższa stawka dzienna
+- Kaucja zwrotna
+
+## Jak wynająć?
+
+1. Wybierz zestaw (Mini lub Standard) i termin na stronie
+2. Złóż rezerwację online i opłać zamówienie
+3. Odbierz sprzęt kurierem lub w paczkomacie w 24-48h
+4. Podłącz antenę, włącz zasilanie – internet gotowy w 5 minut
+
+## Dla kogo?
+
+- Eventy, koncerty, wesela
+- Place budowy, firmy budowlane
+- Kampery, vanlife, podróże
+- Działki rekreacyjne, domki letniskowe
+- Praca zdalna z dowolnego miejsca
+- Produkcje filmowe i TV
+- Jachty i łodzie
+
+## Kontakt
+
+- Strona: https://www.starkit.pl
+- Email: kontakt@starkit.pl
+- Telefon: +48 453 461 061
+- Adres: ul. Cumownicza, 61-131 Poznań
+
+## Więcej informacji
+
+- [Blog](https://www.starkit.pl/blog)
+- [Pełne informacje dla LLM](https://www.starkit.pl/llms-full.txt)

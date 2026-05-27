@@ -51,7 +51,7 @@ async function getProductsSitemap(): Promise<MetadataRoute.Sitemap[]> {
       'url': $baseUrl + '/products/' + slug.current,
       'lastModified': _updatedAt,
       'changeFrequency': 'daily',
-      'priority': 0.8
+      'priority': 0.9
     }
   `;
 

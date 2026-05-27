@@ -7,6 +7,8 @@ type ProductSchemaProps = {
     pricePerDay?: number;
     images?: string[];
     status?: string;
+    reviewCount?: number;
+    avgRating?: number;
   };
 };
 
@@ -37,13 +39,17 @@ export default function ProductSchema({ product }: ProductSchemaProps) {
       "@type": "Organization",
       name: "SpaceX",
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.9",
-      reviewCount: "47",
-      bestRating: "5",
-      worstRating: "1",
-    },
+    ...(product.reviewCount && product.avgRating
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: product.avgRating.toFixed(1),
+            reviewCount: String(product.reviewCount),
+            bestRating: "5",
+            worstRating: "1",
+          },
+        }
+      : {}),
     offers: {
       "@type": "Offer",
       "@id": `${productUrl}#offer`,

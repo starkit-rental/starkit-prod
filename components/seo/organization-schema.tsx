@@ -5,8 +5,10 @@ export default function OrganizationSchema() {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     "@id": `${baseUrl}/#organization`,
+    additionalType: "https://schema.org/RentalShop",
     name: "Starkit",
-    alternateName: ["Starkit Wynajem Starlink", "Wypożyczalnia Starlink Starkit"],
+    alternateName: ["Starkit Wynajem Starlink", "Wypożyczalnia Starlink Starkit", "Starkit.pl"],
+    knowsAbout: ["Starlink", "Internet satelitarny", "Wynajem Starlink", "SpaceX Starlink"],
     url: baseUrl,
     logo: {
       "@type": "ImageObject",

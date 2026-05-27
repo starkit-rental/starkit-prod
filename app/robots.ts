@@ -5,7 +5,27 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: ["/", "/llms.txt", "/llms-full.txt"],
+        disallow: ["/studio/", "/office/", "/api/", "/checkout/", "/admin/"],
+      },
+      {
+        userAgent: "GPTBot",
+        allow: ["/", "/llms.txt", "/llms-full.txt"],
+        disallow: ["/studio/", "/office/", "/api/", "/checkout/", "/admin/"],
+      },
+      {
+        userAgent: "ChatGPT-User",
+        allow: ["/", "/llms.txt", "/llms-full.txt"],
+        disallow: ["/studio/", "/office/", "/api/", "/checkout/", "/admin/"],
+      },
+      {
+        userAgent: "PerplexityBot",
+        allow: ["/", "/llms.txt", "/llms-full.txt"],
+        disallow: ["/studio/", "/office/", "/api/", "/checkout/", "/admin/"],
+      },
+      {
+        userAgent: "Google-Extended",
+        allow: ["/", "/llms.txt", "/llms-full.txt"],
         disallow: ["/studio/", "/office/", "/api/", "/checkout/", "/admin/"],
       },
     ],

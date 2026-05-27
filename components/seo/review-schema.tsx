@@ -46,7 +46,7 @@ export default function ReviewSchema({ productName, productSlug, reviews }: Revi
         worstRating: "1",
       },
       reviewBody: r.bodyText || "",
-      datePublished: "2025-01-15",
+      datePublished: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       publisher: {
         "@type": "Organization",
         name: "Starkit",

@@ -37,13 +37,6 @@ export default function ItemListSchema({ items }: ItemListSchemaProps) {
           `Wynajem ${item.title} – internet satelitarny bez ograniczeń.`,
         url: `${baseUrl}/products/${item.slug}`,
         image: item.image ? [item.image] : [],
-        aggregateRating: {
-          "@type": "AggregateRating",
-          ratingValue: "4.9",
-          reviewCount: "47",
-          bestRating: "5",
-          worstRating: "1",
-        },
         offers: {
           "@type": "Offer",
           // Google rejects price: 0 — use fallback minimum

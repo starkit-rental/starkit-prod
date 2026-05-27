@@ -9,7 +9,6 @@ import CookieConsent from "./_components/cookie-consent";
 import OrganizationSchema from "@/components/seo/organization-schema";
 import WebsiteSchema from "@/components/seo/website-schema";
 import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
-import Script from "next/script";
 
 const isProduction = process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
 
@@ -31,12 +30,20 @@ export const metadata: Metadata = {
   keywords: [
     "wynajem starlink",
     "wynajem starlink mini",
+    "wynajem starlink standard",
     "wypożyczalnia starlink",
+    "wypożyczalnia starlink mini",
+    "wypożyczalnia starlink standard",
     "starlink do wynajęcia",
     "wynajem internetu satelitarnego",
+    "internet satelitarny wynajem",
+    "starlink polska wynajem",
+    "wynajem starlink cena",
     "starlink na event",
     "starlink na budowę",
     "starlink na wesele",
+    "starlink na działkę",
+    "starlink na kampera",
   ],
   openGraph: {
     url: siteUrl,
@@ -75,6 +82,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Preconnect to external domains for performance */}
         <link rel="preconnect" href="https://cdn.sanity.io" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.sanity.io" />
+        {/* LLM discoverability */}
+        <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-friendly site info" />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased overscroll-none", fontSans.variable)} suppressHydrationWarning>
         <CookieConsent />
@@ -90,19 +99,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <>
           <GoogleTagManager gtmId="GTM-MQXCK4RC" />
           <GoogleAnalytics gaId="G-TFV3MF7EEF" />
-          <Script
-            id="google-ads"
-            strategy="afterInteractive"
-            src="https://www.googletagmanager.com/gtag/js?id=AW-18046741285"
-          />
-          <Script id="google-ads-config" strategy="afterInteractive">
-            {`
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'AW-18046741285');
-            `}
-          </Script>
         </>
       )}
     </html>
