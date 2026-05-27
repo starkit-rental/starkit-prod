@@ -4,7 +4,8 @@ import { requireAuth } from "@/lib/auth-guard";
 import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
 import ContractTemplate from "@/lib/pdf/ContractTemplate";
-import { calculatePrice, type PricingTier } from "@/lib/rental-engine";
+import { type PricingTier } from "@/lib/rental-engine";
+import { sumMultiProductPricing, type MultiProductLine } from "@/lib/multi-product-pricing";
 import { generateContractSchema } from "@/lib/validation";
 
 function createSupabaseAdmin() {
@@ -97,81 +98,77 @@ export async function POST(req: NextRequest) {
       })
       .filter(Boolean) as { name: string; serialNumber?: string }[];
 
-    let productId: string | null = null;
-    let basePriceDay = 0;
-    let depositAmount = 0;
+    // Build per-line pricing input by walking ALL order_items (not just the first).
+    // Cache product config to avoid duplicate Supabase reads when multiple stock items
+    // belong to the same product.
+    const productConfigCache = new Map<string, {
+      basePriceDay: number;
+      depositAmount: number;
+      tiers: PricingTier[];
+      autoIncrementMultiplier: number;
+    }>();
+    const lines: MultiProductLine[] = [];
 
-    if (orderItems.length > 0) {
-      const firstItem = orderItems[0];
-      const stockItem = Array.isArray(firstItem?.stock_items) ? firstItem.stock_items[0] : firstItem?.stock_items;
-      const product = Array.isArray(stockItem?.products) ? stockItem.products[0] : stockItem?.products;
-      if (product) {
-        productId = product.id;
-        // Fetch full product details for base pricing
+    for (const it of orderItems as any[]) {
+      const stock = Array.isArray(it?.stock_items) ? it.stock_items[0] : it?.stock_items;
+      const product = Array.isArray(stock?.products) ? stock.products[0] : stock?.products;
+      if (!product?.id) continue;
+      const pid = String(product.id);
+
+      let cached = productConfigCache.get(pid);
+      if (!cached) {
         const { data: productData } = await supabase
           .from("products")
           .select("base_price_day, deposit_amount, auto_increment_multiplier")
-          .eq("id", productId)
+          .eq("id", pid)
           .maybeSingle();
-        if (productData) {
-          basePriceDay = Number(productData.base_price_day ?? 0);
-          depositAmount = Number(productData.deposit_amount ?? 0);
-        }
+        const { data: tiersData } = await supabase
+          .from("pricing_tiers")
+          .select("tier_days, multiplier, label")
+          .eq("product_id", pid)
+          .order("tier_days", { ascending: true });
+        cached = {
+          basePriceDay: Number(productData?.base_price_day ?? 0),
+          depositAmount: Number(productData?.deposit_amount ?? 0),
+          tiers: (tiersData ?? []).map((t: any) => ({
+            tier_days: t.tier_days,
+            multiplier: t.multiplier,
+            label: t.label,
+          })),
+          autoIncrementMultiplier: Number(productData?.auto_increment_multiplier ?? 1.0),
+        };
+        productConfigCache.set(pid, cached);
       }
+
+      lines.push({
+        productId: pid,
+        basePriceDay: cached.basePriceDay,
+        depositAmount: cached.depositAmount,
+        tiers: cached.tiers,
+        autoIncrementMultiplier: cached.autoIncrementMultiplier,
+      });
     }
 
-    // Fetch pricing tiers if we have a product
-    let pricingTiers: PricingTier[] = [];
-    let autoIncrementMultiplier = 1.0;
-    if (productId) {
-      const { data: tiersData } = await supabase
-        .from("pricing_tiers")
-        .select("tier_days, multiplier, label")
-        .eq("product_id", productId)
-        .order("tier_days", { ascending: true });
-      
-      if (tiersData && tiersData.length > 0) {
-        pricingTiers = tiersData.map((t: any) => ({
-          tier_days: t.tier_days,
-          multiplier: t.multiplier,
-          label: t.label,
-        }));
-      }
-
-      const { data: productData } = await supabase
-        .from("products")
-        .select("auto_increment_multiplier")
-        .eq("id", productId)
-        .maybeSingle();
-      if (productData) {
-        autoIncrementMultiplier = productData.auto_increment_multiplier ?? 1.0;
-      }
-    }
-
-    // Recalculate pricing with tiers (don't trust stored values)
+    // Recalculate pricing across ALL order items (don't trust stored values)
     const displayNumber = formatOrderNumber(order.order_number, orderId);
     let rentalSafe = 0;
     let depositSafe = 0;
     let total = 0;
     let rentalDays = calculateRentalDays(order.start_date, order.end_date);
 
-    if (basePriceDay > 0) {
+    if (lines.length > 0) {
       try {
-        const pricingResult = calculatePrice({
+        const r = sumMultiProductPricing({
           startDate: order.start_date,
           endDate: order.end_date,
-          dailyRateCents: Math.round(basePriceDay * 100),
-          depositCents: Math.round(depositAmount * 100),
-          pricingTiers: pricingTiers.length > 0 ? pricingTiers : undefined,
-          autoIncrementMultiplier,
+          lines,
         });
-        rentalSafe = pricingResult.rentalSubtotalCents / 100;
-        depositSafe = pricingResult.depositCents / 100;
-        total = pricingResult.totalCents / 100;
-        rentalDays = pricingResult.days;
+        rentalSafe = r.rentalCents / 100;
+        depositSafe = r.depositCents / 100;
+        total = r.totalCents / 100;
+        rentalDays = r.days || rentalDays;
       } catch (err) {
-        console.error("[generate-contract] Pricing calculation failed, falling back to stored values:", err);
-        // Fallback to stored values if calculation fails
+        console.error("[generate-contract] Multi-product pricing failed, falling back to stored values:", err);
         const rental = Number(String(order.total_rental_price ?? 0));
         const dep = Number(String(order.total_deposit ?? 0));
         rentalSafe = Number.isFinite(rental) ? rental : 0;
@@ -179,7 +176,6 @@ export async function POST(req: NextRequest) {
         total = rentalSafe + depositSafe;
       }
     } else {
-      // No product pricing found, use stored values
       const rental = Number(String(order.total_rental_price ?? 0));
       const dep = Number(String(order.total_deposit ?? 0));
       rentalSafe = Number.isFinite(rental) ? rental : 0;
@@ -224,7 +220,7 @@ export async function POST(req: NextRequest) {
     });
     const pdfBuffer = await renderToBuffer(pdfElement as any);
 
-    console.log(`[generate-contract] PDF generated for ${displayNumber} (${pdfBuffer.length} bytes, ${pricingTiers.length} tiers applied)`);
+    console.log(`[generate-contract] PDF generated for ${displayNumber} (${pdfBuffer.length} bytes, ${lines.length} line(s) priced)`);
 
     // Upload to Supabase Storage — /contracts/{orderId}/{filename}
     const filename = `Umowa_Najmu_Starkit_${displayNumber.replace(/[^a-zA-Z0-9-]/g, "_")}.pdf`;
