@@ -480,7 +480,7 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
           )}
 
           {/* ── Summary Card ── */}
-          {rangeValid && meetsMinimumDays && pricing && (
+          {rangeValid && meetsMinimumDays && pricing && !loadingTiers && (
             <div className="rounded-xl border border-border bg-muted p-4">
               <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Podsumowanie

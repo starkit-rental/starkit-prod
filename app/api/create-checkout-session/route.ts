@@ -227,7 +227,7 @@ export async function POST(req: Request) {
 
     const { data: product, error: productError } = await supabase
       .from("products")
-      .select("id,name,base_price_day,deposit_amount")
+      .select("id,name,base_price_day,deposit_amount,auto_increment_multiplier")
       .eq("id", productId)
       .maybeSingle();
 
@@ -241,12 +241,23 @@ export async function POST(req: Request) {
 
     const dailyRateCents = decimalToCents((product as any).base_price_day);
     const depositCents = decimalToCents((product as any).deposit_amount);
+    const autoIncrementMultiplier: number = (product as any).auto_increment_multiplier ?? 1.0;
+
+    const { data: tiersData } = await supabase
+      .from("pricing_tiers")
+      .select("tier_days,multiplier")
+      .eq("product_id", productId)
+      .order("tier_days", { ascending: true });
+
+    const pricingTiers = (tiersData ?? []) as { tier_days: number; multiplier: number }[];
 
     const pricing = calculatePrice({
       startDate,
       endDate,
       dailyRateCents,
       depositCents,
+      pricingTiers: pricingTiers.length > 0 ? pricingTiers : undefined,
+      autoIncrementMultiplier,
     });
 
     const productName = (product as any).name ? String((product as any).name) : "Produkt";
@@ -310,6 +321,8 @@ export async function POST(req: Request) {
       endDate,
       dailyRateCents,
       depositCents,
+      pricingTiers: pricingTiers.length > 0 ? pricingTiers : undefined,
+      autoIncrementMultiplier,
       customerEmail,
       metadata: {
         orderId,

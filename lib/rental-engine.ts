@@ -354,6 +354,8 @@ export type BuildStripeCheckoutParamsInput = {
   stockItemId?: string;
   customerEmail?: string;
   metadata?: Record<string, string>;
+  pricingTiers?: PricingTier[];
+  autoIncrementMultiplier?: number;
 };
 
 export function buildStripeCheckoutSessionParams(
@@ -372,6 +374,8 @@ export function buildStripeCheckoutSessionParams(
     stockItemId,
     customerEmail,
     metadata,
+    pricingTiers,
+    autoIncrementMultiplier,
   } = input;
 
   const pricing = calculatePrice({
@@ -379,6 +383,8 @@ export function buildStripeCheckoutSessionParams(
     endDate,
     dailyRateCents,
     depositCents,
+    pricingTiers,
+    autoIncrementMultiplier,
   });
 
   const mergedMetadata: Record<string, string> = {
