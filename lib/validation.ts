@@ -130,6 +130,7 @@ export const createCheckoutSchema = z.object({
   productId: uuidSchema,
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  addonIds: z.string().optional(), // Comma-separated addon product IDs
   currency: z.string().optional(),
   customerEmail: emailSchema.optional(),
   customerName: z.string().min(1).max(200).optional(),

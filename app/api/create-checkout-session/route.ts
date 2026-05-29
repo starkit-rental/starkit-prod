@@ -15,6 +15,7 @@ type CreateCheckoutSessionRequestBody = {
   productId: string;
   startDate: string;
   endDate: string;
+  addonIds?: string; // Comma-separated addon product IDs
   currency?: string;
   customerEmail?: string;
   customerName?: string;
@@ -204,6 +205,7 @@ export async function POST(req: Request) {
       customerId = String((existingCustomer as any).id);
     }
 
+    // Check main product availability
     const availability = await checkAvailability({
       supabase,
       productId,
@@ -224,6 +226,37 @@ export async function POST(req: Request) {
     }
 
     const stockItemId = availability.availableStockItemIds[0];
+
+    // Parse and check addon availability
+    const addonIdsArray = body.addonIds ? body.addonIds.split(',').filter(Boolean) : [];
+    const addonStockAssignments: Array<{ productId: string; stockItemId: string }> = [];
+
+    for (const addonId of addonIdsArray) {
+      const addonAvailability = await checkAvailability({
+        supabase,
+        productId: addonId,
+        startDate,
+        endDate,
+        bufferDays: 2,
+      });
+
+      if (!addonAvailability.available) {
+        return NextResponse.json(
+          {
+            error: `Addon unavailable: ${addonId}`,
+            addonId,
+            blockedStartDate: addonAvailability.blockedStartDate,
+            blockedEndDate: addonAvailability.blockedEndDate,
+          },
+          { status: 409 }
+        );
+      }
+
+      addonStockAssignments.push({
+        productId: addonId,
+        stockItemId: addonAvailability.availableStockItemIds[0],
+      });
+    }
 
     const { data: product, error: productError } = await supabase
       .from("products")
@@ -299,13 +332,28 @@ export async function POST(req: Request) {
 
     const orderId = String((createdOrder as any).id);
 
+    // Create order_item for main product
     const { error: orderItemError } = await supabase.from("order_items").insert({
       order_id: orderId,
+      product_id: productId,
       stock_item_id: stockItemId,
     });
 
     if (orderItemError) {
       return NextResponse.json({ error: orderItemError.message }, { status: 500 });
+    }
+
+    // Create order_items for addons
+    for (const addon of addonStockAssignments) {
+      const { error: addonItemError } = await supabase.from("order_items").insert({
+        order_id: orderId,
+        product_id: addon.productId,
+        stock_item_id: addon.stockItemId,
+      });
+
+      if (addonItemError) {
+        return NextResponse.json({ error: addonItemError.message }, { status: 500 });
+      }
     }
 
     const stripe = new Stripe(stripeSecretKey);
@@ -338,8 +386,75 @@ export async function POST(req: Request) {
         ...(termsVersion ? { termsVersion } : {}),
         blockedStartDate: availability.blockedStartDate,
         blockedEndDate: availability.blockedEndDate,
+        ...(addonIdsArray.length > 0 ? { addonIds: addonIdsArray.join(',') } : {}),
       },
     });
+
+    // Add addon line items to Stripe session
+    if (addonStockAssignments.length > 0) {
+      for (const addon of addonStockAssignments) {
+        // Fetch addon product details
+        const { data: addonProduct } = await supabase
+          .from("products")
+          .select("id,name,base_price_day,deposit_amount")
+          .eq("id", addon.productId)
+          .maybeSingle();
+
+        if (!addonProduct) continue;
+
+        const addonDailyRateCents = decimalToCents((addonProduct as any).base_price_day);
+        const addonDepositCents = decimalToCents((addonProduct as any).deposit_amount);
+
+        // Fetch addon pricing tiers
+        const { data: addonTiersData } = await supabase
+          .from("pricing_tiers")
+          .select("tier_days,multiplier")
+          .eq("product_id", addon.productId)
+          .order("tier_days", { ascending: true });
+
+        const addonPricingTiers = (addonTiersData ?? []) as { tier_days: number; multiplier: number }[];
+
+        // Calculate addon pricing
+        const addonPricing = calculatePrice({
+          startDate,
+          endDate,
+          dailyRateCents: addonDailyRateCents,
+          depositCents: addonDepositCents,
+          pricingTiers: addonPricingTiers.length > 0 ? addonPricingTiers : undefined,
+          autoIncrementMultiplier: 1.0,
+        });
+
+        const addonName = (addonProduct as any).name ? String((addonProduct as any).name) : "Dodatek";
+
+        // Add addon rental line item
+        if (addonPricing.rentalSubtotalCents > 0) {
+          sessionParams.line_items!.push({
+            price_data: {
+              currency: currency || "pln",
+              product_data: {
+                name: `${addonName} (dodatek)`,
+              },
+              unit_amount: addonPricing.rentalSubtotalCents,
+            },
+            quantity: 1,
+          });
+        }
+
+        // Add addon deposit line item (if any)
+        if (addonPricing.depositCents > 0) {
+          sessionParams.line_items!.push({
+            price_data: {
+              currency: currency || "pln",
+              product_data: {
+                name: `${addonName} — kaucja`,
+              },
+              unit_amount: addonPricing.depositCents,
+            },
+            quantity: 1,
+          });
+        }
+      }
+    }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
