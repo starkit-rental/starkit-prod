@@ -90,6 +90,57 @@ export default defineType({
       initialValue: "available",
     }),
     defineField({
+      name: "isAddon",
+      title: "Is Addon Product",
+      type: "boolean",
+      group: "content",
+      description: "Mark this product as an addon (powerbank, cable, accessory) that can be added to main products",
+      initialValue: false,
+    }),
+    defineField({
+      name: "canBeOrderedAlone",
+      title: "Can Be Ordered Alone",
+      type: "boolean",
+      group: "content",
+      description: "If false, this addon can only be added to main products, not ordered separately",
+      initialValue: false,
+      hidden: ({ document }) => document?.isAddon !== true,
+    }),
+    defineField({
+      name: "mainProducts",
+      title: "Main Products",
+      type: "array",
+      group: "content",
+      description: "Main products that this addon can be added to (e.g., Starlink Mini, Starlink Standard)",
+      of: [
+        {
+          type: "reference",
+          to: [{ type: "product" }],
+          options: {
+            filter: "isAddon != true",
+          },
+        },
+      ],
+      hidden: ({ document }) => document?.isAddon !== true,
+    }),
+    defineField({
+      name: "availableAddons",
+      title: "Available Addons",
+      type: "array",
+      group: "content",
+      description: "Addon products that can be added to this main product",
+      of: [
+        {
+          type: "reference",
+          to: [{ type: "product" }],
+          options: {
+            filter: "isAddon == true",
+          },
+        },
+      ],
+      hidden: ({ document }) => document?.isAddon === true,
+    }),
+    defineField({
       name: "tags",
       title: "Tags",
       type: "array",
