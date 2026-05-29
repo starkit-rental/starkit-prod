@@ -4,6 +4,8 @@ import WidgetKit
 struct ContentView: View {
     @Binding var highlightedOrderID: String?
     @State private var viewModel = OrdersViewModel()
+    @State private var seenStore = SeenOrdersStore.shared
+    @State private var selectedOrder: Order? = nil
 
     var body: some View {
         NavigationStack {
@@ -62,27 +64,41 @@ struct ContentView: View {
             await viewModel.refresh()
             WidgetCenter.shared.reloadAllTimelines()
         }
+        .onChange(of: highlightedOrderID) { _, newId in
+            guard let id = newId, let data = viewModel.response else { return }
+            let all = data.newOrders + data.active + data.upcoming + data.todayPickup + data.todayReturn
+            if let order = all.first(where: { $0.id == id }) {
+                selectedOrder = order
+            }
+        }
+        .sheet(item: $selectedOrder) { order in
+            let isNew = viewModel.response?.newOrders.contains(where: { $0.id == order.id }) == true
+                        && !seenStore.seenIds.contains(order.id)
+            OrderDetailSheet(order: order, isNew: isNew) {
+                seenStore.markSeen(order.id)
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+        }
     }
 
     @ViewBuilder
     func ordersList(data: WidgetResponse) -> some View {
-        // Deduplicate: each order appears in highest-priority section only
-        let newIds = Set(data.newOrders.map(\.id))
+        let visibleNew = data.newOrders.filter { !seenStore.seenIds.contains($0.id) }
+        let newIds = Set(visibleNew.map(\.id))
         let pickupIds = Set(data.todayPickup.map(\.id))
         let returnIds = Set(data.todayReturn.map(\.id))
         let activeIds = Set(data.active.map(\.id))
 
-        let pickupFiltered = data.todayPickup.filter { !newIds.contains($0.id) }
-        let returnFiltered = data.todayReturn.filter { !newIds.contains($0.id) && !pickupIds.contains($0.id) }
-        let activeFiltered = data.active.filter { !newIds.contains($0.id) && !pickupIds.contains($0.id) && !returnIds.contains($0.id) }
+        let pickupFiltered  = data.todayPickup.filter { !newIds.contains($0.id) }
+        let returnFiltered  = data.todayReturn.filter { !newIds.contains($0.id) && !pickupIds.contains($0.id) }
+        let activeFiltered  = data.active.filter    { !newIds.contains($0.id) && !pickupIds.contains($0.id) && !returnIds.contains($0.id) }
         let upcomingFiltered = data.upcoming.filter { !newIds.contains($0.id) && !pickupIds.contains($0.id) && !returnIds.contains($0.id) && !activeIds.contains($0.id) }
 
         List {
-            // Stats row – "Nowe" first when > 0 so it's always visible
             Section {
                 HStack(spacing: 0) {
-                    if data.stats.newOrders > 0 {
-                        AppStatBadge(value: data.stats.newOrders, label: "Nowe", color: .red)
+                    if visibleNew.count > 0 {
+                        AppStatBadge(value: visibleNew.count, label: "Nowe", color: .red)
                     }
                     AppStatBadge(value: data.stats.totalActive,   label: "Aktywne",     color: .green)
                     AppStatBadge(value: data.stats.totalUpcoming, label: "Nadchodzące", color: .blue)
@@ -92,11 +108,36 @@ struct ContentView: View {
                 .padding(.vertical, 4)
             }
 
-            AppOrderSection(title: "Nowe zamówienia", icon: "bell.fill",               color: .red,    orders: data.newOrders,    highlighted: highlightedOrderID)
-            AppOrderSection(title: "Odbiór dziś",     icon: "arrow.right.circle.fill", color: .purple, orders: pickupFiltered,    highlighted: highlightedOrderID)
-            AppOrderSection(title: "Zwrot dziś",      icon: "arrow.left.circle.fill",  color: .teal,   orders: returnFiltered,    highlighted: highlightedOrderID)
-            AppOrderSection(title: "Aktywne",         icon: "play.fill",               color: .green,  orders: activeFiltered,    highlighted: highlightedOrderID)
-            AppOrderSection(title: "Nadchodzące",     icon: "calendar",                color: .blue,   orders: upcomingFiltered,  highlighted: highlightedOrderID)
+            if !visibleNew.isEmpty {
+                Section {
+                    ForEach(visibleNew) { order in
+                        AppOrderRow(order: order, isHighlighted: highlightedOrderID == order.id) {
+                            selectedOrder = order
+                        } onMarkSeen: {
+                            seenStore.markSeen(order.id)
+                            WidgetCenter.shared.reloadAllTimelines()
+                        }
+                    }
+                } header: {
+                    HStack {
+                        Label("Nowe zamówienia", systemImage: "bell.fill")
+                            .foregroundColor(.red)
+                        Spacer()
+                        Button("Oznacz wszystkie") {
+                            seenStore.markAllSeen(visibleNew.map(\.id))
+                            WidgetCenter.shared.reloadAllTimelines()
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .textCase(nil)
+                    }
+                }
+            }
+
+            AppOrderSection(title: "Odbiór dziś",  icon: "arrow.right.circle.fill", color: .purple, orders: pickupFiltered,    highlighted: highlightedOrderID) { selectedOrder = $0 }
+            AppOrderSection(title: "Zwrot dziś",   icon: "arrow.left.circle.fill",  color: .teal,   orders: returnFiltered,    highlighted: highlightedOrderID) { selectedOrder = $0 }
+            AppOrderSection(title: "Aktywne",      icon: "play.fill",               color: .green,  orders: activeFiltered,    highlighted: highlightedOrderID) { selectedOrder = $0 }
+            AppOrderSection(title: "Nadchodzące",  icon: "calendar",                color: .blue,   orders: upcomingFiltered,  highlighted: highlightedOrderID) { selectedOrder = $0 }
         }
         .listStyle(.insetGrouped)
         .refreshable { await viewModel.refresh() }
@@ -132,12 +173,15 @@ struct AppOrderSection: View {
     let color: Color
     let orders: [Order]
     let highlighted: String?
+    let onTap: (Order) -> Void
 
     var body: some View {
         if !orders.isEmpty {
             Section(header: Label(title, systemImage: icon).foregroundColor(color)) {
                 ForEach(orders) { order in
-                    AppOrderRow(order: order, isHighlighted: highlighted == order.id)
+                    AppOrderRow(order: order, isHighlighted: highlighted == order.id) {
+                        onTap(order)
+                    }
                 }
             }
         }
@@ -149,9 +193,11 @@ struct AppOrderSection: View {
 struct AppOrderRow: View {
     let order: Order
     var isHighlighted: Bool = false
+    let onTap: () -> Void
+    var onMarkSeen: (() -> Void)? = nil
 
     var body: some View {
-        Link(destination: Config.orderAdminWebURL(id: order.id)) {
+        Button(action: onTap) {
             HStack(spacing: 12) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(statusColor)
@@ -198,7 +244,16 @@ struct AppOrderRow: View {
             }
             .padding(.vertical, 4)
         }
+        .buttonStyle(.plain)
         .listRowBackground(isHighlighted ? Color.orange.opacity(0.12) : nil)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            if let markSeen = onMarkSeen {
+                Button(action: markSeen) {
+                    Label("Widziałem", systemImage: "eye.fill")
+                }
+                .tint(.blue)
+            }
+        }
     }
 
     var statusColor: Color {
@@ -243,6 +298,126 @@ struct AppPaymentBadge: View {
         case "unpaid":  return .red
         case "partial": return .orange
         default:        return .gray
+        }
+    }
+}
+
+// MARK: - Order Detail Sheet
+
+struct OrderDetailSheet: View {
+    let order: Order
+    let isNew: Bool
+    let onMarkSeen: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(order.orderNumber)
+                                .font(.title2.bold())
+                            Text(order.displayName)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Text(order.formattedPrice)
+                            .font(.title2.bold())
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section("Termin") {
+                    LabeledContent("Start", value: order.formattedStart)
+                    LabeledContent("Koniec", value: order.formatDate(String(order.endDate.prefix(10))))
+                    if let days = order.daysUntilPickup, days >= 0 {
+                        LabeledContent("Odbiór za") {
+                            Text(days == 0 ? "dziś" : "\(days) dni")
+                                .foregroundColor(.blue)
+                                .fontWeight(.semibold)
+                        }
+                    } else if let days = order.daysUntilReturn, days >= 0 {
+                        LabeledContent("Zwrot za") {
+                            Text(days == 0 ? "dziś" : "\(days) dni")
+                                .foregroundColor(.orange)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                }
+
+                Section("Status") {
+                    LabeledContent("Zamówienie") {
+                        OrderStatusBadge(status: order.orderStatus)
+                    }
+                    LabeledContent("Płatność") {
+                        AppPaymentBadge(status: order.paymentStatus)
+                    }
+                }
+
+                Section {
+                    if isNew {
+                        Button {
+                            onMarkSeen()
+                            dismiss()
+                        } label: {
+                            Label("Oznacz jako widziane", systemImage: "eye.fill")
+                        }
+                        .foregroundColor(.blue)
+                    }
+
+                    Link(destination: Config.orderAdminWebURL(id: order.id)) {
+                        Label("Otwórz w panelu admina", systemImage: "safari")
+                    }
+                }
+            }
+            .navigationTitle("Zamówienie")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Zamknij") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Order Status Badge
+
+struct OrderStatusBadge: View {
+    let status: String?
+
+    var body: some View {
+        if let s = status {
+            Text(label(for: s))
+                .font(.system(size: 12, weight: .semibold))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(color(for: s).opacity(0.15))
+                .foregroundColor(color(for: s))
+                .clipShape(Capsule())
+        }
+    }
+
+    func label(for s: String) -> String {
+        switch s {
+        case "confirmed": return "potwierdzone"
+        case "pending":   return "oczekujące"
+        case "new":       return "nowe"
+        case "cancelled": return "anulowane"
+        case "active":    return "aktywne"
+        default:          return s
+        }
+    }
+
+    func color(for s: String) -> Color {
+        switch s {
+        case "confirmed":       return .green
+        case "pending", "new":  return .orange
+        case "cancelled":       return .red
+        case "active":          return .blue
+        default:                return .gray
         }
     }
 }

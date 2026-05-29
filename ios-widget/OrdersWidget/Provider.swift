@@ -31,7 +31,9 @@ struct OrdersProvider: TimelineProvider {
     private func fetchEntry() async -> OrderEntry {
         do {
             let response = try await NetworkService.shared.fetchOrders()
-            return OrderEntry(date: Date(), response: response, error: nil, isPlaceholder: false)
+            let seenIds = SeenOrdersStore.shared.seenIds
+            let filtered = response.filteringSeen(seenIds)
+            return OrderEntry(date: Date(), response: filtered, error: nil, isPlaceholder: false)
         } catch {
             return OrderEntry(date: Date(), response: nil, error: error.localizedDescription, isPlaceholder: false)
         }

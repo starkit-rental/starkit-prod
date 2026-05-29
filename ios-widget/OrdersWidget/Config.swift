@@ -21,6 +21,6 @@ enum Config {
 
     // URL panelu admina (otwiera przeglądarkę z aplikacji)
     static func orderAdminWebURL(id: String) -> URL {
-        URL(string: "\(apiBaseURL)/admin/orders/\(id)")!
+        URL(string: "\(apiBaseURL)/office/orders/\(id)")!
     }
 }

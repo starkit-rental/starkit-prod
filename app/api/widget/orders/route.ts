@@ -16,6 +16,7 @@ interface OrderSummary {
   customer_name: string | null;
   start_date: string;
   end_date: string;
+  created_at: string;
   order_status: string | null;
   payment_status: string | null;
   total_rental_price: number;
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
     const { data: orders, error } = await supabase
       .from("orders")
       .select(
-        "id,order_number,start_date,end_date,total_rental_price,payment_status,order_status,customers:customer_id(full_name,company_name)"
+        "id,order_number,start_date,end_date,total_rental_price,payment_status,order_status,created_at,customers:customer_id(full_name,company_name)"
       )
       .order("start_date", { ascending: true });
 
@@ -62,6 +63,7 @@ export async function GET(req: NextRequest) {
       total_rental_price: unknown;
       payment_status: string | null;
       order_status: string | null;
+      created_at: string;
       customers: { full_name: string | null; company_name: string | null } | null;
     }>;
 
@@ -86,6 +88,7 @@ export async function GET(req: NextRequest) {
         customer_name: customerName,
         start_date: o.start_date,
         end_date: o.end_date,
+        created_at: o.created_at,
         order_status: o.order_status,
         payment_status: o.payment_status,
         total_rental_price: Number(o.total_rental_price ?? 0),
@@ -104,7 +107,8 @@ export async function GET(req: NextRequest) {
       if (summary.is_active) active.push(summary);
       else if (summary.is_upcoming) upcoming.push(summary);
 
-      if (o.order_status === "pending" || o.order_status === "new" || o.payment_status === "unpaid") {
+      const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      if (new Date(o.created_at) > cutoff24h) {
         newOrders.push(summary);
       }
     }

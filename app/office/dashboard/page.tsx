@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { addDays, addMonths, format, isAfter, isBefore, parseISO, startOfDay, isPast } from "date-fns";
 import { pl } from "date-fns/locale";
-import { CalendarDays, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, Plus, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { moneyPln } from "@/lib/order-helpers";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
@@ -84,6 +85,12 @@ export default function OfficeDashboardPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [viewStart, setViewStart] = useState(() => clampToDate(new Date()));
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    const saved = localStorage.getItem('dashboard-product-filter');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -136,6 +143,45 @@ export default function OfficeDashboardPage() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('dashboard-product-filter', JSON.stringify([...selectedProductIds]));
+  }, [selectedProductIds]);
+
+  const uniqueProducts = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+    for (const si of stockItems) {
+      const product = Array.isArray(si.products) ? si.products[0] : si.products;
+      if (product?.id && product?.name) {
+        map.set(product.id, { id: product.id, name: product.name });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [stockItems]);
+
+  const filteredStockItems = useMemo(() => {
+    if (selectedProductIds.size === 0) return stockItems;
+    return stockItems.filter(si => {
+      const product = Array.isArray(si.products) ? si.products[0] : si.products;
+      return product?.id && selectedProductIds.has(product.id);
+    });
+  }, [stockItems, selectedProductIds]);
+
+  const toggleProductFilter = (productId: string) => {
+    setSelectedProductIds(prev => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  };
+
+  const clearFilters = () => {
+    setSelectedProductIds(new Set());
+  };
 
   const ordersByStockItemId = useMemo(() => {
     const map: Record<string, OrderRow[]> = {};
@@ -236,6 +282,61 @@ export default function OfficeDashboardPage() {
             </Card>
           </div>
 
+          {/* Product Filter */}
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-slate-600" />
+                  <span className="text-sm font-semibold text-slate-900">Filtruj produkty</span>
+                  {selectedProductIds.size > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {selectedProductIds.size}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedProductIds.size > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Wyczyść
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFilterPanel(!showFilterPanel)}
+                    className="h-7 px-2 text-xs"
+                  >
+                    {showFilterPanel ? 'Ukryj' : 'Pokaż'}
+                  </Button>
+                </div>
+              </div>
+              {showFilterPanel && (
+                <div className="flex flex-wrap gap-2">
+                  {uniqueProducts.map(product => (
+                    <Badge
+                      key={product.id}
+                      variant={selectedProductIds.has(product.id) ? "default" : "outline"}
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => toggleProductFilter(product.id)}
+                    >
+                      {product.name}
+                    </Badge>
+                  ))}
+                  {uniqueProducts.length === 0 && (
+                    <span className="text-xs text-slate-500">Brak produktów do filtrowania</span>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Timeline Controls */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
@@ -286,7 +387,7 @@ export default function OfficeDashboardPage() {
                       </div>
                     ))}
 
-                    {stockItems.map((si) => {
+                    {filteredStockItems.map((si) => {
                       const product = Array.isArray(si.products) ? si.products[0] : si.products;
                       const displayProduct = product?.name ?? "Produkt";
                       const serial = si.serial_number ?? "(brak SN)";

@@ -44,9 +44,20 @@ ios-widget/
 - StarKitApp.swift, ContentView.swift, OrdersViewModel.swift, PushManager.swift
 
 **Do OBU targetów** (`StarKitWidget` + `OrdersWidget`):
-- Models.swift, NetworkService.swift, Config.swift
+- Models.swift, NetworkService.swift, Config.swift, **SeenOrdersStore.swift**
 
 W Xcode: zaznacz plik → File Inspector (prawy panel) → Target Membership → zaznacz oba.
+
+### 3b. App Groups (wymagane dla „Oznacz jako widziane")
+
+Aby zamówienia oznaczone jako widziane w aplikacji znikały też z widgetu, oba targety muszą dzielić wspólny `UserDefaults` przez App Groups:
+
+1. Xcode → Target `StarKitWidget` → **Signing & Capabilities** → `+ Capability` → **App Groups**
+2. Dodaj grupę: `group.pl.starkit.widget`
+3. Powtórz dla targetu `OrdersWidget` → ta sama grupa `group.pl.starkit.widget`
+4. Upewnij się, że w obu targetach widnieje ten sam Team ID
+
+Bez App Groups „Oznacz jako widziane" działa tylko wewnątrz aplikacji (nie wpływa na widget).
 
 ### 4. Skonfiguruj Config.swift
 
