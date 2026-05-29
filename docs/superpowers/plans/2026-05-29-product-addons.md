@@ -177,6 +177,32 @@ defineField({
   description: "Mark this product as an addon (powerbank, cable, accessory) that can be added to main products",
   initialValue: false,
 }),
+defineField({
+  name: "canBeOrderedAlone",
+  title: "Can Be Ordered Alone",
+  type: "boolean",
+  group: "content",
+  description: "If false, this addon can only be added to main products, not ordered separately",
+  initialValue: false,
+  hidden: ({ document }) => document?.isAddon !== true,
+}),
+defineField({
+  name: "mainProducts",
+  title: "Main Products",
+  type: "array",
+  group: "content",
+  description: "Main products that this addon can be added to (e.g., Starlink Mini, Starlink Standard)",
+  of: [
+    {
+      type: "reference",
+      to: [{ type: "product" }],
+      options: {
+        filter: "isAddon != true",
+      },
+    },
+  ],
+  hidden: ({ document }) => document?.isAddon !== true,
+}),
 ```
 
 - [ ] **Step 2: Add `availableAddons` reference array field**
@@ -280,6 +306,8 @@ Fill in:
 - **Slug:** powerbank-cayon-60000mah-pd100w
 - **Category:** Select or create "Akcesoria"
 - **Is Addon Product:** ✅ TRUE
+- **Can Be Ordered Alone:** ❌ FALSE (nie można zamówić samodzielnie)
+- **Main Products:** Add references to "Starlink Mini" and "Starlink Standard"
 - **Excerpt:** Potężny powerbank o pojemności 60000mAh z szybkim ładowaniem PD 100W. Idealny do zasilania Starlink Mini przez wiele godzin bez dostępu do prądu.
 - **Price per day:** 20.00
 - **Deposit:** 0.00
