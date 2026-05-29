@@ -200,7 +200,11 @@ export default async function ProductPage({ params }: PageProps) {
               )}
 
               {/* Rental Widget */}
-              <RentalWidget sanitySlug={product.slug} productTitle={product.title || "Produkt"} />
+              <RentalWidget 
+                sanitySlug={product.slug} 
+                productTitle={product.title || "Produkt"}
+                availableAddons={product.availableAddons || []}
+              />
 
 
               {/* Trust signals */}

@@ -30,9 +30,21 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { calculatePrice } from "@/lib/rental-engine";
 import { cn } from "@/lib/utils";
 
+type AddonProduct = {
+  _id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  pricePerDay: number;
+  deposit: number;
+  images?: string[];
+  status: string;
+};
+
 type Props = {
   sanitySlug: string;
   productTitle: string;
+  availableAddons?: AddonProduct[];
 };
 
 type ProductRow = {
