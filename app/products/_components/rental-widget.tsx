@@ -29,6 +29,7 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { calculatePrice } from "@/lib/rental-engine";
 import { cn } from "@/lib/utils";
+import { AddonCarousel } from "./addon-carousel";
 
 type AddonProduct = {
   _id: string;
@@ -80,7 +81,7 @@ function pluralDni(n: number): string {
   return "dni";
 }
 
-export default function RentalWidget({ sanitySlug, productTitle }: Props) {
+export default function RentalWidget({ sanitySlug, productTitle, availableAddons = [] }: Props) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [product, setProduct] = useState<ProductRow | null>(null);
@@ -114,6 +115,11 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
 
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const MIN_RENTAL_DAYS = 3;
+
+  // ── Addons state ──
+  const [selectedAddonIds, setSelectedAddonIds] = useState<Set<string>>(new Set());
+  const [addonAvailability, setAddonAvailability] = useState<Record<string, { available: boolean; reason?: string }>>({});
+  const [loadingAddonAvailability, setLoadingAddonAvailability] = useState(false);
 
   // ── Load product ──
   useEffect(() => {
@@ -341,6 +347,85 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
     return () => { controller.abort(); clearTimeout(t); };
   }, [product, startDate, endDate, rangeValid, rangeOverlapsBlocked]);
 
+  // ── Check addon availability ──
+  useEffect(() => {
+    if (!startDate || !endDate || !availableAddons || availableAddons.length === 0) {
+      setAddonAvailability({});
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function checkAddons() {
+      setLoadingAddonAvailability(true);
+      const results: Record<string, { available: boolean; reason?: string }> = {};
+
+      for (const addon of availableAddons) {
+        try {
+          // Get product_id from Supabase by sanity slug
+          const { data: addonProduct } = await supabase
+            .from("products")
+            .select("id")
+            .eq("sanity_slug", addon.slug)
+            .maybeSingle();
+
+          if (!addonProduct?.id) {
+            results[addon._id] = { available: false, reason: "Produkt nie znaleziony" };
+            continue;
+          }
+
+          // Check availability
+          const res = await fetch("/api/check-availability", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              productId: addonProduct.id,
+              startDate,
+              endDate,
+            }),
+            signal: controller.signal,
+          });
+
+          const json = await res.json();
+
+          if (json.available) {
+            results[addon._id] = { available: true };
+          } else {
+            results[addon._id] = {
+              available: false,
+              reason: `Niedostępny w tym terminie`,
+            };
+          }
+        } catch (e) {
+          if ((e as any)?.name === "AbortError") return;
+          results[addon._id] = { available: false, reason: "Błąd sprawdzania" };
+        }
+      }
+
+      setAddonAvailability(results);
+      setLoadingAddonAvailability(false);
+    }
+
+    const t = setTimeout(() => void checkAddons(), 500);
+    return () => {
+      controller.abort();
+      clearTimeout(t);
+    };
+  }, [startDate, endDate, availableAddons, supabase]);
+
+  // ── Toggle addon selection ──
+  const toggleAddon = useCallback((addonId: string) => {
+    setSelectedAddonIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(addonId)) {
+        next.delete(addonId);
+      } else {
+        next.add(addonId);
+      }
+      return next;
+    });
+  }, []);
+
   // ── Navigate to checkout ──
   function onContinue() {
     setCheckoutError(null);
@@ -355,6 +440,12 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
       from: startDate,
       to: endDate,
     });
+    
+    // Add selected addon IDs
+    if (selectedAddonIds.size > 0) {
+      params.set('addonIds', Array.from(selectedAddonIds).join(','));
+    }
+    
     window.location.href = `/checkout?${params.toString()}`;
   }
 
@@ -565,6 +656,17 @@ export default function RentalWidget({ sanitySlug, productTitle }: Props) {
 
           {checkoutError && <div className="text-sm text-destructive">{checkoutError}</div>}
         </div>
+      )}
+
+      {/* ── Addon Carousel ── */}
+      {availableAddons && availableAddons.length > 0 && rangeValid && (
+        <AddonCarousel
+          addons={availableAddons}
+          selectedAddonIds={selectedAddonIds}
+          onToggleAddon={toggleAddon}
+          addonAvailability={addonAvailability}
+          isLoadingAvailability={loadingAddonAvailability}
+        />
       )}
     </div>
   );
