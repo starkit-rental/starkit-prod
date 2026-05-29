@@ -41,8 +41,25 @@ export const singleProductQuery = groq`
     pricePerDay,
     deposit,
     status,
+    isAddon,
+    canBeOrderedAlone,
     "images": images[].asset->url,
     "category": category->{ title, "slug": slug.current },
+    "availableAddons": availableAddons[]-> {
+      _id,
+      title,
+      "slug": slug.current,
+      excerpt,
+      pricePerDay,
+      deposit,
+      "images": images[].asset->url,
+      status
+    },
+    "mainProducts": mainProducts[]-> {
+      _id,
+      title,
+      "slug": slug.current
+    },
     specs,
     "testimonials": *[_type == "testimonial"] | order(orderRank) {
       _id, name, title, rating, "bodyText": pt::text(body)
