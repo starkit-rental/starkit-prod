@@ -14,13 +14,19 @@ export async function POST(request: NextRequest) {
       insurance = false,
       insuranceValue = 0,
       saturdayDelivery = false,
+      sender: customSender,
+      receiver: customReceiver,
     } = body as { 
       orderId: string; 
       parcelSize: ParcelSize;
       insurance?: boolean;
       insuranceValue?: number;
       saturdayDelivery?: boolean;
+      sender?: any;
+      receiver?: any;
     };
+
+    console.log('[create-shipment] Request:', { orderId, parcelSize, insurance, saturdayDelivery, hasCustomSender: !!customSender, hasCustomReceiver: !!customReceiver });
 
     if (!orderId || !parcelSize) {
       return NextResponse.json(
@@ -61,13 +67,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get sender configuration
-    const senderConfig = await getSenderConfig();
+    // Get sender configuration (use custom if provided)
+    const defaultSenderConfig = await getSenderConfig();
+    const senderConfig = customSender || defaultSenderConfig;
 
-    // Parse customer name
-    const nameParts = (customer.full_name || '').trim().split(' ');
-    const receiverFirstName = nameParts[0] || 'Klient';
-    const receiverLastName = nameParts.slice(1).join(' ') || 'Starkit';
+    // Parse customer name (use custom receiver if provided)
+    let receiverFirstName, receiverLastName, receiverPhone, receiverEmail, destinationCode;
+    
+    if (customReceiver) {
+      receiverFirstName = customReceiver.firstName;
+      receiverLastName = customReceiver.lastName;
+      receiverPhone = customReceiver.phoneNumber;
+      receiverEmail = customReceiver.email;
+      destinationCode = customReceiver.destinationCode;
+    } else {
+      const nameParts = (customer.full_name || '').trim().split(' ');
+      receiverFirstName = nameParts[0] || 'Klient';
+      receiverLastName = nameParts.slice(1).join(' ') || 'Starkit';
+      receiverPhone = customer.phone || '000000000';
+      receiverEmail = customer.email || defaultSenderConfig.email;
+      destinationCode = order.inpost_point_id;
+    }
 
     // Get parcel dimensions
     const dimensions = PARCEL_SIZES[parcelSize];
@@ -92,10 +112,10 @@ export async function POST(request: NextRequest) {
       senderCity: senderConfig.city,
       receiverFirstName,
       receiverLastName,
-      receiverPhoneNumber: customer.phone || '000000000',
-      receiverEmail: customer.email || senderConfig.email,
+      receiverPhoneNumber: receiverPhone,
+      receiverEmail,
       operatorName: 'INPOST' as const,
-      destinationCode: order.inpost_point_id,
+      destinationCode,
       postingCode: senderConfig.postingCode,
       additionalInformation: `Zamówienie ${order.order_number || orderId}`,
       parcels: [
@@ -111,6 +131,8 @@ export async function POST(request: NextRequest) {
       ],
       additionalServices: additionalServices.length > 0 ? additionalServices : undefined,
     };
+
+    console.log('[create-shipment] Shipment data:', JSON.stringify(shipmentData, null, 2));
 
     // Create shipment via Base Courier API
     const shipment = await baseCourierAPI.createShipment(shipmentData);
@@ -169,11 +191,24 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Create shipment error:', error);
+    console.error('[create-shipment] Error:', error);
+    
+    // Extract detailed error message
+    let errorMessage = 'Failed to create shipment';
+    let errorDetails = 'Unknown error';
+    
+    if (error instanceof Error) {
+      errorDetails = error.message;
+      // Check if it's an API error with response
+      if ((error as any).response) {
+        errorDetails = JSON.stringify((error as any).response);
+      }
+    }
+    
     return NextResponse.json(
       {
-        error: 'Failed to create shipment',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
+        details: errorDetails,
       },
       { status: 500 }
     );

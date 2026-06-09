@@ -14,13 +14,19 @@ export async function POST(request: NextRequest) {
       insurance = false,
       insuranceValue = 0,
       saturdayDelivery = false,
+      sender: customSender,
+      receiver: customReceiver,
     } = body as { 
       orderId: string; 
       parcelSize: ParcelSize;
       insurance?: boolean;
       insuranceValue?: number;
       saturdayDelivery?: boolean;
+      sender?: any;
+      receiver?: any;
     };
+
+    console.log('[create-return-label] Request:', { orderId, parcelSize, insurance, saturdayDelivery, hasCustomSender: !!customSender, hasCustomReceiver: !!customReceiver });
 
     if (!orderId || !parcelSize) {
       return NextResponse.json(
@@ -61,13 +67,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get sender configuration (receiver for return label)
-    const senderConfig = await getSenderConfig();
-
-    // Parse customer name (sender for return label)
-    const nameParts = (customer.full_name || '').trim().split(' ');
-    const senderFirstName = nameParts[0] || 'Klient';
-    const senderLastName = nameParts.slice(1).join(' ') || 'Starkit';
+    // Get sender configuration (use custom if provided)
+    const defaultSenderConfig = await getSenderConfig();
+    
+    // For return label: customer is sender, you are receiver
+    let senderFirstName, senderLastName, senderPhone, senderEmail, postingCode;
+    let receiverFirstName, receiverLastName, receiverPhone, receiverEmail, destinationCode;
+    
+    if (customSender) {
+      // Custom sender (customer)
+      senderFirstName = customSender.firstName;
+      senderLastName = customSender.lastName;
+      senderPhone = customSender.phoneNumber;
+      senderEmail = customSender.email;
+      postingCode = customSender.postingCode;
+    } else {
+      // Default: customer data
+      const nameParts = (customer.full_name || '').trim().split(' ');
+      senderFirstName = nameParts[0] || 'Klient';
+      senderLastName = nameParts.slice(1).join(' ') || 'Starkit';
+      senderPhone = customer.phone || '000000000';
+      senderEmail = customer.email || defaultSenderConfig.email;
+      postingCode = order.inpost_point_id;
+    }
+    
+    if (customReceiver) {
+      // Custom receiver (you)
+      receiverFirstName = customReceiver.firstName;
+      receiverLastName = customReceiver.lastName;
+      receiverPhone = customReceiver.phoneNumber;
+      receiverEmail = customReceiver.email;
+      destinationCode = customReceiver.destinationCode;
+    } else {
+      // Default: your data
+      receiverFirstName = defaultSenderConfig.firstName;
+      receiverLastName = defaultSenderConfig.lastName;
+      receiverPhone = defaultSenderConfig.phoneNumber;
+      receiverEmail = defaultSenderConfig.email;
+      destinationCode = defaultSenderConfig.postingCode;
+    }
 
     // Get parcel dimensions
     const dimensions = PARCEL_SIZES[parcelSize];
@@ -81,22 +119,22 @@ export async function POST(request: NextRequest) {
     // Create RETURN shipment request (reversed sender/receiver)
     const shipmentData = {
       reference: `${order.order_number || orderId}-ZWROT`,
-      senderFirstName, // Customer is sender
+      senderFirstName,
       senderLastName,
-      senderPhoneNumber: customer.phone || '000000000',
-      senderEmail: customer.email || senderConfig.email,
+      senderPhoneNumber: senderPhone,
+      senderEmail,
       senderStreet: 'Paczkomat InPost',
-      senderBuildingNumber: order.inpost_point_id,
+      senderBuildingNumber: postingCode,
       senderFlatNumber: '',
       senderPostCode: '00-000',
       senderCity: 'Polska',
-      receiverFirstName: senderConfig.firstName, // You are receiver
-      receiverLastName: senderConfig.lastName,
-      receiverPhoneNumber: senderConfig.phoneNumber,
-      receiverEmail: senderConfig.email,
+      receiverFirstName,
+      receiverLastName,
+      receiverPhoneNumber: receiverPhone,
+      receiverEmail,
       operatorName: 'INPOST' as const,
-      destinationCode: senderConfig.postingCode, // Your InPost point
-      postingCode: order.inpost_point_id, // Customer's InPost point
+      destinationCode,
+      postingCode,
       additionalInformation: `Zwrot - Zamówienie ${order.order_number || orderId}`,
       parcels: [
         {
@@ -111,6 +149,8 @@ export async function POST(request: NextRequest) {
       ],
       additionalServices: additionalServices.length > 0 ? additionalServices : undefined,
     };
+
+    console.log('[create-return-label] Shipment data:', JSON.stringify(shipmentData, null, 2));
 
     // Create shipment via Base Courier API
     const shipment = await baseCourierAPI.createShipment(shipmentData);
@@ -169,11 +209,24 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Create return label error:', error);
+    console.error('[create-return-label] Error:', error);
+    
+    // Extract detailed error message
+    let errorMessage = 'Failed to create return label';
+    let errorDetails = 'Unknown error';
+    
+    if (error instanceof Error) {
+      errorDetails = error.message;
+      // Check if it's an API error with response
+      if ((error as any).response) {
+        errorDetails = JSON.stringify((error as any).response);
+      }
+    }
+    
     return NextResponse.json(
       {
-        error: 'Failed to create return label',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
+        details: errorDetails,
       },
       { status: 500 }
     );

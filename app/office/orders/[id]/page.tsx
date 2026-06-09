@@ -1050,18 +1050,32 @@ export default function OfficeOrderDetailsPage() {
                     </div>
                   </div>
                 ) : order.inpost_point_id ? (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-emerald-600">InPost Paczkomat</div>
-                        <div className="mt-1 font-mono text-sm font-semibold text-emerald-900">{order.inpost_point_id}</div>
-                        {order.inpost_point_address && (
-                          <div className="mt-0.5 text-xs text-emerald-700">{order.inpost_point_address}</div>
-                        )}
+                  <>
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold uppercase tracking-wider text-emerald-600">InPost Paczkomat</div>
+                          <div className="mt-1 font-mono text-sm font-semibold text-emerald-900">{order.inpost_point_id}</div>
+                          {order.inpost_point_address && (
+                            <div className="mt-0.5 text-xs text-emerald-700">{order.inpost_point_address}</div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                    
+                    {/* Courier Labels */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <CourierPanel
+                        orderId={orderId!}
+                        orderNumber={order.order_number}
+                        inpostPointId={order.inpost_point_id}
+                        customerName={customer?.full_name || null}
+                        customerPhone={customer?.phone || null}
+                        customerEmail={customer?.email || null}
+                      />
+                    </div>
+                  </>
                 ) : (
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-start gap-3">
@@ -1097,16 +1111,6 @@ export default function OfficeOrderDetailsPage() {
 
             {/* PDF Contract */}
             <ContractPdfCard orderId={orderId!} supabase={supabase} />
-
-            {/* Courier Labels */}
-            <CourierPanel
-              orderId={orderId!}
-              orderNumber={order.order_number}
-              inpostPointId={order.inpost_point_id}
-              customerName={customer?.full_name || null}
-              customerPhone={customer?.phone || null}
-              customerEmail={customer?.email || null}
-            />
           </div>
 
           {/* Communication History */}

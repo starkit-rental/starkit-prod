@@ -48,6 +48,8 @@ interface CreateShipmentDialogProps {
     insurance: boolean;
     insuranceValue: number;
     saturdayDelivery: boolean;
+    sender: SenderData;
+    receiver: ReceiverData;
   }) => Promise<void>;
 }
 
@@ -56,8 +58,8 @@ export function CreateShipmentDialog({
   onOpenChange,
   type,
   parcelSize,
-  sender,
-  receiver,
+  sender: initialSender,
+  receiver: initialReceiver,
   onConfirm,
 }: CreateShipmentDialogProps) {
   const [insurance, setInsurance] = useState(false);
@@ -65,6 +67,12 @@ export function CreateShipmentDialog({
   const [saturdayDelivery, setSaturdayDelivery] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Editable sender data
+  const [sender, setSender] = useState<SenderData>(initialSender);
+  
+  // Editable receiver data
+  const [receiver, setReceiver] = useState<ReceiverData>(initialReceiver);
 
   const isOutbound = type === 'outbound';
   const title = isOutbound ? 'Potwierdź etykietę wysyłkową' : 'Potwierdź etykietę zwrotną';
@@ -85,9 +93,12 @@ export function CreateShipmentDialog({
         insurance,
         insuranceValue: insurance ? insuranceValue : 0,
         saturdayDelivery,
+        sender,
+        receiver,
       });
       onOpenChange(false);
     } catch (err) {
+      console.error('Shipment creation error:', err);
       setError(err instanceof Error ? err.message : 'Wystąpił błąd');
     } finally {
       setCreating(false);
@@ -101,8 +112,10 @@ export function CreateShipmentDialog({
       setInsuranceValue(500);
       setSaturdayDelivery(false);
       setError(null);
+      setSender(initialSender);
+      setReceiver(initialReceiver);
     }
-  }, [open]);
+  }, [open, initialSender, initialReceiver]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -127,58 +140,88 @@ export function CreateShipmentDialog({
             </p>
           </div>
 
-          {/* Sender Info */}
+          {/* Sender Info - Editable */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-slate-900">Nadawca</h3>
-            <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <span className="text-slate-500">Imię i nazwisko:</span>
-                  <p className="font-medium">{sender.firstName} {sender.lastName}</p>
+            <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Imię</Label>
+                  <Input value={sender.firstName} onChange={(e) => setSender({...sender, firstName: e.target.value})} className="h-8 text-sm" />
                 </div>
-                <div>
-                  <span className="text-slate-500">Telefon:</span>
-                  <p className="font-medium">{sender.phoneNumber}</p>
+                <div className="space-y-1">
+                  <Label className="text-xs">Nazwisko</Label>
+                  <Input value={sender.lastName} onChange={(e) => setSender({...sender, lastName: e.target.value})} className="h-8 text-sm" />
                 </div>
               </div>
-              <div>
-                <span className="text-slate-500">Email:</span>
-                <p className="font-medium">{sender.email}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Telefon</Label>
+                  <Input value={sender.phoneNumber} onChange={(e) => setSender({...sender, phoneNumber: e.target.value})} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Email</Label>
+                  <Input value={sender.email} onChange={(e) => setSender({...sender, email: e.target.value})} className="h-8 text-sm" />
+                </div>
               </div>
-              <div>
-                <span className="text-slate-500">Adres:</span>
-                <p className="font-medium">
-                  {sender.street} {sender.buildingNumber}/{sender.flatNumber}, {sender.postCode} {sender.city}
-                </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Ulica</Label>
+                  <Input value={sender.street} onChange={(e) => setSender({...sender, street: e.target.value})} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Nr budynku</Label>
+                  <Input value={sender.buildingNumber} onChange={(e) => setSender({...sender, buildingNumber: e.target.value})} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Nr mieszkania</Label>
+                  <Input value={sender.flatNumber} onChange={(e) => setSender({...sender, flatNumber: e.target.value})} className="h-8 text-sm" />
+                </div>
               </div>
-              <div>
-                <span className="text-slate-500">Paczkomat nadania:</span>
-                <p className="font-mono font-medium">{sender.postingCode}</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Kod pocztowy</Label>
+                  <Input value={sender.postCode} onChange={(e) => setSender({...sender, postCode: e.target.value})} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Miasto</Label>
+                  <Input value={sender.city} onChange={(e) => setSender({...sender, city: e.target.value})} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Paczkomat nadania</Label>
+                  <Input value={sender.postingCode} onChange={(e) => setSender({...sender, postingCode: e.target.value})} className="h-8 text-sm font-mono" />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Receiver Info */}
+          {/* Receiver Info - Editable */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-slate-900">Odbiorca</h3>
-            <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <span className="text-slate-500">Imię i nazwisko:</span>
-                  <p className="font-medium">{receiver.firstName} {receiver.lastName}</p>
+            <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Imię</Label>
+                  <Input value={receiver.firstName} onChange={(e) => setReceiver({...receiver, firstName: e.target.value})} className="h-8 text-sm" />
                 </div>
-                <div>
-                  <span className="text-slate-500">Telefon:</span>
-                  <p className="font-medium">{receiver.phoneNumber}</p>
+                <div className="space-y-1">
+                  <Label className="text-xs">Nazwisko</Label>
+                  <Input value={receiver.lastName} onChange={(e) => setReceiver({...receiver, lastName: e.target.value})} className="h-8 text-sm" />
                 </div>
               </div>
-              <div>
-                <span className="text-slate-500">Email:</span>
-                <p className="font-medium">{receiver.email}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Telefon</Label>
+                  <Input value={receiver.phoneNumber} onChange={(e) => setReceiver({...receiver, phoneNumber: e.target.value})} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Email</Label>
+                  <Input value={receiver.email} onChange={(e) => setReceiver({...receiver, email: e.target.value})} className="h-8 text-sm" />
+                </div>
               </div>
-              <div>
-                <span className="text-slate-500">Paczkomat odbioru:</span>
-                <p className="font-mono font-medium">{receiver.destinationCode}</p>
+              <div className="space-y-1">
+                <Label className="text-xs">Paczkomat odbioru</Label>
+                <Input value={receiver.destinationCode} onChange={(e) => setReceiver({...receiver, destinationCode: e.target.value})} className="h-8 text-sm font-mono" />
               </div>
             </div>
           </div>

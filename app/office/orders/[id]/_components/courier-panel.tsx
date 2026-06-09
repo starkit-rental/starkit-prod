@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -100,20 +99,10 @@ export function CourierPanel({
 
   if (!inpostPointId) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Truck className="h-5 w-5" />
-            Etykiety kurierskie
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 text-amber-600">
-            <AlertCircle className="h-4 w-4" />
-            <p className="text-sm">Brak wybranego paczkomatu InPost w zamówieniu</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-2 text-amber-600">
+        <AlertCircle className="h-4 w-4" />
+        <p className="text-sm">Brak wybranego paczkomatu InPost w zamówieniu</p>
+      </div>
     );
   }
 
@@ -131,12 +120,16 @@ export function CourierPanel({
     insurance: boolean;
     insuranceValue: number;
     saturdayDelivery: boolean;
+    sender: any;
+    receiver: any;
   }) => {
     setError(null);
 
     const endpoint = dialogType === 'outbound' 
       ? '/api/courier/create-shipment'
       : '/api/courier/create-return-label';
+
+    console.log('Creating shipment:', { endpoint, options });
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -147,13 +140,19 @@ export function CourierPanel({
         insurance: options.insurance,
         insuranceValue: options.insuranceValue,
         saturdayDelivery: options.saturdayDelivery,
+        sender: options.sender,
+        receiver: options.receiver,
       }),
     });
 
     const data = await response.json();
 
+    console.log('Shipment response:', { status: response.status, data });
+
     if (!response.ok) {
-      throw new Error(data.error || 'Nie udało się utworzyć przesyłki');
+      const errorMessage = data.details || data.error || 'Nie udało się utworzyć przesyłki';
+      console.error('Shipment creation failed:', errorMessage, data);
+      throw new Error(errorMessage);
     }
 
     if (dialogType === 'outbound') {
@@ -200,19 +199,9 @@ export function CourierPanel({
 
   if (loadingSender || !senderData) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Truck className="h-5 w-5" />
-            Etykiety kurierskie InPost
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+      </div>
     );
   }
 
@@ -251,14 +240,7 @@ export function CourierPanel({
 
   return (
     <>
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Truck className="h-5 w-5" />
-          Etykiety kurierskie InPost
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
         {/* Parcel Size Selection */}
         <div className="space-y-2">
           <Label htmlFor="parcel-size">Rozmiar paczki</Label>
@@ -355,8 +337,7 @@ export function CourierPanel({
         <p className="text-xs text-muted-foreground">
           Etykiety zostaną połączone na jednym arkuszu A4 do wydruku.
         </p>
-      </CardContent>
-    </Card>
+      </div>
 
     <CreateShipmentDialog
       open={dialogOpen}
