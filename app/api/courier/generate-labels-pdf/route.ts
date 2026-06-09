@@ -46,74 +46,46 @@ export async function POST(request: NextRequest) {
     // Create merged PDF
     const mergedPdf = await PDFDocument.create();
 
-    // Download and merge outbound label
-    if (outboundShipment) {
-      try {
-        let waybillUrl = outboundShipment.waybill_url;
-        let waybillBase64: string | undefined;
-        
-        // If waybill URL is not cached, fetch it
-        if (!waybillUrl && outboundShipment.tracking_number) {
-          const waybillResponse = await baseCourierAPI.getWaybill(parseInt(outboundShipment.tracking_number));
-          
-          if (waybillResponse.success && waybillResponse.data) {
-            waybillUrl = waybillResponse.data.label_url;
-            waybillBase64 = waybillResponse.data.label_base64;
-            
-            // Cache the URL if available
-            if (waybillUrl) {
-              await supabase
-                .from('courier_shipments')
-                .update({ waybill_url: waybillUrl })
-                .eq('id', outboundShipment.id);
-            }
-          }
-        }
+    // Helper: fetch and add label to merged PDF
+    async function addLabelToPdf(shipment: any, label: string) {
+      if (!shipment?.base_courier_number) {
+        console.error(`[generate-labels-pdf] No base_courier_number for ${label}`);
+        return;
+      }
 
-        if (waybillUrl || waybillBase64) {
-          const pdfBuffer = await baseCourierAPI.downloadWaybillPDF(waybillUrl, waybillBase64);
+      try {
+        console.log(`[generate-labels-pdf] Fetching ${label} label for order ID: ${shipment.base_courier_number}`);
+        
+        const waybillResponse = await baseCourierAPI.getWaybill(
+          parseInt(shipment.base_courier_number),
+          'A4'
+        );
+
+        console.log(`[generate-labels-pdf] ${label} waybill response success:`, waybillResponse?.success);
+
+        const pdfBuffer = baseCourierAPI.extractLabelPDF(waybillResponse);
+        
+        if (pdfBuffer) {
           const pdfDoc = await PDFDocument.load(pdfBuffer);
           const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
           pages.forEach((page: any) => mergedPdf.addPage(page));
+          console.log(`[generate-labels-pdf] ${label} label added (${pages.length} pages)`);
+        } else {
+          console.error(`[generate-labels-pdf] No PDF data in ${label} waybill response`);
         }
       } catch (error) {
-        console.error('[generate-labels-pdf] Failed to add outbound label:', error);
+        console.error(`[generate-labels-pdf] Failed to add ${label} label:`, error);
       }
+    }
+
+    // Download and merge outbound label
+    if (outboundShipment) {
+      await addLabelToPdf(outboundShipment, 'outbound');
     }
 
     // Download and merge return label
     if (returnShipment) {
-      try {
-        let waybillUrl = returnShipment.waybill_url;
-        let waybillBase64: string | undefined;
-        
-        // If waybill URL is not cached, fetch it
-        if (!waybillUrl && returnShipment.tracking_number) {
-          const waybillResponse = await baseCourierAPI.getWaybill(parseInt(returnShipment.tracking_number));
-          
-          if (waybillResponse.success && waybillResponse.data) {
-            waybillUrl = waybillResponse.data.label_url;
-            waybillBase64 = waybillResponse.data.label_base64;
-            
-            // Cache the URL if available
-            if (waybillUrl) {
-              await supabase
-                .from('courier_shipments')
-                .update({ waybill_url: waybillUrl })
-                .eq('id', returnShipment.id);
-            }
-          }
-        }
-
-        if (waybillUrl || waybillBase64) {
-          const pdfBuffer = await baseCourierAPI.downloadWaybillPDF(waybillUrl, waybillBase64);
-          const pdfDoc = await PDFDocument.load(pdfBuffer);
-          const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-          pages.forEach((page: any) => mergedPdf.addPage(page));
-        }
-      } catch (error) {
-        console.error('[generate-labels-pdf] Failed to add return label:', error);
-      }
+      await addLabelToPdf(returnShipment, 'return');
     }
 
     // Check if we have any pages

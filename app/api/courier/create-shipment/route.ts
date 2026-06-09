@@ -192,32 +192,13 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to save shipment to database');
     }
 
-    // Try to get waybill
-    let waybillUrl: string | null = null;
-    try {
-      const waybillResponse = await baseCourierAPI.getWaybill(parseInt(orderDetails.waybill_no));
-      
-      if (waybillResponse.success && waybillResponse.data?.label_url) {
-        waybillUrl = waybillResponse.data.label_url;
-        
-        // Update shipment with waybill URL
-        await supabase
-          .from('courier_shipments')
-          .update({ waybill_url: waybillUrl })
-          .eq('id', savedShipment.id);
-      }
-    } catch (waybillError) {
-      console.error('[create-shipment] Failed to get waybill:', waybillError);
-    }
-
     return NextResponse.json({
       success: true,
       shipment: {
         id: savedShipment.id,
-        number: orderDetails.id,
-        trackingNumber: orderDetails.waybill_no,
+        number: String(orderDetails.id),
+        trackingNumber: String(orderDetails.waybill_no),
         status: 'created',
-        waybillUrl,
       },
     });
   } catch (error) {

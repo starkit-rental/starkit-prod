@@ -105,9 +105,11 @@ export class BaseCourierAPI {
   /**
    * Get waybill (label) for a shipment
    * POST /api/getWaybill.json
+   * @param orderId - Order ID from createOrderV2 response (NOT waybill_no!)
+   * @param printerType - A4, LBL (A6), ZPL, EPL
    */
-  async getWaybill(waybillNo: number): Promise<WaybillResponse> {
-    return this.request<WaybillResponse>('/api/getWaybill.json', {
+  async getWaybill(orderId: number, printerType: string = 'A4'): Promise<any> {
+    return this.request<any>('/api/getWaybill.json', {
       method: 'POST',
       body: JSON.stringify({
         auth: {
@@ -115,10 +117,35 @@ export class BaseCourierAPI {
           api_key: this.apiKey,
         },
         Order: {
-          waybill_no: waybillNo,
+          id: orderId,
+          printer_type: printerType,
         },
       }),
     });
+  }
+
+  /**
+   * Extract PDF buffer from getWaybill response
+   * Response structure: data.0.file (base64) or data.labels[0].file (base64)
+   */
+  extractLabelPDF(waybillResponse: any): Buffer | null {
+    if (!waybillResponse?.success || !waybillResponse?.data) return null;
+
+    // Try data.0.file (main document - base64 PDF)
+    const mainDoc = waybillResponse.data['0'] || waybillResponse.data[0];
+    if (mainDoc?.file) {
+      return Buffer.from(mainDoc.file, 'base64');
+    }
+
+    // Try data.labels array
+    if (waybillResponse.data.labels && waybillResponse.data.labels.length > 0) {
+      const label = waybillResponse.data.labels[0];
+      if (label?.file) {
+        return Buffer.from(label.file, 'base64');
+      }
+    }
+
+    return null;
   }
 
   /**

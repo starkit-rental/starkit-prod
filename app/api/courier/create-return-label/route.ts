@@ -219,24 +219,6 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Try to get waybill
-    let waybillUrl: string | null = null;
-    try {
-      const waybillResponse = await baseCourierAPI.getWaybill(parseInt(waybillNo || '0'));
-      
-      if (waybillResponse.success && waybillResponse.data?.label_url) {
-        waybillUrl = waybillResponse.data.label_url;
-        
-        // Update shipment with waybill URL
-        await supabase
-          .from('courier_shipments')
-          .update({ waybill_url: waybillUrl })
-          .eq('id', savedShipment.id);
-      }
-    } catch (waybillError) {
-      console.error('[create-return-label] Failed to get waybill:', waybillError);
-    }
-
     return NextResponse.json({
       success: true,
       shipment: {
@@ -244,7 +226,6 @@ export async function POST(request: NextRequest) {
         number: courierNumber,
         trackingNumber: trackingNum,
         status: 'created',
-        waybillUrl,
       },
     });
   } catch (error) {
