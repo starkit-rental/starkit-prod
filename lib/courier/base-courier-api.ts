@@ -39,16 +39,33 @@ export class BaseCourierAPI {
     };
 
     try {
+      console.log('[BaseCourierAPI] Request:', { url, method: options.method || 'GET', body: options.body });
+      
       const response = await fetch(url, {
         ...options,
         headers,
       });
 
-      const data = await response.json();
+      console.log('[BaseCourierAPI] Response status:', response.status);
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType?.includes('application/json');
+
+      let data: any;
+      if (isJson) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('[BaseCourierAPI] Non-JSON response:', text);
+        data = { error: text };
+      }
+
+      console.log('[BaseCourierAPI] Response data:', data);
 
       if (!response.ok) {
         throw new BaseCourierAPIError(
-          data.message || `API request failed with status ${response.status}`,
+          data.message || data.error || `API request failed with status ${response.status}`,
           response.status,
           data
         );

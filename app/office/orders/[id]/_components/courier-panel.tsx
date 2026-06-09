@@ -22,6 +22,11 @@ interface CourierPanelProps {
   customerName: string | null;
   customerPhone: string | null;
   customerEmail: string | null;
+  customerAddress?: {
+    street: string | null;
+    city: string | null;
+    zip: string | null;
+  };
 }
 
 export function CourierPanel({ 
@@ -31,6 +36,7 @@ export function CourierPanel({
   customerName,
   customerPhone,
   customerEmail,
+  customerAddress,
 }: CourierPanelProps) {
   const supabase = createSupabaseBrowserClient();
   const [parcelSize, setParcelSize] = useState<ParcelSize>('small');

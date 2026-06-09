@@ -1073,6 +1073,11 @@ export default function OfficeOrderDetailsPage() {
                         customerName={customer?.full_name || null}
                         customerPhone={customer?.phone || null}
                         customerEmail={customer?.email || null}
+                        customerAddress={{
+                          street: customer?.address_street || null,
+                          city: customer?.address_city || null,
+                          zip: customer?.address_zip || null,
+                        }}
                       />
                     </div>
                   </>
