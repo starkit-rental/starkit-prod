@@ -112,6 +112,10 @@ export async function POST(request: NextRequest) {
     // Create shipment via Base Courier API
     const shipment = await baseCourierAPI.createShipment({
       Order: orderData,
+      CourierSearch: {
+        courier_type: 'inpost_paczkomaty',
+        cart_sum: insurance ? insuranceValue : 100, // Wartość przesyłki (wymagane)
+      },
     });
 
     console.log('[create-return-label] API Response:', shipment);

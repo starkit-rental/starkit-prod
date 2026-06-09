@@ -91,6 +91,7 @@ export interface BaseCourierOrder {
 export interface BaseCourierSearch {
   courier_id?: string; // Courier ID (will be determined by API)
   courier_type?: string; // e.g. 'inpost_paczkomaty'
+  cart_sum?: number; // Cart value (required for some couriers)
 }
 
 export interface CreateShipmentRequest {
