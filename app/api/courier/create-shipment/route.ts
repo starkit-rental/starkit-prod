@@ -125,12 +125,7 @@ export async function POST(request: NextRequest) {
       receiverLastName,
       receiverPhoneNumber: receiverPhone,
       receiverEmail,
-      // Use customer's real address
-      receiverStreet: streetName,
-      receiverBuildingNumber: buildingNumber,
-      receiverFlatNumber: flatNumber,
-      receiverPostCode: customerZip,
-      receiverCity: customerCity,
+      // For InPost parcel locker, address fields are NOT required (only destinationCode)
       operatorName: 'INPOST' as const,
       destinationCode,
       postingCode: senderConfig.postingCode,

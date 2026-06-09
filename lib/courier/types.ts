@@ -51,15 +51,20 @@ export interface CreateShipmentRequest {
   senderLastName: string;
   senderPhoneNumber: string;
   senderEmail: string;
-  senderStreet: string;
-  senderBuildingNumber: string;
-  senderFlatNumber: string;
-  senderPostCode: string;
-  senderCity: string;
+  senderStreet?: string; // Optional for InPost parcel locker
+  senderBuildingNumber?: string;
+  senderFlatNumber?: string;
+  senderPostCode?: string;
+  senderCity?: string;
   receiverFirstName: string;
   receiverLastName: string;
   receiverPhoneNumber: string;
   receiverEmail: string;
+  receiverStreet?: string; // Optional for InPost parcel locker
+  receiverBuildingNumber?: string;
+  receiverFlatNumber?: string;
+  receiverPostCode?: string;
+  receiverCity?: string;
   operatorName: 'INPOST';
   destinationCode: string;
   postingCode: string;
