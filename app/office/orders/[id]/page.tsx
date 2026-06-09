@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { pl } from "date-fns/locale";
 import { FinanceSection } from "./_components/finance-section";
+import { CourierPanel } from "./_components/courier-panel";
 import { moneyPln, dateShort, shortOrderNumber, initials, normalizeOne, pillForOrder, pillForPayment } from "@/lib/order-helpers";
 
 import {
@@ -1096,6 +1097,16 @@ export default function OfficeOrderDetailsPage() {
 
             {/* PDF Contract */}
             <ContractPdfCard orderId={orderId!} supabase={supabase} />
+
+            {/* Courier Labels */}
+            <CourierPanel
+              orderId={orderId!}
+              orderNumber={order.order_number}
+              inpostPointId={order.inpost_point_id}
+              customerName={customer?.full_name || null}
+              customerPhone={customer?.phone || null}
+              customerEmail={customer?.email || null}
+            />
           </div>
 
           {/* Communication History */}
