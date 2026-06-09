@@ -34,6 +34,11 @@ interface ReceiverData {
   lastName: string;
   phoneNumber: string;
   email: string;
+  street?: string;
+  buildingNumber?: string;
+  flatNumber?: string;
+  postCode?: string;
+  city?: string;
   destinationCode: string;
 }
 
@@ -222,6 +227,30 @@ export function CreateShipmentDialog({
               <div className="space-y-1">
                 <Label className="text-xs">Paczkomat odbioru</Label>
                 <Input value={receiver.destinationCode} onChange={(e) => setReceiver({...receiver, destinationCode: e.target.value})} className="h-8 text-sm font-mono" />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Ulica</Label>
+                  <Input value={receiver.street || ''} onChange={(e) => setReceiver({...receiver, street: e.target.value})} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Nr budynku</Label>
+                  <Input value={receiver.buildingNumber || ''} onChange={(e) => setReceiver({...receiver, buildingNumber: e.target.value})} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Nr mieszkania</Label>
+                  <Input value={receiver.flatNumber || ''} onChange={(e) => setReceiver({...receiver, flatNumber: e.target.value})} className="h-8 text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Kod pocztowy</Label>
+                  <Input value={receiver.postCode || ''} onChange={(e) => setReceiver({...receiver, postCode: e.target.value})} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Miasto</Label>
+                  <Input value={receiver.city || ''} onChange={(e) => setReceiver({...receiver, city: e.target.value})} className="h-8 text-sm" />
+                </div>
               </div>
             </div>
           </div>

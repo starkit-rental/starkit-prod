@@ -235,12 +235,22 @@ export function CourierPanel({
     lastName: receiverLastName,
     phoneNumber: customerPhone || '000000000',
     email: customerEmail || senderData.email,
+    street: customerAddress?.street || '',
+    buildingNumber: customerAddress?.street?.match(/(\d+[a-zA-Z]?)(?:\/|$)/)?.[1] || '',
+    flatNumber: customerAddress?.street?.match(/\/(\d+[a-zA-Z]?)$/)?.[1] || '',
+    postCode: customerAddress?.zip || '',
+    city: customerAddress?.city || '',
     destinationCode: inpostPointId || '',
   } : {
     firstName: senderData.firstName,
     lastName: senderData.lastName,
     phoneNumber: senderData.phoneNumber,
     email: senderData.email,
+    street: senderData.street,
+    buildingNumber: senderData.buildingNumber,
+    flatNumber: senderData.flatNumber,
+    postCode: senderData.postCode,
+    city: senderData.city,
     destinationCode: senderData.postingCode,
   };
 
