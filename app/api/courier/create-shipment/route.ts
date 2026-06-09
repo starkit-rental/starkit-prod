@@ -147,14 +147,11 @@ export async function POST(request: NextRequest) {
       .insert({
         order_id: orderId,
         shipment_type: 'outbound',
-        base_courier_number: orderDetails.id,
-        tracking_number: orderDetails.waybill_no,
-        status: 'created',
+        base_courier_number: String(orderDetails.id),
+        tracking_number: String(orderDetails.waybill_no),
+        status: 'SAVED',
         parcel_size: parcelSize,
-        price: orderDetails.price,
-        price_netto: orderDetails.price_netto,
-        vat_value: orderDetails.vat_value,
-        courier_name: orderDetails.courier_name,
+        operator_name: 'INPOST',
       })
       .select()
       .single();
