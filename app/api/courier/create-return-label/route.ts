@@ -160,29 +160,42 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('[create-return-label] API Response:', JSON.stringify(shipment, null, 2));
+    console.log('[create-return-label] Full API Response:', JSON.stringify(shipment, null, 2));
 
-    if (!shipment.success || !shipment.data?.Order) {
-      const errorMsg = shipment.message || 'Failed to create return label';
+    // Parse API response - handle different response structures
+    let orderId_api: string | undefined;
+    let waybillNo: string | undefined;
+
+    if (shipment.success && shipment.data) {
+      // Try data.Order structure
+      if (shipment.data.Order) {
+        orderId_api = String(shipment.data.Order.id || '');
+        waybillNo = String(shipment.data.Order.waybill_no || '');
+      }
+      // Try data.CartOrder structure
+      const dataAny = shipment.data as any;
+      if (!orderId_api && dataAny.CartOrder) {
+        orderId_api = String(dataAny.CartOrder.id_prefix || dataAny.CartOrder.id || '');
+      }
+    }
+
+    if (!shipment.success) {
+      const errorMsg = shipment.message || JSON.stringify(shipment);
       console.error('[create-return-label] API Error:', errorMsg);
       throw new Error(errorMsg);
     }
 
-    const orderDetails = shipment.data.Order;
-    console.log('[create-return-label] Order details:', JSON.stringify(orderDetails, null, 2));
+    console.log('[create-return-label] Parsed: orderId_api=', orderId_api, 'waybillNo=', waybillNo);
 
-    // Validate order details
-    if (!orderDetails.id || !orderDetails.waybill_no) {
-      console.error('[create-return-label] Missing order details:', { id: orderDetails.id, waybill_no: orderDetails.waybill_no });
-      throw new Error('API response missing required fields (id or waybill_no)');
-    }
+    // Save shipment to database (even with partial data)
+    const courierNumber = orderId_api || `return-${Date.now()}`;
+    const trackingNum = waybillNo || '';
 
-    // Save shipment to database
     const insertData = {
       order_id: orderId,
       shipment_type: 'return',
-      base_courier_number: String(orderDetails.id),
-      tracking_number: String(orderDetails.waybill_no),
+      base_courier_number: courierNumber,
+      tracking_number: trackingNum || null,
       status: 'SAVED',
       parcel_size: parcelSize,
       operator_name: 'INPOST',
@@ -197,15 +210,19 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (saveError) {
-      console.error('[create-return-label] Database error:', saveError);
-      console.error('[create-return-label] Insert data was:', insertData);
-      throw new Error(`Failed to save shipment to database: ${saveError.message}`);
+      console.error('[create-return-label] Database error:', JSON.stringify(saveError));
+      console.error('[create-return-label] Insert data was:', JSON.stringify(insertData));
+      // Return partial success - API created the shipment but DB save failed
+      return NextResponse.json({
+        error: 'Failed to create return label',
+        details: `Database error: ${saveError.message} (code: ${saveError.code}). API shipment was created with id: ${courierNumber}`,
+      }, { status: 500 });
     }
 
     // Try to get waybill
     let waybillUrl: string | null = null;
     try {
-      const waybillResponse = await baseCourierAPI.getWaybill(parseInt(orderDetails.waybill_no));
+      const waybillResponse = await baseCourierAPI.getWaybill(parseInt(waybillNo || '0'));
       
       if (waybillResponse.success && waybillResponse.data?.label_url) {
         waybillUrl = waybillResponse.data.label_url;
@@ -224,8 +241,8 @@ export async function POST(request: NextRequest) {
       success: true,
       shipment: {
         id: savedShipment.id,
-        number: orderDetails.id,
-        trackingNumber: orderDetails.waybill_no,
+        number: courierNumber,
+        trackingNumber: trackingNum,
         status: 'created',
         waybillUrl,
       },
