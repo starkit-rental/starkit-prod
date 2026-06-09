@@ -91,6 +91,10 @@ export async function POST(request: NextRequest) {
       taker_name: customer.full_name || `${receiverFirstName} ${receiverLastName}`,
       taker_email: customer.email || senderConfig.email,
       taker_phone: customer.phone || '000000000',
+      taker_street: '',
+      taker_house_no: '',
+      taker_postal: '',
+      taker_city: '',
       taker_point: order.inpost_point_id, // Customer's InPost point
       
       // Package details

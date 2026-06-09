@@ -80,17 +80,17 @@ export async function POST(request: NextRequest) {
       name: customer.full_name || `${customerFirstName} ${customerLastName}`,
       email: customer.email || senderConfig.email,
       phone: customer.phone || '000000000',
-      street: 'Paczkomat InPost', // Dummy for parcel locker
-      house_no: order.inpost_point_id,
-      postal: '00-000',
-      city: 'Polska',
-      sender_point: order.inpost_point_id, // Customer's InPost point
+      street: '',
+      house_no: '',
+      postal: '',
+      city: '',
+      sender_point: order.inpost_point_id, // Customer's InPost point (nadawca zwrotu)
       
       // Receiver (you) - reversed
       taker_name: `${senderConfig.firstName} ${senderConfig.lastName}`,
       taker_email: senderConfig.email,
       taker_phone: senderConfig.phoneNumber,
-      taker_point: senderConfig.postingCode, // Your InPost point (POZ118M)
+      taker_point: senderConfig.postingCode, // Your InPost point (POZ118M - odbiorca zwrotu)
       
       // Package details
       package_content: `Zwrot - Zamówienie ${order.order_number || orderId}`,
