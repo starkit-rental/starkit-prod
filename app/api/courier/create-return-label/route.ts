@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
-        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone)'
+        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone, address_street, address_city, address_zip)'
       )
       .eq('id', orderId)
       .single();
@@ -63,6 +63,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if return shipment already exists
+    const { data: existingReturn } = await supabase
+      .from('courier_shipments')
+      .select('id, tracking_number, waybill_url')
+      .eq('order_id', orderId)
+      .eq('shipment_type', 'return')
+      .single();
+
+    if (existingReturn) {
+      console.log('[create-return-label] Return shipment already exists:', existingReturn);
+      return NextResponse.json({
+        success: true,
+        shipment: {
+          id: existingReturn.id,
+          trackingNumber: existingReturn.tracking_number,
+          waybillUrl: existingReturn.waybill_url,
+          message: 'Return shipment already exists',
+        },
+      });
+    }
+
     // Get sender configuration (receiver for return label)
     const senderConfig = await getSenderConfig();
 
@@ -74,16 +95,22 @@ export async function POST(request: NextRequest) {
     // Get parcel dimensions
     const dimensions = PARCEL_SIZES[parcelSize];
 
+    // Parse customer address
+    const customerAddress = customer.address_street || '';
+    const addressParts = customerAddress.split(' ');
+    const customerStreet = addressParts.slice(0, -1).join(' ') || 'ul. Nieznana';
+    const customerHouseNo = addressParts[addressParts.length - 1] || '1';
+
     // Prepare order data for Base Courier API (REVERSED for return)
     const orderData: BaseCourierOrder = {
       // Sender (customer) - reversed
       name: customer.full_name || `${customerFirstName} ${customerLastName}`,
       email: customer.email || senderConfig.email,
       phone: customer.phone || '000000000',
-      street: '',
-      house_no: '',
-      postal: '',
-      city: '',
+      street: customerStreet,
+      house_no: customerHouseNo,
+      postal: customer.address_zip || '00-000',
+      city: customer.address_city || 'Polska',
       sender_point: order.inpost_point_id, // Customer's InPost point (nadawca zwrotu)
       
       // Receiver (you) - reversed
@@ -133,32 +160,46 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('[create-return-label] API Response:', shipment);
+    console.log('[create-return-label] API Response:', JSON.stringify(shipment, null, 2));
 
     if (!shipment.success || !shipment.data?.Order) {
-      throw new Error(shipment.message || 'Failed to create return label');
+      const errorMsg = shipment.message || 'Failed to create return label';
+      console.error('[create-return-label] API Error:', errorMsg);
+      throw new Error(errorMsg);
     }
 
     const orderDetails = shipment.data.Order;
+    console.log('[create-return-label] Order details:', JSON.stringify(orderDetails, null, 2));
+
+    // Validate order details
+    if (!orderDetails.id || !orderDetails.waybill_no) {
+      console.error('[create-return-label] Missing order details:', { id: orderDetails.id, waybill_no: orderDetails.waybill_no });
+      throw new Error('API response missing required fields (id or waybill_no)');
+    }
 
     // Save shipment to database
+    const insertData = {
+      order_id: orderId,
+      shipment_type: 'return',
+      base_courier_number: String(orderDetails.id),
+      tracking_number: String(orderDetails.waybill_no),
+      status: 'SAVED',
+      parcel_size: parcelSize,
+      operator_name: 'INPOST',
+    };
+    
+    console.log('[create-return-label] Inserting to DB:', JSON.stringify(insertData, null, 2));
+
     const { data: savedShipment, error: saveError } = await supabase
       .from('courier_shipments')
-      .insert({
-        order_id: orderId,
-        shipment_type: 'return',
-        base_courier_number: String(orderDetails.id),
-        tracking_number: String(orderDetails.waybill_no),
-        status: 'SAVED',
-        parcel_size: parcelSize,
-        operator_name: 'INPOST',
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (saveError) {
       console.error('[create-return-label] Database error:', saveError);
-      throw new Error('Failed to save shipment to database');
+      console.error('[create-return-label] Insert data was:', insertData);
+      throw new Error(`Failed to save shipment to database: ${saveError.message}`);
     }
 
     // Try to get waybill

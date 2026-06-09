@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
-        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone)'
+        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone, address_street, address_city, address_zip)'
       )
       .eq('id', orderId)
       .single();
@@ -63,6 +63,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if outbound shipment already exists
+    const { data: existingOutbound } = await supabase
+      .from('courier_shipments')
+      .select('id, tracking_number, waybill_url')
+      .eq('order_id', orderId)
+      .eq('shipment_type', 'outbound')
+      .single();
+
+    if (existingOutbound) {
+      console.log('[create-shipment] Outbound shipment already exists:', existingOutbound);
+      return NextResponse.json({
+        success: true,
+        shipment: {
+          id: existingOutbound.id,
+          trackingNumber: existingOutbound.tracking_number,
+          waybillUrl: existingOutbound.waybill_url,
+          message: 'Outbound shipment already exists',
+        },
+      });
+    }
+
     // Get sender configuration
     const senderConfig = await getSenderConfig();
 
@@ -70,6 +91,12 @@ export async function POST(request: NextRequest) {
     const nameParts = (customer.full_name || '').trim().split(' ');
     const receiverFirstName = nameParts[0] || 'Klient';
     const receiverLastName = nameParts.slice(1).join(' ') || 'Starkit';
+
+    // Parse customer address
+    const customerAddress = customer.address_street || '';
+    const addressParts = customerAddress.split(' ');
+    const customerStreet = addressParts.slice(0, -1).join(' ') || 'ul. Nieznana';
+    const customerHouseNo = addressParts[addressParts.length - 1] || '1';
 
     // Get parcel dimensions
     const dimensions = PARCEL_SIZES[parcelSize];
@@ -91,10 +118,10 @@ export async function POST(request: NextRequest) {
       taker_name: customer.full_name || `${receiverFirstName} ${receiverLastName}`,
       taker_email: customer.email || senderConfig.email,
       taker_phone: customer.phone || '000000000',
-      taker_street: '',
-      taker_house_no: '',
-      taker_postal: '',
-      taker_city: '',
+      taker_street: customerStreet,
+      taker_house_no: customerHouseNo,
+      taker_postal: customer.address_zip || '00-000',
+      taker_city: customer.address_city || 'Polska',
       taker_point: order.inpost_point_id, // Customer's InPost point
       
       // Package details
