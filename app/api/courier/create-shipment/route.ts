@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
-        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone)'
+        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone, address_street, address_city, address_zip)'
       )
       .eq('id', orderId)
       .single();
@@ -66,6 +66,17 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Parse customer address
+    const customerStreet = customer.address_street || 'Brak';
+    const customerCity = customer.address_city || 'Brak';
+    const customerZip = customer.address_zip || '00-000';
+    
+    // Extract building and flat number from street (e.g. "Bulwar Dedala 30/10")
+    const addressMatch = customerStreet.match(/^(.+?)\s+(\d+[a-zA-Z]?)(?:\/(\d+[a-zA-Z]?))?$/);
+    const streetName = addressMatch ? addressMatch[1] : customerStreet;
+    const buildingNumber = addressMatch ? addressMatch[2] : '1';
+    const flatNumber = addressMatch ? (addressMatch[3] || '') : '';
 
     // Get sender configuration (use custom if provided)
     const defaultSenderConfig = await getSenderConfig();
@@ -114,12 +125,12 @@ export async function POST(request: NextRequest) {
       receiverLastName,
       receiverPhoneNumber: receiverPhone,
       receiverEmail,
-      // For InPost parcel locker, use dummy address (required by API)
-      receiverStreet: 'Paczkomat InPost',
-      receiverBuildingNumber: destinationCode,
-      receiverFlatNumber: '',
-      receiverPostCode: '00-000',
-      receiverCity: 'Polska',
+      // Use customer's real address
+      receiverStreet: streetName,
+      receiverBuildingNumber: buildingNumber,
+      receiverFlatNumber: flatNumber,
+      receiverPostCode: customerZip,
+      receiverCity: customerCity,
       operatorName: 'INPOST' as const,
       destinationCode,
       postingCode: senderConfig.postingCode,

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
-        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone)'
+        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone, address_street, address_city, address_zip)'
       )
       .eq('id', orderId)
       .single();
@@ -66,6 +66,17 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Parse customer address
+    const customerStreet = customer.address_street || 'Brak';
+    const customerCity = customer.address_city || 'Brak';
+    const customerZip = customer.address_zip || '00-000';
+    
+    // Extract building and flat number from street (e.g. "Bulwar Dedala 30/10")
+    const addressMatch = customerStreet.match(/^(.+?)\s+(\d+[a-zA-Z]?)(?:\/(\d+[a-zA-Z]?))?$/);
+    const streetName = addressMatch ? addressMatch[1] : customerStreet;
+    const buildingNumber = addressMatch ? addressMatch[2] : '1';
+    const flatNumber = addressMatch ? (addressMatch[3] || '') : '';
 
     // Get sender configuration (use custom if provided)
     const defaultSenderConfig = await getSenderConfig();
@@ -123,21 +134,22 @@ export async function POST(request: NextRequest) {
       senderLastName,
       senderPhoneNumber: senderPhone,
       senderEmail,
-      senderStreet: 'Paczkomat InPost',
-      senderBuildingNumber: postingCode,
-      senderFlatNumber: '',
-      senderPostCode: '00-000',
-      senderCity: 'Polska',
+      // Use customer's real address (customer is sender for return label)
+      senderStreet: streetName,
+      senderBuildingNumber: buildingNumber,
+      senderFlatNumber: flatNumber,
+      senderPostCode: customerZip,
+      senderCity: customerCity,
       receiverFirstName,
       receiverLastName,
       receiverPhoneNumber: receiverPhone,
       receiverEmail,
-      // Receiver address (your address for return label)
-      receiverStreet: 'Paczkomat InPost',
-      receiverBuildingNumber: destinationCode,
-      receiverFlatNumber: '',
-      receiverPostCode: '00-000',
-      receiverCity: 'Polska',
+      // Receiver address (your real address for return label)
+      receiverStreet: defaultSenderConfig.street,
+      receiverBuildingNumber: defaultSenderConfig.buildingNumber,
+      receiverFlatNumber: defaultSenderConfig.flatNumber,
+      receiverPostCode: defaultSenderConfig.postCode,
+      receiverCity: defaultSenderConfig.city,
       operatorName: 'INPOST' as const,
       destinationCode,
       postingCode,
