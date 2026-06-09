@@ -94,10 +94,19 @@ export interface BaseCourierSearch {
   cart_sum?: number; // Cart value (required for some couriers)
 }
 
+export interface BaseCourierCart {
+  Order: BaseCourierOrder;
+}
+
+export interface BaseCourierPayment {
+  payment: string; // e.g. 'bank', 'pay_later', 'paynow'
+}
+
 export interface CreateShipmentRequest {
   auth: BaseCourierAuth;
-  Order: BaseCourierOrder;
+  Cart: BaseCourierCart;
   CourierSearch?: BaseCourierSearch;
+  CartOrder?: BaseCourierPayment;
 }
 
 export interface ShipmentResponse {
