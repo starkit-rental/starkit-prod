@@ -3,8 +3,9 @@ import { SenderConfig } from './types';
 // Base Courier API Configuration
 export const BASE_COURIER_CONFIG = {
   apiKey: process.env.BASE_COURIER_API_KEY || 'kziim7ie1nhwk3qw2l6ezc',
-  apiUrl: 'https://api.bliskapaczka.pl/v2',
-  sandboxUrl: 'https://api.sandbox-bliskapaczka.pl/v2',
+  apiLogin: process.env.BASE_COURIER_API_LOGIN || 'starkit.rental@gmail.com',
+  apiUrl: 'https://api.blpaczka.com',
+  sandboxUrl: 'https://sandbox.blpaczka.com',
   useSandbox: process.env.NODE_ENV === 'development',
 } as const;
 
@@ -44,4 +45,8 @@ export function getApiUrl(): string {
 
 export function getApiKey(): string {
   return BASE_COURIER_CONFIG.apiKey;
+}
+
+export function getApiLogin(): string {
+  return BASE_COURIER_CONFIG.apiLogin;
 }

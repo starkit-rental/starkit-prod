@@ -1,4 +1,4 @@
-import { getApiUrl, getApiKey } from './base-courier-config';
+import { getApiUrl, getApiKey, getApiLogin } from './base-courier-config';
 import type { CreateShipmentRequest, ShipmentResponse, WaybillResponse } from './types';
 
 class BaseCourierAPIError extends Error {
@@ -14,15 +14,17 @@ class BaseCourierAPIError extends Error {
 
 /**
  * Base Courier API Client
- * Documentation: https://docs.bliskapaczka.pl/
+ * Documentation: https://api.blpaczka.com/output.json
  */
 export class BaseCourierAPI {
   private apiUrl: string;
   private apiKey: string;
+  private apiLogin: string;
 
-  constructor(apiKey?: string) {
+  constructor(apiKey?: string, apiLogin?: string) {
     this.apiUrl = getApiUrl();
     this.apiKey = apiKey || getApiKey();
+    this.apiLogin = apiLogin || getApiLogin();
   }
 
   private async request<T>(
@@ -34,7 +36,6 @@ export class BaseCourierAPI {
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`,
       ...options.headers,
     };
 
@@ -83,44 +84,56 @@ export class BaseCourierAPI {
   }
 
   /**
-   * Create and advice a shipment
-   * POST /v2/order/advice
+   * Create a shipment
+   * POST /api/createOrder.json
    */
-  async createShipment(data: CreateShipmentRequest): Promise<ShipmentResponse> {
-    return this.request<ShipmentResponse>('/order/advice', {
+  async createShipment(orderData: Omit<CreateShipmentRequest, 'auth'>): Promise<ShipmentResponse> {
+    const requestData: CreateShipmentRequest = {
+      auth: {
+        login: this.apiLogin,
+        api_key: this.apiKey,
+      },
+      ...orderData,
+    };
+    
+    return this.request<ShipmentResponse>('/api/createOrder.json', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(requestData),
     });
   }
 
   /**
-   * Get waybill URL for a shipment
-   * GET /v2/order/{number}/waybill
+   * Get waybill (label) for a shipment
+   * POST /api/getWaybill.json
    */
-  async getWaybill(orderNumber: string): Promise<WaybillResponse[]> {
-    return this.request<WaybillResponse[]>(`/order/${orderNumber}/waybill`);
+  async getWaybill(waybillNo: number): Promise<WaybillResponse> {
+    return this.request<WaybillResponse>('/api/getWaybill.json', {
+      method: 'POST',
+      body: JSON.stringify({
+        auth: {
+          login: this.apiLogin,
+          api_key: this.apiKey,
+        },
+        Order: {
+          waybill_no: waybillNo,
+        },
+      }),
+    });
   }
 
   /**
-   * Get shipment details
-   * GET /v2/order/{number}
+   * Download waybill PDF from URL or base64
    */
-  async getShipment(orderNumber: string): Promise<ShipmentResponse> {
-    return this.request<ShipmentResponse>(`/order/${orderNumber}`);
-  }
-
-  /**
-   * Get tracking information
-   * GET /v2/order/{number}/tracking
-   */
-  async getTracking(orderNumber: string): Promise<any> {
-    return this.request<any>(`/order/${orderNumber}/tracking`);
-  }
-
-  /**
-   * Download waybill PDF as buffer
-   */
-  async downloadWaybillPDF(waybillUrl: string): Promise<Buffer> {
+  async downloadWaybillPDF(labelUrl?: string, labelBase64?: string): Promise<Buffer> {
+    if (labelBase64) {
+      return Buffer.from(labelBase64, 'base64');
+    }
+    
+    if (!labelUrl) {
+      throw new BaseCourierAPIError('No label URL or base64 data provided');
+    }
+    
+    const waybillUrl = labelUrl;
     const response = await fetch(waybillUrl);
     
     if (!response.ok) {

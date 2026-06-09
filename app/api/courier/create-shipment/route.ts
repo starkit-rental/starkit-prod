@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { baseCourierAPI } from '@/lib/courier/base-courier-api';
 import { getSenderConfig } from '@/lib/courier/get-sender-config';
-import { PARCEL_SIZES, type ParcelSize } from '@/lib/courier/types';
+import { PARCEL_SIZES, type ParcelSize, type BaseCourierOrder } from '@/lib/courier/types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,19 +14,15 @@ export async function POST(request: NextRequest) {
       insurance = false,
       insuranceValue = 0,
       saturdayDelivery = false,
-      sender: customSender,
-      receiver: customReceiver,
     } = body as { 
       orderId: string; 
       parcelSize: ParcelSize;
       insurance?: boolean;
       insuranceValue?: number;
       saturdayDelivery?: boolean;
-      sender?: any;
-      receiver?: any;
     };
 
-    console.log('[create-shipment] Request:', { orderId, parcelSize, insurance, saturdayDelivery, hasCustomSender: !!customSender, hasCustomReceiver: !!customReceiver });
+    console.log('[create-shipment] Request:', { orderId, parcelSize, insurance, saturdayDelivery });
 
     if (!orderId || !parcelSize) {
       return NextResponse.json(
@@ -46,7 +42,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
-        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone, address_street, address_city, address_zip)'
+        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone)'
       )
       .eq('id', orderId)
       .single();
@@ -67,87 +63,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse customer address
-    const customerStreet = customer.address_street || 'Brak';
-    const customerCity = customer.address_city || 'Brak';
-    const customerZip = customer.address_zip || '00-000';
-    
-    // Extract building and flat number from street (e.g. "Bulwar Dedala 30/10")
-    const addressMatch = customerStreet.match(/^(.+?)\s+(\d+[a-zA-Z]?)(?:\/(\d+[a-zA-Z]?))?$/);
-    const streetName = addressMatch ? addressMatch[1] : customerStreet;
-    const buildingNumber = addressMatch ? addressMatch[2] : '1';
-    const flatNumber = addressMatch ? (addressMatch[3] || '') : '';
+    // Get sender configuration
+    const senderConfig = await getSenderConfig();
 
-    // Get sender configuration (use custom if provided)
-    const defaultSenderConfig = await getSenderConfig();
-    const senderConfig = customSender || defaultSenderConfig;
-
-    // Parse customer name (use custom receiver if provided)
-    let receiverFirstName, receiverLastName, receiverPhone, receiverEmail, destinationCode;
-    
-    if (customReceiver) {
-      receiverFirstName = customReceiver.firstName;
-      receiverLastName = customReceiver.lastName;
-      receiverPhone = customReceiver.phoneNumber;
-      receiverEmail = customReceiver.email;
-      destinationCode = customReceiver.destinationCode;
-    } else {
-      const nameParts = (customer.full_name || '').trim().split(' ');
-      receiverFirstName = nameParts[0] || 'Klient';
-      receiverLastName = nameParts.slice(1).join(' ') || 'Starkit';
-      receiverPhone = customer.phone || '000000000';
-      receiverEmail = customer.email || defaultSenderConfig.email;
-      destinationCode = order.inpost_point_id;
-    }
+    // Parse customer name
+    const nameParts = (customer.full_name || '').trim().split(' ');
+    const receiverFirstName = nameParts[0] || 'Klient';
+    const receiverLastName = nameParts.slice(1).join(' ') || 'Starkit';
 
     // Get parcel dimensions
     const dimensions = PARCEL_SIZES[parcelSize];
 
-    // Prepare additional services
-    const additionalServices: Array<{ name: string }> = [];
-    if (saturdayDelivery) {
-      additionalServices.push({ name: 'SATURDAY_DELIVERY' });
-    }
-
-    // Create shipment request
-    const shipmentData = {
-      reference: order.order_number || orderId,
-      senderFirstName: senderConfig.firstName,
-      senderLastName: senderConfig.lastName,
-      senderPhoneNumber: senderConfig.phoneNumber,
-      senderEmail: senderConfig.email,
-      senderStreet: senderConfig.street,
-      senderBuildingNumber: senderConfig.buildingNumber,
-      senderFlatNumber: senderConfig.flatNumber,
-      senderPostCode: senderConfig.postCode,
-      senderCity: senderConfig.city,
-      receiverFirstName,
-      receiverLastName,
-      receiverPhoneNumber: receiverPhone,
-      receiverEmail,
-      // For InPost parcel locker, address fields are NOT required (only destinationCode)
-      operatorName: 'INPOST' as const,
-      destinationCode,
-      postingCode: senderConfig.postingCode,
-      additionalInformation: `Zamówienie ${order.order_number || orderId}`,
-      parcels: [
-        {
-          dimensions: {
-            height: dimensions.height,
-            length: dimensions.length,
-            width: dimensions.width,
-            weight: dimensions.weight,
-          },
-          insuranceValue: insurance ? insuranceValue : undefined,
-        },
-      ],
-      additionalServices: additionalServices.length > 0 ? additionalServices : undefined,
+    // Prepare order data for Base Courier API
+    const orderData: BaseCourierOrder = {
+      // Sender (you)
+      name: `${senderConfig.firstName} ${senderConfig.lastName}`,
+      email: senderConfig.email,
+      phone: senderConfig.phoneNumber,
+      street: senderConfig.street,
+      house_no: senderConfig.buildingNumber,
+      locum_no: senderConfig.flatNumber || undefined,
+      postal: senderConfig.postCode,
+      city: senderConfig.city,
+      sender_point: senderConfig.postingCode, // POZ118M
+      
+      // Receiver (customer)
+      taker_name: customer.full_name || `${receiverFirstName} ${receiverLastName}`,
+      taker_email: customer.email || senderConfig.email,
+      taker_phone: customer.phone || '000000000',
+      taker_point: order.inpost_point_id, // Customer's InPost point
+      
+      // Package details
+      package_content: `Zamówienie ${order.order_number || orderId}`,
+      ref_number: order.order_number || orderId,
+      
+      // Dimensions
+      height: dimensions.height,
+      width: dimensions.width,
+      depth: dimensions.length,
+      weight: dimensions.weight,
+      
+      // Additional options
+      insurance: insurance ? insuranceValue : undefined,
+      inpost_weekend: saturdayDelivery || undefined,
     };
 
-    console.log('[create-shipment] Shipment data:', JSON.stringify(shipmentData, null, 2));
+    console.log('[create-shipment] Order data:', JSON.stringify(orderData, null, 2));
 
     // Create shipment via Base Courier API
-    const shipment = await baseCourierAPI.createShipment(shipmentData);
+    const shipment = await baseCourierAPI.createShipment({
+      Order: orderData,
+    });
+
+    console.log('[create-shipment] API Response:', shipment);
+
+    if (!shipment.success || !shipment.data?.Order) {
+      throw new Error(shipment.message || 'Failed to create shipment');
+    }
+
+    const orderDetails = shipment.data.Order;
 
     // Save shipment to database
     const { data: savedShipment, error: saveError } = await supabase
@@ -155,32 +129,30 @@ export async function POST(request: NextRequest) {
       .insert({
         order_id: orderId,
         shipment_type: 'outbound',
-        base_courier_number: shipment.number,
-        tracking_number: shipment.trackingNumber,
-        operator_name: shipment.operatorName,
+        base_courier_number: orderDetails.id,
+        tracking_number: orderDetails.waybill_no,
+        status: 'created',
         parcel_size: parcelSize,
-        destination_code: shipment.destinationCode,
-        posting_code: shipment.postingCode,
-        status: shipment.status,
-        advised_at: shipment.adviceDate ? new Date(shipment.adviceDate).toISOString() : null,
+        price: orderDetails.price,
+        price_netto: orderDetails.price_netto,
+        vat_value: orderDetails.vat_value,
+        courier_name: orderDetails.courier_name,
       })
       .select()
       .single();
 
     if (saveError) {
-      console.error('Failed to save shipment to database:', saveError);
-      return NextResponse.json(
-        { error: 'Failed to save shipment', details: saveError.message },
-        { status: 500 }
-      );
+      console.error('[create-shipment] Database error:', saveError);
+      throw new Error('Failed to save shipment to database');
     }
 
-    // Get waybill URL
+    // Try to get waybill
     let waybillUrl: string | null = null;
     try {
-      const waybills = await baseCourierAPI.getWaybill(shipment.number);
-      if (waybills && waybills.length > 0) {
-        waybillUrl = waybills[0].url;
+      const waybillResponse = await baseCourierAPI.getWaybill(parseInt(orderDetails.waybill_no));
+      
+      if (waybillResponse.success && waybillResponse.data?.label_url) {
+        waybillUrl = waybillResponse.data.label_url;
         
         // Update shipment with waybill URL
         await supabase
@@ -189,29 +161,27 @@ export async function POST(request: NextRequest) {
           .eq('id', savedShipment.id);
       }
     } catch (waybillError) {
-      console.error('Failed to get waybill:', waybillError);
+      console.error('[create-shipment] Failed to get waybill:', waybillError);
     }
 
     return NextResponse.json({
       success: true,
       shipment: {
         id: savedShipment.id,
-        number: shipment.number,
-        trackingNumber: shipment.trackingNumber,
-        status: shipment.status,
+        number: orderDetails.id,
+        trackingNumber: orderDetails.waybill_no,
+        status: 'created',
         waybillUrl,
       },
     });
   } catch (error) {
     console.error('[create-shipment] Error:', error);
     
-    // Extract detailed error message
     let errorMessage = 'Failed to create shipment';
     let errorDetails = 'Unknown error';
     
     if (error instanceof Error) {
       errorDetails = error.message;
-      // Check if it's an API error with response
       if ((error as any).response) {
         errorDetails = JSON.stringify((error as any).response);
       }

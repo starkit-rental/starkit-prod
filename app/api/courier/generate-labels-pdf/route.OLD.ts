@@ -19,65 +19,58 @@ export async function POST(request: NextRequest) {
     // Get shipments for this order
     const { data: shipments, error: shipmentsError } = await supabase
       .from('courier_shipments')
-      .select('*')
-      .eq('order_id', orderId);
+      .select('id, shipment_type, base_courier_number, waybill_url')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: true });
 
-    if (shipmentsError) {
-      throw new Error('Failed to fetch shipments');
-    }
-
-    if (!shipments || shipments.length === 0) {
+    if (shipmentsError || !shipments || shipments.length === 0) {
       return NextResponse.json(
         { error: 'No shipments found for this order' },
         { status: 404 }
       );
     }
 
-    const outboundShipment = shipments.find((s: any) => s.shipment_type === 'outbound');
-    const returnShipment = shipments.find((s: any) => s.shipment_type === 'return');
+    // Find outbound and return shipments
+    const outboundShipment = shipments.find((s) => s.shipment_type === 'outbound');
+    const returnShipment = shipments.find((s) => s.shipment_type === 'return');
 
     if (!outboundShipment && !returnShipment) {
       return NextResponse.json(
-        { error: 'No shipments found' },
+        { error: 'No valid shipments found' },
         { status: 404 }
       );
     }
 
-    // Create merged PDF
+    // Create a new PDF document
     const mergedPdf = await PDFDocument.create();
 
     // Download and merge outbound label
     if (outboundShipment) {
       try {
         let waybillUrl = outboundShipment.waybill_url;
-        let waybillBase64: string | undefined;
         
         // If waybill URL is not cached, fetch it
-        if (!waybillUrl && outboundShipment.tracking_number) {
-          const waybillResponse = await baseCourierAPI.getWaybill(parseInt(outboundShipment.tracking_number));
-          
-          if (waybillResponse.success && waybillResponse.data) {
-            waybillUrl = waybillResponse.data.label_url;
-            waybillBase64 = waybillResponse.data.label_base64;
+        if (!waybillUrl && outboundShipment.base_courier_number) {
+          const waybills = await baseCourierAPI.getWaybill(outboundShipment.base_courier_number);
+          if (waybills && waybills.length > 0) {
+            waybillUrl = waybills[0].url;
             
-            // Cache the URL if available
-            if (waybillUrl) {
-              await supabase
-                .from('courier_shipments')
-                .update({ waybill_url: waybillUrl })
-                .eq('id', outboundShipment.id);
-            }
+            // Cache the URL
+            await supabase
+              .from('courier_shipments')
+              .update({ waybill_url: waybillUrl })
+              .eq('id', outboundShipment.id);
           }
         }
 
-        if (waybillUrl || waybillBase64) {
-          const pdfBuffer = await baseCourierAPI.downloadWaybillPDF(waybillUrl, waybillBase64);
+        if (waybillUrl) {
+          const pdfBuffer = await baseCourierAPI.downloadWaybillPDF(waybillUrl);
           const pdfDoc = await PDFDocument.load(pdfBuffer);
           const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
           pages.forEach((page: any) => mergedPdf.addPage(page));
         }
       } catch (error) {
-        console.error('[generate-labels-pdf] Failed to add outbound label:', error);
+        console.error('Failed to add outbound label:', error);
       }
     }
 
@@ -85,42 +78,36 @@ export async function POST(request: NextRequest) {
     if (returnShipment) {
       try {
         let waybillUrl = returnShipment.waybill_url;
-        let waybillBase64: string | undefined;
         
         // If waybill URL is not cached, fetch it
-        if (!waybillUrl && returnShipment.tracking_number) {
-          const waybillResponse = await baseCourierAPI.getWaybill(parseInt(returnShipment.tracking_number));
-          
-          if (waybillResponse.success && waybillResponse.data) {
-            waybillUrl = waybillResponse.data.label_url;
-            waybillBase64 = waybillResponse.data.label_base64;
+        if (!waybillUrl && returnShipment.base_courier_number) {
+          const waybills = await baseCourierAPI.getWaybill(returnShipment.base_courier_number);
+          if (waybills && waybills.length > 0) {
+            waybillUrl = waybills[0].url;
             
-            // Cache the URL if available
-            if (waybillUrl) {
-              await supabase
-                .from('courier_shipments')
-                .update({ waybill_url: waybillUrl })
-                .eq('id', returnShipment.id);
-            }
+            // Cache the URL
+            await supabase
+              .from('courier_shipments')
+              .update({ waybill_url: waybillUrl })
+              .eq('id', returnShipment.id);
           }
         }
 
-        if (waybillUrl || waybillBase64) {
-          const pdfBuffer = await baseCourierAPI.downloadWaybillPDF(waybillUrl, waybillBase64);
+        if (waybillUrl) {
+          const pdfBuffer = await baseCourierAPI.downloadWaybillPDF(waybillUrl);
           const pdfDoc = await PDFDocument.load(pdfBuffer);
           const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
           pages.forEach((page: any) => mergedPdf.addPage(page));
         }
       } catch (error) {
-        console.error('[generate-labels-pdf] Failed to add return label:', error);
+        console.error('Failed to add return label:', error);
       }
     }
 
-    // Check if we have any pages
     if (mergedPdf.getPageCount() === 0) {
       return NextResponse.json(
-        { error: 'No labels available to download' },
-        { status: 404 }
+        { error: 'No labels could be generated' },
+        { status: 500 }
       );
     }
 
@@ -135,7 +122,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[generate-labels-pdf] Error:', error);
+    console.error('Generate labels PDF error:', error);
     return NextResponse.json(
       {
         error: 'Failed to generate labels PDF',

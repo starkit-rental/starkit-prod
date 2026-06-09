@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { baseCourierAPI } from '@/lib/courier/base-courier-api';
 import { getSenderConfig } from '@/lib/courier/get-sender-config';
-import { PARCEL_SIZES, type ParcelSize } from '@/lib/courier/types';
+import { PARCEL_SIZES, type ParcelSize, type BaseCourierOrder } from '@/lib/courier/types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,19 +14,15 @@ export async function POST(request: NextRequest) {
       insurance = false,
       insuranceValue = 0,
       saturdayDelivery = false,
-      sender: customSender,
-      receiver: customReceiver,
     } = body as { 
       orderId: string; 
       parcelSize: ParcelSize;
       insurance?: boolean;
       insuranceValue?: number;
       saturdayDelivery?: boolean;
-      sender?: any;
-      receiver?: any;
     };
 
-    console.log('[create-return-label] Request:', { orderId, parcelSize, insurance, saturdayDelivery, hasCustomSender: !!customSender, hasCustomReceiver: !!customReceiver });
+    console.log('[create-return-label] Request:', { orderId, parcelSize, insurance, saturdayDelivery });
 
     if (!orderId || !parcelSize) {
       return NextResponse.json(
@@ -46,7 +42,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
-        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone, address_street, address_city, address_zip)'
+        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone)'
       )
       .eq('id', orderId)
       .single();
@@ -67,101 +63,64 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse customer address
-    const customerStreet = customer.address_street || 'Brak';
-    const customerCity = customer.address_city || 'Brak';
-    const customerZip = customer.address_zip || '00-000';
-    
-    // Extract building and flat number from street (e.g. "Bulwar Dedala 30/10")
-    const addressMatch = customerStreet.match(/^(.+?)\s+(\d+[a-zA-Z]?)(?:\/(\d+[a-zA-Z]?))?$/);
-    const streetName = addressMatch ? addressMatch[1] : customerStreet;
-    const buildingNumber = addressMatch ? addressMatch[2] : '1';
-    const flatNumber = addressMatch ? (addressMatch[3] || '') : '';
+    // Get sender configuration (receiver for return label)
+    const senderConfig = await getSenderConfig();
 
-    // Get sender configuration (use custom if provided)
-    const defaultSenderConfig = await getSenderConfig();
-    
-    // For return label: customer is sender, you are receiver
-    let senderFirstName, senderLastName, senderPhone, senderEmail, postingCode;
-    let receiverFirstName, receiverLastName, receiverPhone, receiverEmail, destinationCode;
-    
-    if (customSender) {
-      // Custom sender (customer)
-      senderFirstName = customSender.firstName;
-      senderLastName = customSender.lastName;
-      senderPhone = customSender.phoneNumber;
-      senderEmail = customSender.email;
-      postingCode = customSender.postingCode;
-    } else {
-      // Default: customer data
-      const nameParts = (customer.full_name || '').trim().split(' ');
-      senderFirstName = nameParts[0] || 'Klient';
-      senderLastName = nameParts.slice(1).join(' ') || 'Starkit';
-      senderPhone = customer.phone || '000000000';
-      senderEmail = customer.email || defaultSenderConfig.email;
-      postingCode = order.inpost_point_id;
-    }
-    
-    if (customReceiver) {
-      // Custom receiver (you)
-      receiverFirstName = customReceiver.firstName;
-      receiverLastName = customReceiver.lastName;
-      receiverPhone = customReceiver.phoneNumber;
-      receiverEmail = customReceiver.email;
-      destinationCode = customReceiver.destinationCode;
-    } else {
-      // Default: your data
-      receiverFirstName = defaultSenderConfig.firstName;
-      receiverLastName = defaultSenderConfig.lastName;
-      receiverPhone = defaultSenderConfig.phoneNumber;
-      receiverEmail = defaultSenderConfig.email;
-      destinationCode = defaultSenderConfig.postingCode;
-    }
+    // Parse customer name
+    const nameParts = (customer.full_name || '').trim().split(' ');
+    const customerFirstName = nameParts[0] || 'Klient';
+    const customerLastName = nameParts.slice(1).join(' ') || 'Starkit';
 
     // Get parcel dimensions
     const dimensions = PARCEL_SIZES[parcelSize];
 
-    // Prepare additional services
-    const additionalServices: Array<{ name: string }> = [];
-    if (saturdayDelivery) {
-      additionalServices.push({ name: 'SATURDAY_DELIVERY' });
-    }
-
-    // Create RETURN shipment request (reversed sender/receiver)
-    const shipmentData = {
-      reference: `${order.order_number || orderId}-ZWROT`,
-      senderFirstName,
-      senderLastName,
-      senderPhoneNumber: senderPhone,
-      senderEmail,
-      // For InPost parcel locker, address fields are NOT required
-      receiverFirstName,
-      receiverLastName,
-      receiverPhoneNumber: receiverPhone,
-      receiverEmail,
-      // For InPost parcel locker, address fields are NOT required
-      operatorName: 'INPOST' as const,
-      destinationCode,
-      postingCode,
-      additionalInformation: `Zwrot - Zamówienie ${order.order_number || orderId}`,
-      parcels: [
-        {
-          dimensions: {
-            height: dimensions.height,
-            length: dimensions.length,
-            width: dimensions.width,
-            weight: dimensions.weight,
-          },
-          insuranceValue: insurance ? insuranceValue : undefined,
-        },
-      ],
-      additionalServices: additionalServices.length > 0 ? additionalServices : undefined,
+    // Prepare order data for Base Courier API (REVERSED for return)
+    const orderData: BaseCourierOrder = {
+      // Sender (customer) - reversed
+      name: customer.full_name || `${customerFirstName} ${customerLastName}`,
+      email: customer.email || senderConfig.email,
+      phone: customer.phone || '000000000',
+      street: 'Paczkomat InPost', // Dummy for parcel locker
+      house_no: order.inpost_point_id,
+      postal: '00-000',
+      city: 'Polska',
+      sender_point: order.inpost_point_id, // Customer's InPost point
+      
+      // Receiver (you) - reversed
+      taker_name: `${senderConfig.firstName} ${senderConfig.lastName}`,
+      taker_email: senderConfig.email,
+      taker_phone: senderConfig.phoneNumber,
+      taker_point: senderConfig.postingCode, // Your InPost point (POZ118M)
+      
+      // Package details
+      package_content: `Zwrot - Zamówienie ${order.order_number || orderId}`,
+      ref_number: `${order.order_number || orderId}-ZWROT`,
+      
+      // Dimensions
+      height: dimensions.height,
+      width: dimensions.width,
+      depth: dimensions.length,
+      weight: dimensions.weight,
+      
+      // Additional options
+      insurance: insurance ? insuranceValue : undefined,
+      inpost_weekend: saturdayDelivery || undefined,
     };
 
-    console.log('[create-return-label] Shipment data:', JSON.stringify(shipmentData, null, 2));
+    console.log('[create-return-label] Order data:', JSON.stringify(orderData, null, 2));
 
     // Create shipment via Base Courier API
-    const shipment = await baseCourierAPI.createShipment(shipmentData);
+    const shipment = await baseCourierAPI.createShipment({
+      Order: orderData,
+    });
+
+    console.log('[create-return-label] API Response:', shipment);
+
+    if (!shipment.success || !shipment.data?.Order) {
+      throw new Error(shipment.message || 'Failed to create return label');
+    }
+
+    const orderDetails = shipment.data.Order;
 
     // Save shipment to database
     const { data: savedShipment, error: saveError } = await supabase
@@ -169,32 +128,30 @@ export async function POST(request: NextRequest) {
       .insert({
         order_id: orderId,
         shipment_type: 'return',
-        base_courier_number: shipment.number,
-        tracking_number: shipment.trackingNumber,
-        operator_name: shipment.operatorName,
+        base_courier_number: orderDetails.id,
+        tracking_number: orderDetails.waybill_no,
+        status: 'created',
         parcel_size: parcelSize,
-        destination_code: shipment.destinationCode,
-        posting_code: shipment.postingCode,
-        status: shipment.status,
-        advised_at: shipment.adviceDate ? new Date(shipment.adviceDate).toISOString() : null,
+        price: orderDetails.price,
+        price_netto: orderDetails.price_netto,
+        vat_value: orderDetails.vat_value,
+        courier_name: orderDetails.courier_name,
       })
       .select()
       .single();
 
     if (saveError) {
-      console.error('Failed to save return shipment to database:', saveError);
-      return NextResponse.json(
-        { error: 'Failed to save return shipment', details: saveError.message },
-        { status: 500 }
-      );
+      console.error('[create-return-label] Database error:', saveError);
+      throw new Error('Failed to save shipment to database');
     }
 
-    // Get waybill URL
+    // Try to get waybill
     let waybillUrl: string | null = null;
     try {
-      const waybills = await baseCourierAPI.getWaybill(shipment.number);
-      if (waybills && waybills.length > 0) {
-        waybillUrl = waybills[0].url;
+      const waybillResponse = await baseCourierAPI.getWaybill(parseInt(orderDetails.waybill_no));
+      
+      if (waybillResponse.success && waybillResponse.data?.label_url) {
+        waybillUrl = waybillResponse.data.label_url;
         
         // Update shipment with waybill URL
         await supabase
@@ -203,29 +160,27 @@ export async function POST(request: NextRequest) {
           .eq('id', savedShipment.id);
       }
     } catch (waybillError) {
-      console.error('Failed to get waybill:', waybillError);
+      console.error('[create-return-label] Failed to get waybill:', waybillError);
     }
 
     return NextResponse.json({
       success: true,
       shipment: {
         id: savedShipment.id,
-        number: shipment.number,
-        trackingNumber: shipment.trackingNumber,
-        status: shipment.status,
+        number: orderDetails.id,
+        trackingNumber: orderDetails.waybill_no,
+        status: 'created',
         waybillUrl,
       },
     });
   } catch (error) {
     console.error('[create-return-label] Error:', error);
     
-    // Extract detailed error message
     let errorMessage = 'Failed to create return label';
     let errorDetails = 'Unknown error';
     
     if (error instanceof Error) {
       errorDetails = error.message;
-      // Check if it's an API error with response
       if ((error as any).response) {
         errorDetails = JSON.stringify((error as any).response);
       }
