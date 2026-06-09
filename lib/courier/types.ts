@@ -88,25 +88,39 @@ export interface BaseCourierOrder {
   inpost_weekend?: boolean; // Saturday delivery
 }
 
+// CourierSearchDto - required fields: weight, type, side_x, side_y, side_z, origin
 export interface BaseCourierSearch {
-  courier_id?: string; // Courier ID (will be determined by API)
-  courier_type?: string; // e.g. 'inpost_paczkomaty'
-  cart_sum?: number; // Cart value (required for some couriers)
+  courier_code: string; // e.g. 'paczkomaty', 'dpd', 'inpost', etc.
+  type: string; // 'package' | 'pallet' | 'envelope' | 'not_standard'
+  weight: number; // Weight in kg
+  side_x: number; // Side X in cm
+  side_y: number; // Side Y in cm
+  side_z: number; // Side Z in cm
+  origin?: string; // Order source identifier
+  foreign?: string; // 'local' | 'foreign'
+  no_pickup?: boolean; // No courier pickup (self-delivery to point)
+  cover?: number; // Insurance amount
+  saturday_delivery?: boolean;
+  synchronous_label?: boolean; // Create label synchronously with order
+  is_return?: boolean; // Is return shipment
 }
 
+// CartDto - wraps Order
 export interface BaseCourierCart {
   Order: BaseCourierOrder;
 }
 
+// CartOrderDto - payment method
 export interface BaseCourierPayment {
-  payment: string; // e.g. 'bank', 'pay_later', 'paynow'
+  payment: 'bank' | 'pay_later'; // 'bank' = prepaid, 'pay_later' = deferred
 }
 
+// Full createOrderV2 request
 export interface CreateShipmentRequest {
   auth: BaseCourierAuth;
-  Cart: BaseCourierCart;
-  CourierSearch?: BaseCourierSearch;
-  CartOrder?: BaseCourierPayment;
+  Cart: BaseCourierCart[]; // Array of CartDto!
+  CourierSearch: BaseCourierSearch;
+  CartOrder: BaseCourierPayment;
 }
 
 export interface ShipmentResponse {

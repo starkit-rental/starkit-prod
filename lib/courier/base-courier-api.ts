@@ -84,8 +84,8 @@ export class BaseCourierAPI {
   }
 
   /**
-   * Create a shipment
-   * POST /api/createOrder.json
+   * Create a shipment (V2 - supports multiple shipments)
+   * POST /api/createOrderV2.json
    */
   async createShipment(orderData: Omit<CreateShipmentRequest, 'auth'>): Promise<ShipmentResponse> {
     const requestData: CreateShipmentRequest = {
@@ -96,7 +96,7 @@ export class BaseCourierAPI {
       ...orderData,
     };
     
-    return this.request<ShipmentResponse>('/api/createOrder.json', {
+    return this.request<ShipmentResponse>('/api/createOrderV2.json', {
       method: 'POST',
       body: JSON.stringify(requestData),
     });

@@ -26,7 +26,7 @@ describe('Base Courier Integration', () => {
       expect(baseCourierAPI).toBeDefined();
       expect(typeof baseCourierAPI.createShipment).toBe('function');
       expect(typeof baseCourierAPI.getWaybill).toBe('function');
-      expect(typeof baseCourierAPI.getShipment).toBe('function');
+      expect(typeof baseCourierAPI.downloadWaybillPDF).toBe('function');
     });
   });
 

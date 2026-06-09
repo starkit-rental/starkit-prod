@@ -110,17 +110,26 @@ export async function POST(request: NextRequest) {
 
     console.log('[create-shipment] Order data:', JSON.stringify(orderData, null, 2));
 
-    // Create shipment via Base Courier API
+    // Create shipment via Base Courier API (createOrderV2)
     const shipment = await baseCourierAPI.createShipment({
-      Cart: {
-        Order: orderData,
-      },
+      Cart: [
+        { Order: orderData },
+      ],
       CourierSearch: {
-        courier_type: 'inpost_paczkomaty',
-        cart_sum: insurance ? insuranceValue : 100, // Wartość przesyłki (wymagane)
+        courier_code: 'paczkomaty',
+        type: 'package',
+        weight: dimensions.weight,
+        side_x: dimensions.length,
+        side_y: dimensions.width,
+        side_z: dimensions.height,
+        origin: 'starkit',
+        no_pickup: true, // Self-delivery to InPost point
+        synchronous_label: true, // Get label immediately
+        cover: insurance ? insuranceValue : undefined,
+        saturday_delivery: saturdayDelivery || undefined,
       },
       CartOrder: {
-        payment: 'bank', // Płatność z konta prepaid
+        payment: 'bank',
       },
     });
 
