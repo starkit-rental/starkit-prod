@@ -164,40 +164,76 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('[create-shipment] API Response:', shipment);
+    console.log('[create-shipment] Full API Response:', JSON.stringify(shipment, null, 2));
 
-    if (!shipment.success || !shipment.data?.Order) {
-      throw new Error(shipment.message || 'Failed to create shipment');
+    if (!shipment.success) {
+      const errorMsg = shipment.message || JSON.stringify(shipment);
+      console.error('[create-shipment] API Error:', errorMsg);
+      throw new Error(errorMsg);
     }
 
-    const orderDetails = shipment.data.Order;
+    // Parse response - try different structures
+    let apiOrderId: string | undefined;
+    let waybillNo: string | undefined;
+
+    const dataAny = shipment.data as any;
+    
+    // Try data.Order (single order)
+    if (dataAny?.Order) {
+      apiOrderId = String(dataAny.Order.id || '');
+      waybillNo = String(dataAny.Order.waybill_no || '');
+      console.log('[create-shipment] Parsed from data.Order:', { apiOrderId, waybillNo });
+    }
+    // Try data.CartOrder (V2 response)
+    else if (dataAny?.CartOrder) {
+      apiOrderId = String(dataAny.CartOrder.id || dataAny.CartOrder.id_prefix || '');
+      waybillNo = String(dataAny.CartOrder.waybill_no || '');
+      console.log('[create-shipment] Parsed from data.CartOrder:', { apiOrderId, waybillNo });
+    }
+    // Try data array
+    else if (Array.isArray(shipment.data) && shipment.data.length > 0) {
+      const firstOrder = shipment.data[0];
+      apiOrderId = String(firstOrder.id || firstOrder.order_id || '');
+      waybillNo = String(firstOrder.waybill_no || firstOrder.tracking_number || '');
+      console.log('[create-shipment] Parsed from data array:', { apiOrderId, waybillNo });
+    }
+
+    if (!apiOrderId) {
+      console.error('[create-shipment] Could not parse order ID from response:', shipment);
+      throw new Error('API response missing order ID');
+    }
 
     // Save shipment to database
+    const insertData = {
+      order_id: orderId,
+      shipment_type: 'outbound',
+      base_courier_number: apiOrderId,
+      tracking_number: waybillNo || null,
+      status: 'SAVED',
+      parcel_size: parcelSize,
+      operator_name: 'INPOST',
+    };
+
+    console.log('[create-shipment] Inserting to DB:', JSON.stringify(insertData, null, 2));
+
     const { data: savedShipment, error: saveError } = await supabase
       .from('courier_shipments')
-      .insert({
-        order_id: orderId,
-        shipment_type: 'outbound',
-        base_courier_number: String(orderDetails.id),
-        tracking_number: String(orderDetails.waybill_no),
-        status: 'SAVED',
-        parcel_size: parcelSize,
-        operator_name: 'INPOST',
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (saveError) {
-      console.error('[create-shipment] Database error:', saveError);
-      throw new Error('Failed to save shipment to database');
+      console.error('[create-shipment] Database error:', JSON.stringify(saveError));
+      console.error('[create-shipment] Insert data was:', JSON.stringify(insertData));
+      throw new Error(`Failed to save shipment to database: ${saveError.message} (code: ${saveError.code})`);
     }
 
     return NextResponse.json({
       success: true,
       shipment: {
         id: savedShipment.id,
-        number: String(orderDetails.id),
-        trackingNumber: String(orderDetails.waybill_no),
+        number: apiOrderId,
+        trackingNumber: waybillNo || '',
         status: 'created',
       },
     });
