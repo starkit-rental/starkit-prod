@@ -114,6 +114,12 @@ export async function POST(request: NextRequest) {
       receiverLastName,
       receiverPhoneNumber: receiverPhone,
       receiverEmail,
+      // For InPost parcel locker, use dummy address (required by API)
+      receiverStreet: 'Paczkomat InPost',
+      receiverBuildingNumber: destinationCode,
+      receiverFlatNumber: '',
+      receiverPostCode: '00-000',
+      receiverCity: 'Polska',
       operatorName: 'INPOST' as const,
       destinationCode,
       postingCode: senderConfig.postingCode,
