@@ -101,6 +101,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // First, search for available products to get valid productId
+    let validProductId = productId;
+    try {
+      const products = await api.searchProducts({
+        senderPostCode: senderConfig.postCode,
+        senderCountryId: COUNTRY_IDS.POLAND,
+        receiverPostCode: customer.address_zip || '00-000',
+        receiverCountryId: COUNTRY_IDS.POLAND,
+        length: dimensions.length,
+        width: dimensions.width,
+        height: dimensions.height,
+        weight: dimensions.weight,
+        collectionType: 'POINT',
+        senderPointId: senderConfig.postingCode,
+        receiverPointId: order.inpost_point_id,
+      });
+
+      if (products.length === 0) {
+        return NextResponse.json(
+          { error: 'No available carriers for this shipment. Check addresses and parcel size.' },
+          { status: 400 }
+        );
+      }
+
+      // Use the cheapest InPost product
+      const inpostProduct = products.find(p => p.carrierName.toLowerCase().includes('inpost'));
+      validProductId = inpostProduct ? inpostProduct.id : products[0].id;
+      
+      console.log('[globkurier/create-shipment] Found products:', products.length, 'Using productId:', validProductId);
+    } catch (searchError) {
+      console.error('[globkurier/create-shipment] Product search failed:', searchError);
+      return NextResponse.json(
+        { error: 'Failed to find available carriers', details: searchError instanceof Error ? searchError.message : 'Unknown error' },
+        { status: 400 }
+      );
+    }
+
     // Parse customer name
     const nameParts = (customer.full_name || '').trim().split(' ');
     const customerFirstName = nameParts[0] || 'Klient';
@@ -182,7 +219,7 @@ export async function POST(request: NextRequest) {
         height: dimensions.height,
         weight: dimensions.weight,
         quantity: 1,
-        productId,
+        productId: validProductId,
       },
       senderAddress,
       receiverAddress,
@@ -213,7 +250,7 @@ export async function POST(request: NextRequest) {
         shipment_type: shipmentType,
         courier_provider: 'globkurier',
         globkurier_order_number: orderResponse.number,
-        globkurier_product_id: productId,
+        globkurier_product_id: validProductId,
         tracking_number: orderResponse.trackingNumber || null,
         carrier_name: 'InPost', // TODO: get from product
         status: orderResponse.status,
