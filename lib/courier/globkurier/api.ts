@@ -126,9 +126,27 @@ export class GlobKurierAPI {
       }
 
       if (!response.ok) {
-        const errorData = data as GlobKurierErrorResponse;
+        const errorData = data as GlobKurierErrorResponse & {
+          errors?: any;
+          violations?: any;
+          error?: string;
+        };
+        console.error('[GlobKurierAPI] Error response body:', JSON.stringify(data, null, 2));
+
+        // Build a detailed message from whatever fields the API returned
+        let detailMessage =
+          errorData.message ||
+          errorData.error ||
+          `API request failed with status ${response.status}`;
+
+        // Append validation details if present
+        const validation = errorData.errors || errorData.violations || errorData.details;
+        if (validation) {
+          detailMessage += ` | Details: ${JSON.stringify(validation)}`;
+        }
+
         throw new GlobKurierAPIError(
-          errorData.message || `API request failed with status ${response.status}`,
+          detailMessage,
           response.status,
           errorData.code,
           errorData.details
