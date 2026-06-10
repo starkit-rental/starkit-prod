@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Package, Download, Loader2, Truck, RotateCcw, CheckCircle2, AlertCircle } from "lucide-react";
+import { Package, Download, Loader2, Truck, RotateCcw, CheckCircle2, AlertCircle, ExternalLink, Copy, Check } from "lucide-react";
 import { CreateShipmentDialog } from "./create-shipment-dialog";
 import type { ParcelSize } from "@/lib/courier/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -48,8 +48,30 @@ export function CourierPanel({
   const [error, setError] = useState<string | null>(null);
   const [senderData, setSenderData] = useState<any>(null);
   const [loadingSender, setLoadingSender] = useState(true);
+  const [shipments, setShipments] = useState<any[]>([]);
+  const [loadingShipments, setLoadingShipments] = useState(true);
+  const [copiedTracking, setCopiedTracking] = useState<string | null>(null);
 
-  // Load sender configuration
+  // Load existing shipments for this order
+  async function loadShipments() {
+    setLoadingShipments(true);
+    const { data } = await supabase
+      .from('courier_shipments')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false });
+    
+    if (data && data.length > 0) {
+      setShipments(data);
+      const hasOutbound = data.some((s: any) => s.shipment_type === 'outbound');
+      const hasReturn = data.some((s: any) => s.shipment_type === 'return');
+      setOutboundCreated(hasOutbound);
+      setReturnCreated(hasReturn);
+    }
+    setLoadingShipments(false);
+  }
+
+  // Load sender configuration and shipments
   useEffect(() => {
     async function loadSenderConfig() {
       setLoadingSender(true);
@@ -101,7 +123,8 @@ export function CourierPanel({
       setLoadingSender(false);
     }
     loadSenderConfig();
-  }, [supabase]);
+    loadShipments();
+  }, [supabase, orderId]);
 
   if (!inpostPointId) {
     return (
@@ -128,14 +151,14 @@ export function CourierPanel({
     saturdayDelivery: boolean;
     sender: any;
     receiver: any;
+    productId?: number;
   }) => {
     setError(null);
 
-    const endpoint = dialogType === 'outbound' 
-      ? '/api/courier/create-shipment'
-      : '/api/courier/create-return-label';
+    // Use GlobKurier endpoint
+    const endpoint = '/api/courier/globkurier/create-shipment';
 
-    console.log('Creating shipment:', { endpoint, options });
+    console.log('Creating shipment:', { endpoint, options, dialogType });
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -143,11 +166,11 @@ export function CourierPanel({
       body: JSON.stringify({ 
         orderId, 
         parcelSize,
+        shipmentType: dialogType,
+        productId: options.productId || 2000, // Default InPost product ID
         insurance: options.insurance,
         insuranceValue: options.insuranceValue,
         saturdayDelivery: options.saturdayDelivery,
-        sender: options.sender,
-        receiver: options.receiver,
       }),
     });
 
@@ -166,6 +189,14 @@ export function CourierPanel({
     } else {
       setReturnCreated(true);
     }
+    // Reload shipments to get the new data
+    loadShipments();
+  };
+
+  const copyToClipboard = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedTracking(text);
+    setTimeout(() => setCopiedTracking(null), 2000);
   };
 
   const handleDownloadPDF = async () => {
@@ -173,7 +204,7 @@ export function CourierPanel({
     setDownloadingPDF(true);
 
     try {
-      const response = await fetch('/api/courier/generate-labels-pdf', {
+      const response = await fetch('/api/courier/globkurier/labels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId }),
@@ -202,8 +233,10 @@ export function CourierPanel({
   };
 
   const canDownloadPDF = outboundCreated || returnCreated;
+  const outboundShipment = shipments.find((s: any) => s.shipment_type === 'outbound');
+  const returnShipment = shipments.find((s: any) => s.shipment_type === 'return');
 
-  if (loadingSender || !senderData) {
+  if (loadingSender || loadingShipments || !senderData) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
@@ -279,6 +312,107 @@ export function CourierPanel({
         <div className="rounded-lg bg-blue-50 p-3 text-sm">
           <p className="font-medium text-blue-900">Paczkomat: {inpostPointId}</p>
         </div>
+
+        {/* Existing Shipments Display */}
+        {shipments.length > 0 && (
+          <div className="space-y-3">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Utworzone przesyłki</Label>
+            
+            {outboundShipment && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm font-medium text-emerald-900">Etykieta wysyłkowa</span>
+                  </div>
+                  <span className="text-xs text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded">
+                    {outboundShipment.status || 'SAVED'}
+                  </span>
+                </div>
+                {outboundShipment.tracking_number && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-slate-500">Nr śledzenia:</span>
+                    <code className="text-xs font-mono bg-white px-2 py-1 rounded border">
+                      {outboundShipment.tracking_number}
+                    </code>
+                    <button
+                      onClick={() => copyToClipboard(outboundShipment.tracking_number)}
+                      className="p-1 hover:bg-emerald-100 rounded"
+                      title="Kopiuj numer"
+                    >
+                      {copiedTracking === outboundShipment.tracking_number ? (
+                        <Check className="h-3 w-3 text-emerald-600" />
+                      ) : (
+                        <Copy className="h-3 w-3 text-slate-400" />
+                      )}
+                    </button>
+                    <a
+                      href={`https://inpost.pl/sledzenie-przesylek?number=${outboundShipment.tracking_number}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 hover:bg-emerald-100 rounded"
+                      title="Śledź przesyłkę"
+                    >
+                      <ExternalLink className="h-3 w-3 text-slate-400" />
+                    </a>
+                  </div>
+                )}
+                {outboundShipment.base_courier_number && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    ID zamówienia: {outboundShipment.base_courier_number}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {returnShipment && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <RotateCcw className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-medium text-amber-900">Etykieta zwrotna</span>
+                  </div>
+                  <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded">
+                    {returnShipment.status || 'SAVED'}
+                  </span>
+                </div>
+                {returnShipment.tracking_number && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-slate-500">Nr śledzenia:</span>
+                    <code className="text-xs font-mono bg-white px-2 py-1 rounded border">
+                      {returnShipment.tracking_number}
+                    </code>
+                    <button
+                      onClick={() => copyToClipboard(returnShipment.tracking_number)}
+                      className="p-1 hover:bg-amber-100 rounded"
+                      title="Kopiuj numer"
+                    >
+                      {copiedTracking === returnShipment.tracking_number ? (
+                        <Check className="h-3 w-3 text-amber-600" />
+                      ) : (
+                        <Copy className="h-3 w-3 text-slate-400" />
+                      )}
+                    </button>
+                    <a
+                      href={`https://inpost.pl/sledzenie-przesylek?number=${returnShipment.tracking_number}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 hover:bg-amber-100 rounded"
+                      title="Śledź przesyłkę"
+                    >
+                      <ExternalLink className="h-3 w-3 text-slate-400" />
+                    </a>
+                  </div>
+                )}
+                {returnShipment.base_courier_number && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    ID zamówienia: {returnShipment.base_courier_number}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (

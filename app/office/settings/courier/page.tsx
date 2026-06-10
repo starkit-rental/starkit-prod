@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Loader2, Truck } from "lucide-react";
+import { Save, Loader2, Truck, CheckCircle2, XCircle, Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { DEFAULT_SENDER_CONFIG, COURIER_SETTINGS_KEYS } from "@/lib/courier/base-courier-config";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CourierSettingsPage() {
   const supabase = createSupabaseBrowserClient();
@@ -26,7 +27,14 @@ export default function CourierSettingsPage() {
     postCode: DEFAULT_SENDER_CONFIG.postCode,
     city: DEFAULT_SENDER_CONFIG.city,
     postingCode: DEFAULT_SENDER_CONFIG.postingCode,
+    // GlobKurier credentials
+    globkurierEmail: '',
+    globkurierPassword: '',
+    globkurierEnvironment: 'test' as 'test' | 'production',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [originalData, setOriginalData] = useState(formData);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -39,10 +47,17 @@ export default function CourierSettingsPage() {
     setLoading(true);
     setError(null);
 
+    const allKeys = [
+      ...Object.values(COURIER_SETTINGS_KEYS),
+      'globkurier_email',
+      'globkurier_password',
+      'globkurier_environment',
+    ];
+
     const { data, error: fetchError } = await supabase
       .from("site_settings")
       .select("key, value")
-      .in("key", Object.values(COURIER_SETTINGS_KEYS));
+      .in("key", allKeys);
 
     if (fetchError) {
       setError("Nie udało się załadować ustawień: " + fetchError.message);
@@ -64,6 +79,9 @@ export default function CourierSettingsPage() {
         postCode: settingsMap.get(COURIER_SETTINGS_KEYS.SENDER_POST_CODE) || DEFAULT_SENDER_CONFIG.postCode,
         city: settingsMap.get(COURIER_SETTINGS_KEYS.SENDER_CITY) || DEFAULT_SENDER_CONFIG.city,
         postingCode: settingsMap.get(COURIER_SETTINGS_KEYS.SENDER_POSTING_CODE) || DEFAULT_SENDER_CONFIG.postingCode,
+        globkurierEmail: settingsMap.get('globkurier_email') || '',
+        globkurierPassword: settingsMap.get('globkurier_password') || '',
+        globkurierEnvironment: (settingsMap.get('globkurier_environment') || 'test') as 'test' | 'production',
       };
 
       setFormData(loadedData);
@@ -89,6 +107,9 @@ export default function CourierSettingsPage() {
       { key: COURIER_SETTINGS_KEYS.SENDER_POST_CODE, value: formData.postCode },
       { key: COURIER_SETTINGS_KEYS.SENDER_CITY, value: formData.city },
       { key: COURIER_SETTINGS_KEYS.SENDER_POSTING_CODE, value: formData.postingCode },
+      { key: 'globkurier_email', value: formData.globkurierEmail },
+      { key: 'globkurier_password', value: formData.globkurierPassword },
+      { key: 'globkurier_environment', value: formData.globkurierEnvironment },
     ];
 
     try {
@@ -131,7 +152,7 @@ export default function CourierSettingsPage() {
             Ustawienia kuriera
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Konfiguracja danych nadawcy dla przesyłek Base Courier / InPost
+            Konfiguracja danych nadawcy i integracji GlobKurier
           </p>
         </div>
         <Button
@@ -174,6 +195,7 @@ export default function CourierSettingsPage() {
           </CardContent>
         </Card>
       ) : (
+        <>
         <Card>
           <CardHeader>
             <CardTitle>Dane nadawcy</CardTitle>
@@ -295,6 +317,124 @@ export default function CourierSettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* GlobKurier API Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Integracja GlobKurier</CardTitle>
+            <CardDescription>
+              Dane logowania do API GlobKurier. Wymagane do tworzenia przesyłek.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="globkurierEmail">Email (login)</Label>
+                <Input
+                  id="globkurierEmail"
+                  type="email"
+                  value={formData.globkurierEmail}
+                  onChange={handleChange("globkurierEmail")}
+                  placeholder="twoj@email.pl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="globkurierPassword">Hasło</Label>
+                <div className="relative">
+                  <Input
+                    id="globkurierPassword"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.globkurierPassword}
+                    onChange={handleChange("globkurierPassword")}
+                    placeholder="••••••••"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="globkurierEnvironment">Środowisko</Label>
+              <Select
+                value={formData.globkurierEnvironment}
+                onValueChange={(value: 'test' | 'production') => 
+                  setFormData(prev => ({ ...prev, globkurierEnvironment: value }))
+                }
+              >
+                <SelectTrigger id="globkurierEnvironment">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="test">Testowe (sandbox)</SelectItem>
+                  <SelectItem value="production">Produkcyjne</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Użyj środowiska testowego do sprawdzenia integracji
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  if (!formData.globkurierEmail || !formData.globkurierPassword) {
+                    setError('Wprowadź email i hasło');
+                    return;
+                  }
+                  setTestingConnection(true);
+                  setConnectionStatus('idle');
+                  try {
+                    const res = await fetch('/api/courier/globkurier/test-connection', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        email: formData.globkurierEmail,
+                        password: formData.globkurierPassword,
+                        environment: formData.globkurierEnvironment,
+                      }),
+                    });
+                    if (res.ok) {
+                      setConnectionStatus('success');
+                    } else {
+                      setConnectionStatus('error');
+                    }
+                  } catch {
+                    setConnectionStatus('error');
+                  } finally {
+                    setTestingConnection(false);
+                  }
+                }}
+                disabled={testingConnection || !formData.globkurierEmail || !formData.globkurierPassword}
+              >
+                {testingConnection ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testowanie...</>
+                ) : (
+                  'Test połączenia'
+                )}
+              </Button>
+              {connectionStatus === 'success' && (
+                <span className="flex items-center gap-1 text-sm text-green-600">
+                  <CheckCircle2 className="h-4 w-4" /> Połączenie OK
+                </span>
+              )}
+              {connectionStatus === 'error' && (
+                <span className="flex items-center gap-1 text-sm text-red-600">
+                  <XCircle className="h-4 w-4" /> Błąd połączenia
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        </>
       )}
     </div>
   );

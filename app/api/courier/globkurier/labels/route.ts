@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { baseCourierAPI } from '@/lib/courier/base-courier-api';
+import { createGlobKurierAPI } from '@/lib/courier/globkurier';
 import { PDFDocument } from 'pdf-lib';
 
 export async function POST(request: NextRequest) {
@@ -20,7 +20,8 @@ export async function POST(request: NextRequest) {
     const { data: shipments, error: shipmentsError } = await supabase
       .from('courier_shipments')
       .select('*')
-      .eq('order_id', orderId);
+      .eq('order_id', orderId)
+      .eq('courier_provider', 'globkurier');
 
     if (shipmentsError) {
       throw new Error('Failed to fetch shipments');
@@ -28,18 +29,17 @@ export async function POST(request: NextRequest) {
 
     if (!shipments || shipments.length === 0) {
       return NextResponse.json(
-        { error: 'No shipments found for this order' },
+        { error: 'No GlobKurier shipments found for this order' },
         { status: 404 }
       );
     }
 
-    const outboundShipment = shipments.find((s: any) => s.shipment_type === 'outbound');
-    const returnShipment = shipments.find((s: any) => s.shipment_type === 'return');
-
-    if (!outboundShipment && !returnShipment) {
+    // Create GlobKurier API client
+    const api = await createGlobKurierAPI(supabase);
+    if (!api) {
       return NextResponse.json(
-        { error: 'No shipments found' },
-        { status: 404 }
+        { error: 'GlobKurier not configured' },
+        { status: 400 }
       );
     }
 
@@ -48,42 +48,56 @@ export async function POST(request: NextRequest) {
 
     // Helper: fetch and add label to merged PDF
     async function addLabelToPdf(shipment: any, label: string) {
-      if (!shipment?.base_courier_number) {
-        console.error(`[generate-labels-pdf] No base_courier_number for ${label}`);
+      if (!shipment?.globkurier_order_number) {
+        console.error(`[globkurier/labels] No order number for ${label}`);
         return;
       }
 
       try {
-        console.log(`[generate-labels-pdf] Fetching ${label} label for order ID: ${shipment.base_courier_number}`);
-        
-        const waybillResponse = await baseCourierAPI.getWaybill(
-          parseInt(shipment.base_courier_number),
-          'A4'
-        );
+        console.log(`[globkurier/labels] Fetching ${label} label for: ${shipment.globkurier_order_number}`);
 
-        console.log(`[generate-labels-pdf] ${label} waybill response success:`, waybillResponse?.success);
-
-        const pdfBuffer = baseCourierAPI.extractLabelPDF(waybillResponse);
-        
-        if (pdfBuffer) {
+        // Check if we have cached label
+        if (shipment.label_base64) {
+          const pdfBuffer = Buffer.from(shipment.label_base64, 'base64');
           const pdfDoc = await PDFDocument.load(pdfBuffer);
           const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-          pages.forEach((page: any) => mergedPdf.addPage(page));
-          console.log(`[generate-labels-pdf] ${label} label added (${pages.length} pages)`);
-        } else {
-          console.error(`[generate-labels-pdf] No PDF data in ${label} waybill response`);
+          pages.forEach((page) => mergedPdf.addPage(page));
+          console.log(`[globkurier/labels] ${label} label added from cache`);
+          return;
+        }
+
+        // Fetch labels from API
+        const labels = await api.getLabels(shipment.globkurier_order_number);
+
+        for (const labelData of labels) {
+          if (labelData.type === 'WAYBILL' && labelData.content) {
+            const pdfBuffer = Buffer.from(labelData.content, 'base64');
+            const pdfDoc = await PDFDocument.load(pdfBuffer);
+            const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+            pages.forEach((page) => mergedPdf.addPage(page));
+
+            // Cache the label
+            await supabase
+              .from('courier_shipments')
+              .update({ label_base64: labelData.content })
+              .eq('id', shipment.id);
+
+            console.log(`[globkurier/labels] ${label} label added (${pages.length} pages)`);
+          }
         }
       } catch (error) {
-        console.error(`[generate-labels-pdf] Failed to add ${label} label:`, error);
+        console.error(`[globkurier/labels] Failed to add ${label} label:`, error);
       }
     }
 
-    // Download and merge outbound label
+    // Process each shipment
+    const outboundShipment = shipments.find((s: any) => s.shipment_type === 'outbound');
+    const returnShipment = shipments.find((s: any) => s.shipment_type === 'return');
+
     if (outboundShipment) {
       await addLabelToPdf(outboundShipment, 'outbound');
     }
 
-    // Download and merge return label
     if (returnShipment) {
       await addLabelToPdf(returnShipment, 'return');
     }
@@ -107,7 +121,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[generate-labels-pdf] Error:', error);
+    console.error('[globkurier/labels] Error:', error);
     return NextResponse.json(
       {
         error: 'Failed to generate labels PDF',
