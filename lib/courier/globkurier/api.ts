@@ -301,5 +301,5 @@ export async function createGlobKurierAPI(
     return null;
   }
 
-  return new GlobKurierAPI(email, password, environment);
+  return new GlobKurierAPI(email as string, password as string, environment);
 }
