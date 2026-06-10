@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const mergedPdf = await PDFDocument.create();
 
     // Helper: fetch and add label to merged PDF
-    async function addLabelToPdf(shipment: any, label: string) {
+    async function addLabelToPdf(shipment: any, label: string, apiClient: NonNullable<typeof api>) {
       if (!shipment?.globkurier_order_number) {
         console.error(`[globkurier/labels] No order number for ${label}`);
         return;
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch labels from API
-        const labels = await api.getLabels(shipment.globkurier_order_number);
+        const labels = await apiClient.getLabels(shipment.globkurier_order_number);
 
         for (const labelData of labels) {
           if (labelData.type === 'WAYBILL' && labelData.content) {
@@ -95,11 +95,11 @@ export async function POST(request: NextRequest) {
     const returnShipment = shipments.find((s: any) => s.shipment_type === 'return');
 
     if (outboundShipment) {
-      await addLabelToPdf(outboundShipment, 'outbound');
+      await addLabelToPdf(outboundShipment, 'outbound', api);
     }
 
     if (returnShipment) {
-      await addLabelToPdf(returnShipment, 'return');
+      await addLabelToPdf(returnShipment, 'return', api);
     }
 
     // Check if we have any pages
