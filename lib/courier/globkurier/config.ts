@@ -22,10 +22,12 @@ export const ADDON_IDS = {
   SATURDAY_DELIVERY: 1234, // Dostawa w sobotę (verify actual ID)
 };
 
-// Payment IDs
+// Payment IDs (from GET /order/payments)
 export const PAYMENT_IDS = {
-  PREPAID: 2, // Przedpłata
-  POSTPAID: 1, // Płatność po dostawie
+  ONLINE: 2, // Płatność online (default)
+  BANK_TRANSFER: 1, // Przelew bankowy
+  DEFERRED: 4, // Faktura zbiorcza (odroczony termin płatności) - wymaga umowy
+  PREPAID: 9, // Konto pre-paid (faktura zbiorcza) - wymaga doładowania salda
 };
 
 // Country IDs
