@@ -83,6 +83,52 @@ export interface GlobKurierCreateOrderRequest {
   referenceNumber?: string;
 }
 
+// BestPrice address (uses country code, not countryId)
+export interface GlobKurierBestPriceAddress {
+  name: string;
+  city: string;
+  street: string;
+  houseNumber: string;
+  apartmentNumber?: string;
+  postCode: string;
+  country: string; // 'PL'
+  pointId?: string; // InPost point ID
+  phone: string;
+  email: string;
+  contactPerson?: string;
+}
+
+// BestPrice addons (keyed by category)
+export interface GlobKurierBestPriceAddons {
+  INSURANCE?: { value: number };
+  CASH_ON_DELIVERY?: { value: number; bankAccountNumber?: string };
+  [key: string]: { value?: number; [k: string]: any } | undefined;
+}
+
+// BestPrice order request (simplified endpoint)
+export interface GlobKurierBestPriceRequest {
+  shipment: {
+    length: number;
+    width: number;
+    height: number;
+    weight: number;
+    quantity: number;
+    integrationName?: string; // e.g. 'InPost'
+    productId?: number;
+  };
+  senderAddress: GlobKurierBestPriceAddress;
+  receiverAddress: GlobKurierBestPriceAddress;
+  content: string;
+  paymentId: number;
+  agreements: GlobKurierAgreements;
+  addons?: GlobKurierBestPriceAddons;
+  purpose?: GlobKurierPurpose;
+  collectionType: GlobKurierCollectionType;
+  deliveryType: GlobKurierCollectionType;
+  referenceNumber?: string;
+  receiverType?: 'COMPANY' | 'PRIVATE_PERSON';
+}
+
 // Product (carrier option) from search
 export interface GlobKurierProduct {
   id: number;

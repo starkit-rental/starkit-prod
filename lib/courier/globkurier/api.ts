@@ -5,6 +5,7 @@ import type {
   GlobKurierEnvironment,
   GlobKurierAuth,
   GlobKurierCreateOrderRequest,
+  GlobKurierBestPriceRequest,
   GlobKurierOrderResponse,
   GlobKurierProduct,
   GlobKurierSearchProductsRequest,
@@ -215,6 +216,64 @@ export class GlobKurierAPI {
         currency: response.pricing?.currency || 'PLN',
       },
       trackingNumber: response.trackingNumber,
+      trackingUrl: response.trackingUrl,
+    };
+  }
+
+  /**
+   * Create order using simplified bestPrice endpoint.
+   * Automatically finds the best matching product/carrier.
+   * POST /v1/order/bestPrice?createFully=true&onlyPricing=false
+   */
+  async createOrderBestPrice(
+    orderData: GlobKurierBestPriceRequest,
+    options: { onlyPricing?: boolean } = {}
+  ): Promise<GlobKurierOrderResponse> {
+    const onlyPricing = options.onlyPricing ?? false;
+    const createFully = !onlyPricing;
+
+    console.log('[GlobKurierAPI] bestPrice request:', JSON.stringify(orderData, null, 2));
+
+    const response = await this.request<any>(
+      `/order/bestPrice?createFully=${createFully}&onlyPricing=${onlyPricing}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(orderData),
+      }
+    );
+
+    console.log('[GlobKurierAPI] bestPrice response:', JSON.stringify(response, null, 2));
+
+    // Response may contain order data (createFully) and/or pricing
+    const priceGross = response.totalGrossPrice ?? response.pricing?.priceGross ?? 0;
+    const priceNet = response.totalNetPrice ?? response.pricing?.priceNet ?? 0;
+    const currency = response.currency ?? response.pricing?.currency ?? 'PLN';
+    const vatPercent = response.vatPercent ?? response.pricing?.vatPercent ?? 23;
+
+    // Order number can be in different fields depending on createFully
+    const orderNumber =
+      response.number ||
+      response.orderNumber ||
+      response.order?.number ||
+      (Array.isArray(response.orders) ? response.orders[0]?.number : undefined) ||
+      '';
+
+    const trackingNumber =
+      response.trackingNumber ||
+      response.order?.trackingNumber ||
+      (Array.isArray(response.orders) ? response.orders[0]?.trackingNumber : undefined);
+
+    return {
+      number: orderNumber,
+      status: response.status || response.order?.status || 'NEW_SHIPMENT',
+      creationDate: response.creationDate || new Date().toISOString(),
+      pricing: {
+        priceGross,
+        priceNet,
+        vatPercent,
+        currency,
+      },
+      trackingNumber,
       trackingUrl: response.trackingUrl,
     };
   }

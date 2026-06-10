@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { createGlobKurierAPI, PARCEL_SIZES, COUNTRY_IDS, PAYMENT_IDS } from '@/lib/courier/globkurier';
+import { createGlobKurierAPI, PARCEL_SIZES, PAYMENT_IDS } from '@/lib/courier/globkurier';
 import { getSenderConfig } from '@/lib/courier/get-sender-config';
-import type { ParcelSize, GlobKurierCreateOrderRequest, GlobKurierAddon } from '@/lib/courier/globkurier';
+import type { ParcelSize, GlobKurierBestPriceRequest, GlobKurierBestPriceAddons } from '@/lib/courier/globkurier';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,26 +11,23 @@ export async function POST(request: NextRequest) {
     const {
       orderId,
       parcelSize,
-      productId,
       shipmentType = 'outbound',
       insurance = false,
       insuranceValue = 0,
-      saturdayDelivery = false,
     } = body as {
       orderId: string;
       parcelSize: ParcelSize;
-      productId: number;
       shipmentType?: 'outbound' | 'return';
       insurance?: boolean;
       insuranceValue?: number;
       saturdayDelivery?: boolean;
     };
 
-    console.log('[globkurier/create-shipment] Request:', { orderId, parcelSize, productId, shipmentType });
+    console.log('[globkurier/create-shipment] Request:', { orderId, parcelSize, shipmentType });
 
-    if (!orderId || !parcelSize || !productId) {
+    if (!orderId || !parcelSize) {
       return NextResponse.json(
-        { error: 'Missing orderId, parcelSize, or productId' },
+        { error: 'Missing orderId or parcelSize' },
         { status: 400 }
       );
     }
@@ -101,43 +98,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // First, search for available products to get valid productId
-    let validProductId = productId;
-    try {
-      const products = await api.searchProducts({
-        senderPostCode: senderConfig.postCode,
-        senderCountryId: COUNTRY_IDS.POLAND,
-        receiverPostCode: customer.address_zip || '00-000',
-        receiverCountryId: COUNTRY_IDS.POLAND,
-        length: dimensions.length,
-        width: dimensions.width,
-        height: dimensions.height,
-        weight: dimensions.weight,
-        collectionType: 'POINT',
-        senderPointId: senderConfig.postingCode,
-        receiverPointId: order.inpost_point_id,
-      });
-
-      if (products.length === 0) {
-        return NextResponse.json(
-          { error: 'No available carriers for this shipment. Check addresses and parcel size.' },
-          { status: 400 }
-        );
-      }
-
-      // Use the cheapest InPost product
-      const inpostProduct = products.find(p => p.carrierName.toLowerCase().includes('inpost'));
-      validProductId = inpostProduct ? inpostProduct.id : products[0].id;
-      
-      console.log('[globkurier/create-shipment] Found products:', products.length, 'Using productId:', validProductId);
-    } catch (searchError) {
-      console.error('[globkurier/create-shipment] Product search failed:', searchError);
-      return NextResponse.json(
-        { error: 'Failed to find available carriers', details: searchError instanceof Error ? searchError.message : 'Unknown error' },
-        { status: 400 }
-      );
-    }
-
     // Parse customer name
     const nameParts = (customer.full_name || '').trim().split(' ');
     const customerFirstName = nameParts[0] || 'Klient';
@@ -150,76 +110,55 @@ export async function POST(request: NextRequest) {
     const customerHouseNo = addressMatch ? addressMatch[2].split('/')[0] : '1';
     const customerApartmentNo = addressMatch ? addressMatch[2].split('/')[1] : undefined;
 
-    // Build addons
-    const addons: GlobKurierAddon[] = [];
+    // Build addons (keyed by category for bestPrice endpoint)
+    const addons: GlobKurierBestPriceAddons = {};
     if (insurance && insuranceValue > 0) {
-      addons.push({ id: 1578, value: insuranceValue * 100 }); // Convert to grosze
+      addons.INSURANCE = { value: insuranceValue };
     }
 
     // Determine sender and receiver based on shipment type
     const isOutbound = shipmentType === 'outbound';
 
-    const senderAddress = isOutbound
-      ? {
-          name: `${senderConfig.firstName} ${senderConfig.lastName}`,
-          city: senderConfig.city,
-          street: senderConfig.street,
-          houseNumber: senderConfig.buildingNumber,
-          apartmentNumber: senderConfig.flatNumber || undefined,
-          postCode: senderConfig.postCode,
-          countryId: COUNTRY_IDS.POLAND,
-          pointId: senderConfig.postingCode,
-          phone: senderConfig.phoneNumber,
-          email: senderConfig.email,
-        }
-      : {
-          name: customer.full_name || `${customerFirstName} ${customerLastName}`,
-          city: customer.address_city || 'Polska',
-          street: customerStreet,
-          houseNumber: customerHouseNo,
-          apartmentNumber: customerApartmentNo,
-          postCode: customer.address_zip || '00-000',
-          countryId: COUNTRY_IDS.POLAND,
-          pointId: order.inpost_point_id,
-          phone: customer.phone || '000000000',
-          email: customer.email || senderConfig.email,
-        };
+    const myAddress = {
+      name: `${senderConfig.firstName} ${senderConfig.lastName}`,
+      city: senderConfig.city,
+      street: senderConfig.street,
+      houseNumber: senderConfig.buildingNumber,
+      apartmentNumber: senderConfig.flatNumber || undefined,
+      postCode: senderConfig.postCode,
+      country: 'PL',
+      pointId: senderConfig.postingCode,
+      phone: senderConfig.phoneNumber,
+      email: senderConfig.email,
+      contactPerson: `${senderConfig.firstName} ${senderConfig.lastName}`,
+    };
 
-    const receiverAddress = isOutbound
-      ? {
-          name: customer.full_name || `${customerFirstName} ${customerLastName}`,
-          city: customer.address_city || 'Polska',
-          street: customerStreet,
-          houseNumber: customerHouseNo,
-          apartmentNumber: customerApartmentNo,
-          postCode: customer.address_zip || '00-000',
-          countryId: COUNTRY_IDS.POLAND,
-          pointId: order.inpost_point_id,
-          phone: customer.phone || '000000000',
-          email: customer.email || senderConfig.email,
-        }
-      : {
-          name: `${senderConfig.firstName} ${senderConfig.lastName}`,
-          city: senderConfig.city,
-          street: senderConfig.street,
-          houseNumber: senderConfig.buildingNumber,
-          apartmentNumber: senderConfig.flatNumber || undefined,
-          postCode: senderConfig.postCode,
-          countryId: COUNTRY_IDS.POLAND,
-          pointId: senderConfig.postingCode,
-          phone: senderConfig.phoneNumber,
-          email: senderConfig.email,
-        };
+    const customerAddr = {
+      name: customer.full_name || `${customerFirstName} ${customerLastName}`,
+      city: customer.address_city || 'Polska',
+      street: customerStreet,
+      houseNumber: customerHouseNo,
+      apartmentNumber: customerApartmentNo,
+      postCode: customer.address_zip || '00-000',
+      country: 'PL',
+      pointId: order.inpost_point_id,
+      phone: customer.phone || '000000000',
+      email: customer.email || senderConfig.email,
+      contactPerson: customer.full_name || `${customerFirstName} ${customerLastName}`,
+    };
 
-    // Create order request
-    const orderRequest: GlobKurierCreateOrderRequest = {
+    const senderAddress = isOutbound ? myAddress : customerAddr;
+    const receiverAddress = isOutbound ? customerAddr : myAddress;
+
+    // Create order request using bestPrice (auto-selects cheapest InPost product)
+    const orderRequest: GlobKurierBestPriceRequest = {
       shipment: {
         length: dimensions.length,
         width: dimensions.width,
         height: dimensions.height,
         weight: dimensions.weight,
         quantity: 1,
-        productId: validProductId,
+        integrationName: 'InPost',
       },
       senderAddress,
       receiverAddress,
@@ -229,16 +168,18 @@ export async function POST(request: NextRequest) {
         receiveElectronicBills: true,
         processingPersonalData: true,
       },
-      addons: addons.length > 0 ? addons : undefined,
+      addons: Object.keys(addons).length > 0 ? addons : undefined,
       purpose: 'SOLD',
       collectionType: 'POINT',
+      deliveryType: 'POINT',
       referenceNumber: order.order_number || orderId,
+      receiverType: 'PRIVATE_PERSON',
     };
 
     console.log('[globkurier/create-shipment] Order request:', JSON.stringify(orderRequest, null, 2));
 
-    // Create order via GlobKurier API
-    const orderResponse = await api.createOrder(orderRequest);
+    // Create order via GlobKurier bestPrice API
+    const orderResponse = await api.createOrderBestPrice(orderRequest);
 
     console.log('[globkurier/create-shipment] Order response:', orderResponse);
 
@@ -250,7 +191,7 @@ export async function POST(request: NextRequest) {
         shipment_type: shipmentType,
         courier_provider: 'globkurier',
         globkurier_order_number: orderResponse.number,
-        globkurier_product_id: validProductId,
+        globkurier_product_id: null,
         tracking_number: orderResponse.trackingNumber || null,
         carrier_name: 'InPost', // TODO: get from product
         status: orderResponse.status,
