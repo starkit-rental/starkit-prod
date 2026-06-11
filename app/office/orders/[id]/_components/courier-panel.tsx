@@ -360,9 +360,14 @@ export function CourierPanel({
                     </a>
                   </div>
                 )}
-                {outboundShipment.base_courier_number && (
+                {(outboundShipment.globkurier_order_number || outboundShipment.base_courier_number) && (
                   <div className="text-xs text-slate-500 mt-1">
-                    ID zamówienia: {outboundShipment.base_courier_number}
+                    ID zamówienia: {outboundShipment.globkurier_order_number || outboundShipment.base_courier_number}
+                  </div>
+                )}
+                {outboundShipment.price_gross && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    Cena: {outboundShipment.price_gross} {outboundShipment.currency || 'PLN'}
                   </div>
                 )}
               </div>
@@ -407,9 +412,14 @@ export function CourierPanel({
                     </a>
                   </div>
                 )}
-                {returnShipment.base_courier_number && (
+                {(returnShipment.globkurier_order_number || returnShipment.base_courier_number) && (
                   <div className="text-xs text-slate-500 mt-1">
-                    ID zamówienia: {returnShipment.base_courier_number}
+                    ID zamówienia: {returnShipment.globkurier_order_number || returnShipment.base_courier_number}
+                  </div>
+                )}
+                {returnShipment.price_gross && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    Cena: {returnShipment.price_gross} {returnShipment.currency || 'PLN'}
                   </div>
                 )}
               </div>
