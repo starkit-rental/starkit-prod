@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Pencil,
+  Truck,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ const navGroups = [
       { href: "/office/settings/pricing", label: "Cennik", icon: Settings },
       { href: "/office/settings/contract", label: "Umowa", icon: FileText },
       { href: "/office/settings/emails", label: "E-maile", icon: Mail },
+      { href: "/office/settings/courier", label: "Kurier", icon: Truck },
       { href: "/studio", label: "CMS", icon: Pencil },
     ],
   },
@@ -151,6 +153,7 @@ export default function OfficeLayout({ children }: { children: React.ReactNode }
     if (pathname?.startsWith("/office/settings/pricing")) return "Cennik";
     if (pathname?.startsWith("/office/settings/contract")) return "Umowa";
     if (pathname?.startsWith("/office/settings/emails")) return "E-maile";
+    if (pathname?.startsWith("/office/settings/courier")) return "Kurier";
     return "Panel";
   })();
 
