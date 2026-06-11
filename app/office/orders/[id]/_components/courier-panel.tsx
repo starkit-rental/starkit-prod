@@ -258,8 +258,8 @@ export function CourierPanel({
     street: 'Paczkomat InPost',
     buildingNumber: inpostPointId || '',
     flatNumber: '',
-    postCode: '00-000',
-    city: 'Polska',
+    postCode: customerAddress?.zip || '00-000', // Use customer's postal code (paczkomat is in their city)
+    city: customerAddress?.city || 'Polska',
     postingCode: inpostPointId || '',
   };
 
