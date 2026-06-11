@@ -504,9 +504,9 @@ export default function OfficeOrderDetailsPage() {
   }
 
   async function loadOrder() {
-    console.log('[OrderDetail] loadOrder called, orderId:', orderId);
+    console.error('🔥 LOADORDER CALLED - orderId:', orderId);
     if (!orderId) {
-      console.log('[OrderDetail] No orderId, skipping load');
+      console.error('🔥 NO ORDERID - SKIPPING');
       return;
     }
     setLoading(true);
@@ -515,11 +515,10 @@ export default function OfficeOrderDetailsPage() {
     try {
       const res = await fetch(`/api/office/order-detail?orderId=${orderId}`);
       const json = await res.json();
-      console.log('[OrderDetail] Loaded order data:', { 
+      console.error('🔥 ORDER DATA LOADED:', { 
         orderId, 
         inpost_point_id: json.order?.inpost_point_id,
         delivery_method: json.order?.delivery_method,
-        fullOrder: json.order 
       });
       if (!res.ok) {
         setError(json?.error || "Błąd ładowania zamówienia");
@@ -536,6 +535,7 @@ export default function OfficeOrderDetailsPage() {
 
   useEffect(() => {
     console.log('[OrderDetail] useEffect triggered, orderId:', orderId);
+    console.error('🔥 USEEFFECT CALLED - orderId:', orderId); // error jest zawsze widoczny
     void loadOrder();
     void loadEmailLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
