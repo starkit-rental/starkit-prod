@@ -35,6 +35,7 @@ export interface SenderConfig {
   postCode: string;
   city: string;
   postingCode: string; // InPost point ID
+  nip?: string; // Tax ID (optional)
 }
 
 export interface ReceiverData {

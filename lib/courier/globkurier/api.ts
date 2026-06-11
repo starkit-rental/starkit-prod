@@ -90,28 +90,42 @@ export class GlobKurierAPI {
    */
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit & { binary?: boolean } = {}
   ): Promise<T> {
     const token = await this.getToken();
     const url = `${this.apiUrl}${endpoint}`;
 
+    const { binary, ...fetchOptions } = options;
+
     const headers = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      'Accept': binary ? 'application/pdf' : 'application/json',
       'Accept-Language': 'pl',
       'X-Auth-Token': token,
-      ...options.headers,
+      ...fetchOptions.headers,
     };
 
     try {
-      console.log('[GlobKurierAPI] Request:', { url, method: options.method || 'GET' });
+      console.log('[GlobKurierAPI] Request:', { url, method: fetchOptions.method || 'GET', binary });
 
       const response = await fetch(url, {
-        ...options,
+        ...fetchOptions,
         headers,
       });
 
       console.log('[GlobKurierAPI] Response status:', response.status);
+
+      // Handle binary responses (PDF)
+      if (binary) {
+        if (!response.ok) {
+          throw new GlobKurierAPIError(
+            `Failed to download PDF: ${response.statusText}`,
+            response.status
+          );
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer) as unknown as T;
+      }
 
       const contentType = response.headers.get('content-type');
       const isJson = contentType?.includes('application/json');
@@ -194,10 +208,11 @@ export class GlobKurierAPI {
 
     const response = await this.request<any>(`/products?${queryParams.toString()}`);
 
-    // flatList=true may return a plain array, or wrapped in items/products
+    // flatList=true groups all products under 'standard' key (or fast/superfast/noon/morning)
+    // Response shape: { fast: [], superfast: [], noon: [], morning: [], standard: [...] }
     const items: any[] = Array.isArray(response)
       ? response
-      : response.items || response.products || response.data || [];
+      : response.standard || response.items || response.products || response.data || [];
 
     return items.map((item: any) => ({
       id: item.id,
@@ -214,7 +229,9 @@ export class GlobKurierAPI {
       deliveryDays: item.averageDelivery ?? item.deliveryDays,
       collectionType: item.collectionType || collectionType,
       additionalInfo: item.serviceCode || item.additionalInfo,
+      serviceCode: item.serviceCode,
       addons: item.addons,
+      addonsCategories: item.addonsCategories,
     }));
   }
 
@@ -325,6 +342,25 @@ export class GlobKurierAPI {
       format: item.format || 'PDF',
       content: item.content, // base64
     }));
+  }
+
+  /**
+   * Get labels by order hashes (bulk download)
+   * GET /v1/order/labels?orderHashes[]=hash1&orderHashes[]=hash2&format=A4
+   * Returns binary PDF directly
+   */
+  async getLabelsByHashes(orderHashes: string[], format: 'A4' | 'A6' = 'A4'): Promise<Buffer> {
+    const queryParams = new URLSearchParams();
+    orderHashes.forEach(hash => queryParams.append('orderHashes[]', hash));
+    queryParams.append('format', format);
+
+    return this.request<Buffer>(
+      `/order/labels?${queryParams.toString()}`,
+      {
+        method: 'GET',
+        binary: true,
+      }
+    );
   }
 
   /**

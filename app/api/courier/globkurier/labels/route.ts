@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createGlobKurierAPI } from '@/lib/courier/globkurier';
-import { PDFDocument } from 'pdf-lib';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +20,8 @@ export async function POST(request: NextRequest) {
       .from('courier_shipments')
       .select('*')
       .eq('order_id', orderId)
-      .eq('courier_provider', 'globkurier');
+      .eq('courier_provider', 'globkurier')
+      .order('shipment_type', { ascending: true }); // outbound first, then return
 
     if (shipmentsError) {
       throw new Error('Failed to fetch shipments');
@@ -34,6 +34,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Collect order hashes
+    const orderHashes = shipments
+      .filter((s: any) => s.globkurier_order_hash)
+      .map((s: any) => s.globkurier_order_hash);
+
+    if (orderHashes.length === 0) {
+      return NextResponse.json(
+        { error: 'No order hashes found for shipments. Orders may not have been created yet.' },
+        { status: 404 }
+      );
+    }
+
+    console.log('[globkurier/labels] Fetching labels for hashes:', orderHashes);
+
     // Create GlobKurier API client
     const api = await createGlobKurierAPI(supabase);
     if (!api) {
@@ -43,78 +57,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create merged PDF
-    const mergedPdf = await PDFDocument.create();
+    // Fetch merged PDF directly from API using order hashes
+    const pdfBuffer = await api.getLabelsByHashes(orderHashes, 'A4');
 
-    // Helper: fetch and add label to merged PDF
-    async function addLabelToPdf(shipment: any, label: string, apiClient: NonNullable<typeof api>) {
-      if (!shipment?.globkurier_order_number) {
-        console.error(`[globkurier/labels] No order number for ${label}`);
-        return;
-      }
-
-      try {
-        console.log(`[globkurier/labels] Fetching ${label} label for: ${shipment.globkurier_order_number}`);
-
-        // Check if we have cached label
-        if (shipment.label_base64) {
-          const pdfBuffer = Buffer.from(shipment.label_base64, 'base64');
-          const pdfDoc = await PDFDocument.load(pdfBuffer);
-          const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-          pages.forEach((page) => mergedPdf.addPage(page));
-          console.log(`[globkurier/labels] ${label} label added from cache`);
-          return;
-        }
-
-        // Fetch labels from API
-        const labels = await apiClient.getLabels(shipment.globkurier_order_number);
-
-        for (const labelData of labels) {
-          if (labelData.type === 'WAYBILL' && labelData.content) {
-            const pdfBuffer = Buffer.from(labelData.content, 'base64');
-            const pdfDoc = await PDFDocument.load(pdfBuffer);
-            const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-            pages.forEach((page) => mergedPdf.addPage(page));
-
-            // Cache the label
-            await supabase
-              .from('courier_shipments')
-              .update({ label_base64: labelData.content })
-              .eq('id', shipment.id);
-
-            console.log(`[globkurier/labels] ${label} label added (${pages.length} pages)`);
-          }
-        }
-      } catch (error) {
-        console.error(`[globkurier/labels] Failed to add ${label} label:`, error);
-      }
-    }
-
-    // Process each shipment
-    const outboundShipment = shipments.find((s: any) => s.shipment_type === 'outbound');
-    const returnShipment = shipments.find((s: any) => s.shipment_type === 'return');
-
-    if (outboundShipment) {
-      await addLabelToPdf(outboundShipment, 'outbound', api);
-    }
-
-    if (returnShipment) {
-      await addLabelToPdf(returnShipment, 'return', api);
-    }
-
-    // Check if we have any pages
-    if (mergedPdf.getPageCount() === 0) {
-      return NextResponse.json(
-        { error: 'No labels available to download' },
-        { status: 404 }
-      );
-    }
-
-    // Save the merged PDF
-    const pdfBytes = await mergedPdf.save();
+    console.log('[globkurier/labels] PDF downloaded, size:', pdfBuffer.length, 'bytes');
 
     // Return PDF as response
-    return new NextResponse(Buffer.from(pdfBytes), {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="etykiety-${orderId}.pdf"`,

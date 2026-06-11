@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
       shipmentType = 'outbound',
       insurance = false,
       insuranceValue = 0,
+      saturdayDelivery = false,
     } = body as {
       orderId: string;
       parcelSize: ParcelSize;
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
-        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone, address_street, address_city, address_zip)'
+        'id, order_number, inpost_point_id, customers:customer_id(full_name, email, phone, address_street, address_city, address_zip, nip)'
       )
       .eq('id', orderId)
       .single();
@@ -117,6 +118,10 @@ export async function POST(request: NextRequest) {
     if (insurance && insuranceValue > 0) {
       addons.INSURANCE = { value: insuranceValue };
     }
+    // Saturday delivery for InPost uses WEEKEND_DELIVERY addon (not SATURDAY_DELIVERY)
+    if (saturdayDelivery) {
+      addons.WEEKEND_DELIVERY = {};
+    }
 
     // Determine sender and receiver based on shipment type
     const isOutbound = shipmentType === 'outbound';
@@ -133,7 +138,28 @@ export async function POST(request: NextRequest) {
       phone: senderConfig.phoneNumber,
       email: senderConfig.email,
       contactPerson: `${senderConfig.firstName} ${senderConfig.lastName}`,
+      nip: senderConfig.nip || undefined,
     };
+
+    // Validate required customer data
+    if (!customer.phone) {
+      return NextResponse.json(
+        { error: 'Customer phone number is required' },
+        { status: 400 }
+      );
+    }
+    if (!customer.email) {
+      return NextResponse.json(
+        { error: 'Customer email is required' },
+        { status: 400 }
+      );
+    }
+    if (!order.inpost_point_id) {
+      return NextResponse.json(
+        { error: 'InPost point ID is required' },
+        { status: 400 }
+      );
+    }
 
     const customerAddr = {
       name: customer.full_name || `${customerFirstName} ${customerLastName}`,
@@ -144,9 +170,10 @@ export async function POST(request: NextRequest) {
       postCode: customer.address_zip || '00-000',
       country: 'PL',
       pointId: order.inpost_point_id,
-      phone: customer.phone || '000000000',
-      email: customer.email || senderConfig.email,
+      phone: customer.phone,
+      email: customer.email,
       contactPerson: customer.full_name || `${customerFirstName} ${customerLastName}`,
+      nip: customer.nip || undefined,
     };
 
     const senderAddress = isOutbound ? myAddress : customerAddr;
@@ -194,9 +221,10 @@ export async function POST(request: NextRequest) {
         shipment_type: shipmentType,
         courier_provider: 'globkurier',
         globkurier_order_number: orderResponse.number,
+        globkurier_order_hash: orderResponse.hash || null,
         globkurier_product_id: productId || null,
         tracking_number: orderResponse.trackingNumber || null,
-        carrier_name: 'InPost', // TODO: get from product
+        carrier_name: 'InPost',
         status: orderResponse.status,
         parcel_size: parcelSize,
         price_gross: orderResponse.pricing.priceGross,

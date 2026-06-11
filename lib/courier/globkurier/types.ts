@@ -168,6 +168,7 @@ export interface GlobKurierSearchProductsRequest {
 // Order response
 export interface GlobKurierOrderResponse {
   number: string; // e.g. GK240610123456
+  hash?: string; // Order hash for label download
   status: GlobKurierOrderStatus;
   creationDate: string;
   pricing: {
