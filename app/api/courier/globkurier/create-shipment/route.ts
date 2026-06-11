@@ -16,6 +16,8 @@ export async function POST(request: NextRequest) {
       insurance = false,
       insuranceValue = 0,
       saturdayDelivery = false,
+      senderOverride,
+      receiverOverride,
     } = body as {
       orderId: string;
       parcelSize: ParcelSize;
@@ -24,6 +26,8 @@ export async function POST(request: NextRequest) {
       insurance?: boolean;
       insuranceValue?: number;
       saturdayDelivery?: boolean;
+      senderOverride?: any;
+      receiverOverride?: any;
     };
 
     console.log('[globkurier/create-shipment] Request:', { orderId, parcelSize, productId, shipmentType });
@@ -175,6 +179,25 @@ export async function POST(request: NextRequest) {
       contactPerson: customer.full_name || `${customerFirstName} ${customerLastName}`,
       nip: customer.nip || undefined,
     };
+
+    // Apply overrides from modal if provided
+    if (senderOverride && receiverOverride) {
+      const isOutbound = shipmentType === 'outbound';
+      
+      // Use override data for sender
+      if (isOutbound && senderOverride.postingCode) {
+        myAddress.pointId = senderOverride.postingCode;
+      } else if (!isOutbound && senderOverride.destinationCode) {
+        customerAddr.pointId = senderOverride.destinationCode;
+      }
+      
+      // Use override data for receiver
+      if (isOutbound && receiverOverride.destinationCode) {
+        customerAddr.pointId = receiverOverride.destinationCode;
+      } else if (!isOutbound && receiverOverride.postingCode) {
+        myAddress.pointId = receiverOverride.postingCode;
+      }
+    }
 
     const senderAddress = isOutbound ? myAddress : customerAddr;
     const receiverAddress = isOutbound ? customerAddr : myAddress;

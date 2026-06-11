@@ -171,6 +171,9 @@ export function CourierPanel({
         insurance: options.insurance,
         insuranceValue: options.insuranceValue,
         saturdayDelivery: options.saturdayDelivery,
+        // Pass edited sender and receiver data from modal
+        senderOverride: options.sender,
+        receiverOverride: options.receiver,
       }),
     });
 
