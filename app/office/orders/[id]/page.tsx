@@ -344,8 +344,13 @@ function ProductsCard({
 }
 
 export default function OfficeOrderDetailsPage() {
+  console.log('🚀 [OrderDetail] PAGE COMPONENT RENDERING');
+  
   const params = useParams<{ id: string }>();
   const orderId = params?.id;
+  
+  console.log('🔍 [OrderDetail] params:', params, 'orderId:', orderId);
+  
   const router = useRouter();
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -761,6 +766,11 @@ export default function OfficeOrderDetailsPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* DEBUG: Visible indicator */}
+      <div className="fixed top-4 right-4 z-50 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-bold">
+        🔴 DEBUG: Page Loaded - orderId: {orderId || 'NULL'}
+      </div>
+      
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
