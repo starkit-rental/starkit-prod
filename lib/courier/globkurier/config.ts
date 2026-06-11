@@ -15,11 +15,13 @@ export function getEnvironment(): GlobKurierEnvironment {
   return process.env.NODE_ENV === 'production' ? 'production' : 'test';
 }
 
-// Default addon IDs (may vary by carrier)
+// Note: Addon IDs vary by carrier and should be fetched dynamically via GET /products/{productId}/addons
+// For bestPrice endpoint, use addon categories instead (e.g., INSURANCE, CASH_ON_DELIVERY)
+// Legacy addon IDs kept for reference only - DO NOT USE directly
 export const ADDON_IDS = {
-  INSURANCE: 1578, // Ubezpieczenie
-  COD: 632, // Pobranie
-  SATURDAY_DELIVERY: 1234, // Dostawa w sobotę (verify actual ID)
+  INSURANCE: 1578, // Example - varies by carrier
+  COD: 632, // Example - varies by carrier
+  SATURDAY_DELIVERY: 1234, // Example - varies by carrier
 };
 
 // Payment IDs (from GET /order/payments)

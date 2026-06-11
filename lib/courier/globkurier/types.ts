@@ -75,7 +75,7 @@ export interface GlobKurierCreateOrderRequest {
   senderAddress: GlobKurierAddress;
   receiverAddress: GlobKurierAddress;
   content: string;
-  paymentId: number; // 2 = prepaid
+  paymentId: number; // 9 = prepaid (pre-paid account), 2 = online payment
   agreements: GlobKurierAgreements;
   addons?: GlobKurierAddon[];
   purpose?: GlobKurierPurpose;
@@ -192,6 +192,7 @@ export interface GlobKurierErrorResponse {
   code: string;
   message: string;
   details?: Record<string, string[]>;
+  fields?: Record<string, string>; // Field-level validation errors
 }
 
 // Parcel sizes (same as Base Courier)

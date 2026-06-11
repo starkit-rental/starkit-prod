@@ -140,7 +140,7 @@ export class GlobKurierAPI {
           `API request failed with status ${response.status}`;
 
         // Append validation details if present
-        const validation = errorData.errors || errorData.violations || errorData.details;
+        const validation = errorData.errors || errorData.violations || errorData.details || errorData.fields;
         if (validation) {
           detailMessage += ` | Details: ${JSON.stringify(validation)}`;
         }
