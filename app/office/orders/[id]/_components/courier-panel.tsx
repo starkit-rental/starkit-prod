@@ -55,11 +55,13 @@ export function CourierPanel({
   // Load existing shipments for this order
   async function loadShipments() {
     setLoadingShipments(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('courier_shipments')
       .select('*')
       .eq('order_id', orderId)
       .order('created_at', { ascending: false });
+    
+    console.log('[CourierPanel] Loaded shipments:', { orderId, count: data?.length || 0, data, error });
     
     if (data && data.length > 0) {
       setShipments(data);
@@ -67,6 +69,11 @@ export function CourierPanel({
       const hasReturn = data.some((s: any) => s.shipment_type === 'return');
       setOutboundCreated(hasOutbound);
       setReturnCreated(hasReturn);
+      console.log('[CourierPanel] Shipments state:', { hasOutbound, hasReturn });
+    } else {
+      setShipments([]);
+      setOutboundCreated(false);
+      setReturnCreated(false);
     }
     setLoadingShipments(false);
   }
