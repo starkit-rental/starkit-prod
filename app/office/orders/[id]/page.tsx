@@ -506,6 +506,12 @@ export default function OfficeOrderDetailsPage() {
     try {
       const res = await fetch(`/api/office/order-detail?orderId=${orderId}`);
       const json = await res.json();
+      console.log('[OrderDetail] Loaded order data:', { 
+        orderId, 
+        inpost_point_id: json.order?.inpost_point_id,
+        delivery_method: json.order?.delivery_method,
+        fullOrder: json.order 
+      });
       if (!res.ok) {
         setError(json?.error || "Błąd ładowania zamówienia");
         setOrder(null);
