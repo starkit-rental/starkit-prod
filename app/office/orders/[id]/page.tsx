@@ -499,7 +499,11 @@ export default function OfficeOrderDetailsPage() {
   }
 
   async function loadOrder() {
-    if (!orderId) return;
+    console.log('[OrderDetail] loadOrder called, orderId:', orderId);
+    if (!orderId) {
+      console.log('[OrderDetail] No orderId, skipping load');
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -526,6 +530,7 @@ export default function OfficeOrderDetailsPage() {
   }
 
   useEffect(() => {
+    console.log('[OrderDetail] useEffect triggered, orderId:', orderId);
     void loadOrder();
     void loadEmailLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
