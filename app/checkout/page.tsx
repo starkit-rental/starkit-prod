@@ -43,7 +43,7 @@ const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 const TERMS_VERSION = "1.0";
 const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN ?? "";
-const INPOST_CODE_REGEX = /^[A-Za-z]{3}\d{2}[A-Za-z0-9]{0,3}$/;
+const INPOST_CODE_REGEX = /^[A-Za-z]{3,4}\d{2}[A-Za-z0-9]{0,3}$/;
 
 /* ───────────────────────────── types ─────────────────────────────── */
 
@@ -866,7 +866,7 @@ function CheckoutContent() {
                   </div>
                   {inpostCode.trim() && !inpostCodeValid && (
                     <p className="mt-1.5 text-xs text-destructive">
-                      Kod musi składać się z 3 liter + 2 cyfr + opcjonalny sufiks (np. KRA01M, POZ08M)
+                      Kod musi składać się z 3-4 liter + 2 cyfr + opcjonalny sufiks (np. KRA01M, PALU01M)
                     </p>
                   )}
                 </div>
