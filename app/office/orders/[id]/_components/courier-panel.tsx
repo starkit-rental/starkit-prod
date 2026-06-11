@@ -30,7 +30,7 @@ export function CourierPanel({
   customerEmail,
   customerAddress,
 }: CourierPanelProps) {
-  console.log('[CourierPanel] Component mounted:', { orderId, inpostPointId, customerName });
+  console.error('🔥 [CourierPanel] COMPONENT MOUNTED:', { orderId, inpostPointId, customerName });
   
   const supabase = createSupabaseBrowserClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -127,7 +127,7 @@ export function CourierPanel({
   }, [supabase, orderId]);
 
   if (!inpostPointId) {
-    console.log('[CourierPanel] No InPost point ID, showing error message');
+    console.error('🔥 [CourierPanel] NO INPOST POINT ID - showing error');
     return (
       <div className="flex items-center gap-2 text-amber-600">
         <AlertCircle className="h-4 w-4" />
@@ -136,7 +136,7 @@ export function CourierPanel({
     );
   }
   
-  console.log('[CourierPanel] Rendering panel with InPost point:', inpostPointId);
+  console.error('🔥 [CourierPanel] RENDERING PANEL - inpostPointId:', inpostPointId);
 
   const openOutboundDialog = () => {
     setDialogType('outbound');
