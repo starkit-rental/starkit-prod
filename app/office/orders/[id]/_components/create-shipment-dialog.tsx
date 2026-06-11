@@ -13,6 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Package, RotateCcw, AlertCircle } from "lucide-react";
 import { CarrierSelector } from "./carrier-selector";
 import type { ParcelSize } from "@/lib/courier/types";
@@ -59,13 +66,13 @@ interface CreateShipmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   type: 'outbound' | 'return';
-  parcelSize: ParcelSize;
   sender: SenderData;
   receiver: ReceiverData;
   onConfirm: (options: {
     insurance: boolean;
     insuranceValue: number;
     saturdayDelivery: boolean;
+    parcelSize: ParcelSize;
     sender: SenderData;
     receiver: ReceiverData;
     productId?: number;
@@ -76,11 +83,11 @@ export function CreateShipmentDialog({
   open,
   onOpenChange,
   type,
-  parcelSize,
   sender: initialSender,
   receiver: initialReceiver,
   onConfirm,
 }: CreateShipmentDialogProps) {
+  const [parcelSize, setParcelSize] = useState<ParcelSize>('small');
   const [insurance, setInsurance] = useState(false);
   const [insuranceValue, setInsuranceValue] = useState(500);
   const [saturdayDelivery, setSaturdayDelivery] = useState(false);
@@ -160,9 +167,10 @@ export function CreateShipmentDialog({
         insurance,
         insuranceValue: insurance ? insuranceValue : 0,
         saturdayDelivery,
+        parcelSize,
         sender,
         receiver,
-        productId: selectedCarrierId,
+        productId: selectedCarrierId || undefined,
       });
       onOpenChange(false);
     } catch (err) {
@@ -205,11 +213,18 @@ export function CreateShipmentDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Parcel Size */}
-          <div className="rounded-lg bg-blue-50 p-3">
-            <p className="text-sm font-medium text-blue-900">
-              Rozmiar paczki: {parcelSizeLabel}
-            </p>
+          {/* Parcel Size Selector */}
+          <div className="space-y-2">
+            <Label htmlFor="parcel-size" className="text-sm font-semibold">Rozmiar paczki</Label>
+            <Select value={parcelSize} onValueChange={(v) => setParcelSize(v as ParcelSize)}>
+              <SelectTrigger id="parcel-size" className="h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="small">Mała (18 × 35 × 60 cm, gabaryt B)</SelectItem>
+                <SelectItem value="large">Duża (64 × 38 × 41 cm, 15kg, gabaryt C)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Sender Info - Editable */}

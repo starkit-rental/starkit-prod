@@ -3,16 +3,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Package, Download, Loader2, Truck, RotateCcw, CheckCircle2, AlertCircle, ExternalLink, Copy, Check } from "lucide-react";
 import { CreateShipmentDialog } from "./create-shipment-dialog";
-import type { ParcelSize } from "@/lib/courier/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 interface CourierPanelProps {
@@ -39,7 +31,6 @@ export function CourierPanel({
   customerAddress,
 }: CourierPanelProps) {
   const supabase = createSupabaseBrowserClient();
-  const [parcelSize, setParcelSize] = useState<ParcelSize>('small');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<'outbound' | 'return'>('outbound');
   const [downloadingPDF, setDownloadingPDF] = useState(false);
@@ -156,6 +147,7 @@ export function CourierPanel({
     insurance: boolean;
     insuranceValue: number;
     saturdayDelivery: boolean;
+    parcelSize: 'small' | 'large';
     sender: any;
     receiver: any;
     productId?: number;
@@ -172,7 +164,7 @@ export function CourierPanel({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         orderId, 
-        parcelSize,
+        parcelSize: options.parcelSize,
         shipmentType: dialogType,
         productId: options.productId,
         insurance: options.insurance,
@@ -300,23 +292,6 @@ export function CourierPanel({
   return (
     <>
     <div className="space-y-4">
-        {/* Parcel Size Selection */}
-        <div className="space-y-2">
-          <Label htmlFor="parcel-size">Rozmiar paczki</Label>
-          <Select value={parcelSize} onValueChange={(v) => setParcelSize(v as ParcelSize)}>
-            <SelectTrigger id="parcel-size">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="small">
-                Mała (18 × 35 × 60 cm, gabaryt B)
-              </SelectItem>
-              <SelectItem value="large">
-                Duża (64 × 38 × 41 cm, 15kg, gabaryt C)
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
         {/* InPost Point Info */}
         <div className="rounded-lg bg-blue-50 p-3 text-sm">
@@ -513,7 +488,6 @@ export function CourierPanel({
       open={dialogOpen}
       onOpenChange={setDialogOpen}
       type={dialogType}
-      parcelSize={parcelSize}
       sender={sender}
       receiver={receiver}
       onConfirm={handleCreateShipment}
