@@ -11,19 +11,21 @@ export async function POST(request: NextRequest) {
     const {
       orderId,
       parcelSize,
+      productId,
       shipmentType = 'outbound',
       insurance = false,
       insuranceValue = 0,
     } = body as {
       orderId: string;
       parcelSize: ParcelSize;
+      productId?: number;
       shipmentType?: 'outbound' | 'return';
       insurance?: boolean;
       insuranceValue?: number;
       saturdayDelivery?: boolean;
     };
 
-    console.log('[globkurier/create-shipment] Request:', { orderId, parcelSize, shipmentType });
+    console.log('[globkurier/create-shipment] Request:', { orderId, parcelSize, productId, shipmentType });
 
     if (!orderId || !parcelSize) {
       return NextResponse.json(
@@ -150,7 +152,8 @@ export async function POST(request: NextRequest) {
     const senderAddress = isOutbound ? myAddress : customerAddr;
     const receiverAddress = isOutbound ? customerAddr : myAddress;
 
-    // Create order request using bestPrice (auto-selects cheapest InPost product)
+    // Create order request using bestPrice.
+    // If a productId was selected (carrier picker), use it; otherwise let API auto-select InPost.
     const orderRequest: GlobKurierBestPriceRequest = {
       shipment: {
         length: dimensions.length,
@@ -158,7 +161,7 @@ export async function POST(request: NextRequest) {
         height: dimensions.height,
         weight: dimensions.weight,
         quantity: 1,
-        integrationName: 'InPost',
+        ...(productId ? { productId } : { integrationName: 'InPost' }),
       },
       senderAddress,
       receiverAddress,
@@ -191,7 +194,7 @@ export async function POST(request: NextRequest) {
         shipment_type: shipmentType,
         courier_provider: 'globkurier',
         globkurier_order_number: orderResponse.number,
-        globkurier_product_id: null,
+        globkurier_product_id: productId || null,
         tracking_number: orderResponse.trackingNumber || null,
         carrier_name: 'InPost', // TODO: get from product
         status: orderResponse.status,

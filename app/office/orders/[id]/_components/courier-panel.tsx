@@ -167,7 +167,7 @@ export function CourierPanel({
         orderId, 
         parcelSize,
         shipmentType: dialogType,
-        productId: options.productId || 2000, // Default InPost product ID
+        productId: options.productId,
         insurance: options.insurance,
         insuranceValue: options.insuranceValue,
         saturdayDelivery: options.saturdayDelivery,

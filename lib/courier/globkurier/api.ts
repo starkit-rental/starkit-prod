@@ -178,11 +178,17 @@ export class GlobKurierAPI {
       width: String(params.width),
       height: String(params.height),
       weight: String(params.weight),
+      quantity: '1',
+      packageType: 'PARCEL',
+      transportType: 'ROAD',
+      flatList: 'true',
     });
 
-    if (params.collectionType) {
-      queryParams.append('collectionType', params.collectionType);
-    }
+    // Collection/delivery types are arrays in the API (collectionTypes[]=...)
+    const collectionType = params.collectionType || 'POINT';
+    queryParams.append('collectionTypes[]', collectionType);
+    queryParams.append('deliveryTypes[]', collectionType);
+
     if (params.senderPointId) {
       queryParams.append('senderPointId', params.senderPointId);
     }
@@ -190,21 +196,28 @@ export class GlobKurierAPI {
       queryParams.append('receiverPointId', params.receiverPointId);
     }
 
-    const response = await this.request<{ items: any[] }>(`/products?${queryParams.toString()}`);
-    
-    // Map response to our product type
-    return (response.items || []).map((item: any) => ({
+    const response = await this.request<any>(`/products?${queryParams.toString()}`);
+
+    // flatList=true may return a plain array, or wrapped in items/products
+    const items: any[] = Array.isArray(response)
+      ? response
+      : response.items || response.products || response.data || [];
+
+    return items.map((item: any) => ({
       id: item.id,
-      name: item.name,
+      name: item.name || item.packageName || '',
       carrierName: item.carrierName || item.carrier?.name || 'Unknown',
-      carrierLogo: item.carrierLogo || item.carrier?.logo,
-      priceGross: item.priceGross || item.pricing?.priceGross || 0,
-      priceNet: item.priceNet || item.pricing?.priceNet || 0,
-      currency: item.currency || 'PLN',
+      carrierLogo: item.carrierLogoLink || item.carrierLogo || item.carrier?.logo,
+      priceGross: item.grossPrice ?? item.priceGross ?? item.pricing?.priceGross ?? 0,
+      priceNet: item.netPrice ?? item.priceNet ?? item.pricing?.priceNet ?? 0,
+      currency:
+        typeof item.currency === 'string'
+          ? item.currency
+          : item.currency?.code || 'PLN',
       deliveryTime: item.deliveryTime,
-      deliveryDays: item.deliveryDays,
-      collectionType: item.collectionType || 'PICKUP',
-      additionalInfo: item.additionalInfo,
+      deliveryDays: item.averageDelivery ?? item.deliveryDays,
+      collectionType: item.collectionType || collectionType,
+      additionalInfo: item.serviceCode || item.additionalInfo,
       addons: item.addons,
     }));
   }

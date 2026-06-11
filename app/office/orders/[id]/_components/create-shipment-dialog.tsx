@@ -14,7 +14,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Package, RotateCcw, AlertCircle } from "lucide-react";
+import { CarrierSelector } from "./carrier-selector";
 import type { ParcelSize } from "@/lib/courier/types";
+
+interface Carrier {
+  id: number;
+  name: string;
+  carrierName: string;
+  priceGross: number;
+  priceNet: number;
+  currency: string;
+  deliveryTime?: string;
+  deliveryDays?: number;
+  additionalInfo?: string;
+}
 
 interface SenderData {
   firstName: string;
@@ -55,6 +68,7 @@ interface CreateShipmentDialogProps {
     saturdayDelivery: boolean;
     sender: SenderData;
     receiver: ReceiverData;
+    productId?: number;
   }) => Promise<void>;
 }
 
@@ -72,6 +86,12 @@ export function CreateShipmentDialog({
   const [saturdayDelivery, setSaturdayDelivery] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Carrier selection
+  const [carriers, setCarriers] = useState<Carrier[]>([]);
+  const [loadingCarriers, setLoadingCarriers] = useState(false);
+  const [selectedCarrierId, setSelectedCarrierId] = useState<number | null>(null);
+  const [hasSearchedCarriers, setHasSearchedCarriers] = useState(false);
   
   // Editable sender data
   const [sender, setSender] = useState<SenderData>(initialSender);
@@ -89,7 +109,49 @@ export function CreateShipmentDialog({
     ? 'Mała (18 × 35 × 60 cm, gabaryt B)'
     : 'Duża (64 × 38 × 41 cm, 15kg, gabaryt C)';
 
+  const searchCarriers = async () => {
+    setLoadingCarriers(true);
+    setHasSearchedCarriers(true);
+    setSelectedCarrierId(null);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/courier/globkurier/search-carriers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parcelSize,
+          senderPostCode: sender.postCode,
+          senderPointId: sender.postingCode,
+          receiverPostCode: receiver.postCode,
+          receiverPointId: receiver.destinationCode,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.details || data.error || 'Nie udało się pobrać przewoźników');
+      }
+      const list: Carrier[] = data.carriers || [];
+      setCarriers(list);
+      // Auto-select the cheapest (first, already sorted)
+      if (list.length > 0) {
+        setSelectedCarrierId(list[0].id);
+      }
+    } catch (err) {
+      console.error('Carrier search error:', err);
+      setError(err instanceof Error ? err.message : 'Błąd wyszukiwania przewoźników');
+      setCarriers([]);
+    } finally {
+      setLoadingCarriers(false);
+    }
+  };
+
   const handleConfirm = async () => {
+    if (!selectedCarrierId) {
+      setError('Wybierz przewoźnika przed utworzeniem przesyłki');
+      return;
+    }
+
     setCreating(true);
     setError(null);
 
@@ -100,6 +162,7 @@ export function CreateShipmentDialog({
         saturdayDelivery,
         sender,
         receiver,
+        productId: selectedCarrierId,
       });
       onOpenChange(false);
     } catch (err) {
@@ -119,6 +182,10 @@ export function CreateShipmentDialog({
       setError(null);
       setSender(initialSender);
       setReceiver(initialReceiver);
+      setCarriers([]);
+      setSelectedCarrierId(null);
+      setHasSearchedCarriers(false);
+      setLoadingCarriers(false);
     }
   }, [open, initialSender, initialReceiver]);
 
@@ -255,6 +322,18 @@ export function CreateShipmentDialog({
             </div>
           </div>
 
+          {/* Carrier Selection */}
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <CarrierSelector
+              carriers={carriers}
+              loading={loadingCarriers}
+              selectedCarrierId={selectedCarrierId}
+              onSelect={setSelectedCarrierId}
+              onSearch={searchCarriers}
+              hasSearched={hasSearchedCarriers}
+            />
+          </div>
+
           {/* Additional Options */}
           <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
             <h3 className="text-sm font-semibold text-slate-900">Dodatkowe opcje</h3>
@@ -324,7 +403,7 @@ export function CreateShipmentDialog({
           >
             Anuluj
           </Button>
-          <Button onClick={handleConfirm} disabled={creating}>
+          <Button onClick={handleConfirm} disabled={creating || !selectedCarrierId}>
             {creating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
