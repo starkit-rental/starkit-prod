@@ -152,6 +152,7 @@ export interface GlobKurierProduct {
 }
 
 // Search products request
+// Note: senderPointId and receiverPointId are NOT supported in /products endpoint
 export interface GlobKurierSearchProductsRequest {
   senderPostCode: string;
   senderCountryId: number;
@@ -162,8 +163,6 @@ export interface GlobKurierSearchProductsRequest {
   height: number;
   weight: number;
   collectionType?: GlobKurierCollectionType;
-  senderPointId?: string;
-  receiverPointId?: string;
 }
 
 // Order response

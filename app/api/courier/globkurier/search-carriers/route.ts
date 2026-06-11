@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Search for available carriers
+    // Note: senderPointId/receiverPointId are not used in search, only in order creation
     const products = await api.searchProducts({
       senderPostCode,
       senderCountryId: COUNTRY_IDS.POLAND,
@@ -56,8 +57,6 @@ export async function POST(request: NextRequest) {
       height: dimensions.height,
       weight: dimensions.weight,
       collectionType: senderPointId ? 'POINT' : 'PICKUP',
-      senderPointId,
-      receiverPointId,
     });
 
     // Sort by price

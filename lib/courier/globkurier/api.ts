@@ -189,12 +189,8 @@ export class GlobKurierAPI {
     queryParams.append('collectionTypes[]', collectionType);
     queryParams.append('deliveryTypes[]', collectionType);
 
-    if (params.senderPointId) {
-      queryParams.append('senderPointId', params.senderPointId);
-    }
-    if (params.receiverPointId) {
-      queryParams.append('receiverPointId', params.receiverPointId);
-    }
+    // Note: senderPointId and receiverPointId are NOT supported in /products endpoint
+    // They are only used when creating orders via /order or /order/bestPrice
 
     const response = await this.request<any>(`/products?${queryParams.toString()}`);
 
