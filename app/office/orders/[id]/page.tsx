@@ -504,22 +504,13 @@ export default function OfficeOrderDetailsPage() {
   }
 
   async function loadOrder() {
-    console.error('🔥 LOADORDER CALLED - orderId:', orderId);
-    if (!orderId) {
-      console.error('🔥 NO ORDERID - SKIPPING');
-      return;
-    }
+    if (!orderId) return;
     setLoading(true);
     setError(null);
 
     try {
       const res = await fetch(`/api/office/order-detail?orderId=${orderId}`);
       const json = await res.json();
-      console.error('🔥 ORDER DATA LOADED:', { 
-        orderId, 
-        inpost_point_id: json.order?.inpost_point_id,
-        delivery_method: json.order?.delivery_method,
-      });
       if (!res.ok) {
         setError(json?.error || "Błąd ładowania zamówienia");
         setOrder(null);
@@ -534,8 +525,6 @@ export default function OfficeOrderDetailsPage() {
   }
 
   useEffect(() => {
-    console.log('[OrderDetail] useEffect triggered, orderId:', orderId);
-    console.error('🔥 USEEFFECT CALLED - orderId:', orderId); // error jest zawsze widoczny
     void loadOrder();
     void loadEmailLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -766,11 +755,6 @@ export default function OfficeOrderDetailsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* DEBUG: Visible indicator */}
-      <div className="fixed top-4 right-4 z-50 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-bold">
-        🔴 DEBUG: Page Loaded - orderId: {orderId || 'NULL'}
-      </div>
-      
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
