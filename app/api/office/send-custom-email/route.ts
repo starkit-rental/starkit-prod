@@ -4,11 +4,19 @@ import { sendAndLog } from "@/lib/email";
 import { requireAuth } from "@/lib/auth-guard";
 import {
   withStarkitTemplate,
+  plainTextToEmailHtml,
   EMAIL_SUBJECTS,
   type EmailTemplateType,
 } from "@/lib/email-template";
 
-const BRAND_FONT = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif';
+// Allowed attachment MIME types for emails
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/jpg",
+]);
+// Max total attachment size (Resend hard limit is 40MB; keep a safe margin)
+const MAX_TOTAL_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 
 function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -26,11 +34,12 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { orderId, templateId, finalContent, customSubject } = body as {
+    const { orderId, templateId, finalContent, customSubject, attachments } = body as {
       orderId?: string;
       templateId?: string;
       finalContent?: string;
       customSubject?: string;
+      attachments?: { filename: string; contentType: string; data: string }[];
     };
 
     if (!orderId || !templateId) {
@@ -67,8 +76,34 @@ export async function POST(req: NextRequest) {
     const isHtml = /<[a-z][\s\S]*>/i.test(bodyContent);
     const innerHtml = isHtml
       ? bodyContent
-      : `<div style="font-family:${BRAND_FONT};font-size:15px;color:#334155;line-height:1.65;white-space:pre-wrap">${bodyContent}</div>`;
+      : plainTextToEmailHtml(bodyContent);
     const html = withStarkitTemplate(innerHtml);
+
+    // Build & validate attachments (PDF / JPG only)
+    let emailAttachments: { filename: string; content: Buffer }[] | undefined;
+    if (Array.isArray(attachments) && attachments.length > 0) {
+      let totalBytes = 0;
+      const built: { filename: string; content: Buffer }[] = [];
+      for (const att of attachments) {
+        if (!att?.data || !att?.filename) continue;
+        if (!ALLOWED_ATTACHMENT_TYPES.has((att.contentType || "").toLowerCase())) {
+          return NextResponse.json(
+            { error: `Niedozwolony typ załącznika: ${att.filename}. Dozwolone są tylko PDF i JPG.` },
+            { status: 422 }
+          );
+        }
+        const buf = Buffer.from(att.data, "base64");
+        totalBytes += buf.length;
+        built.push({ filename: att.filename, content: buf });
+      }
+      if (totalBytes > MAX_TOTAL_ATTACHMENT_BYTES) {
+        return NextResponse.json(
+          { error: "Załączniki są zbyt duże (maks. 20 MB łącznie)." },
+          { status: 422 }
+        );
+      }
+      if (built.length > 0) emailAttachments = built;
+    }
 
     // Resolve subject
     const subjectTemplate = customSubject || EMAIL_SUBJECTS[templateId as EmailTemplateType] || "Wiadomość od Starkit — SK-{{id}}";
@@ -83,6 +118,7 @@ export async function POST(req: NextRequest) {
       html,
       orderId,
       type: "manual",
+      attachments: emailAttachments,
     });
 
     return NextResponse.json({ ok: true, resendId: result.id }, { status: 200 });

@@ -4,6 +4,7 @@ import {
   withStarkitTemplate,
   renderAlertBox,
   renderCtaButton,
+  plainTextToEmailHtml,
 } from "@/lib/email-template";
 
 const BRAND_FONT =
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
     const isContentHtml = /<[a-z][\s\S]*>/i.test(bodyContent);
     const innerHtml = isContentHtml
       ? bodyContent
-      : `<div style="font-family:${BRAND_FONT};font-size:15px;color:#334155;line-height:1.65;white-space:pre-wrap">${bodyContent}</div>`;
+      : plainTextToEmailHtml(bodyContent);
     html = withStarkitTemplate(innerHtml);
 
     return new NextResponse(html, {

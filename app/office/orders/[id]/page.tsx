@@ -39,6 +39,7 @@ import {
   FileText,
   Download,
   ExternalLink,
+  Paperclip,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,13 @@ type OrderRow = {
 
 
 type SiteSettingRow = { key: string; value: string };
+
+type MessengerAttachment = {
+  filename: string;
+  contentType: string;
+  size: number;
+  data: string; // base64 (without data URL prefix)
+};
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Nowe",
@@ -377,6 +385,8 @@ export default function OfficeOrderDetailsPage() {
   const [messengerError, setMessengerError] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState("");
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [messengerAttachments, setMessengerAttachments] = useState<MessengerAttachment[]>([]);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   // Email countdown state
   const [emailCountdown, setEmailCountdown] = useState<number | null>(null);
@@ -617,8 +627,73 @@ export default function OfficeOrderDetailsPage() {
     setMessengerContent(content);
     setMessengerError(null);
     setPreviewHtml("");
+    setMessengerAttachments([]);
     setShowMessenger(true);
     void fetchPreview(tpl.id, content);
+  }
+
+  const ALLOWED_ATTACHMENT_EXT = [".pdf", ".jpg", ".jpeg"];
+  const MAX_TOTAL_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Strip the "data:<mime>;base64," prefix
+        const base64 = result.includes(",") ? result.split(",")[1] : result;
+        resolve(base64);
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleAttachmentSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    setMessengerError(null);
+
+    const accepted: MessengerAttachment[] = [];
+    for (const file of files) {
+      const lname = file.name.toLowerCase();
+      const okExt = ALLOWED_ATTACHMENT_EXT.some((ext) => lname.endsWith(ext));
+      const okType = ["application/pdf", "image/jpeg", "image/jpg"].includes(file.type);
+      if (!okExt && !okType) {
+        setMessengerError(`Niedozwolony typ pliku: ${file.name}. Dozwolone są tylko PDF i JPG.`);
+        continue;
+      }
+      const contentType = lname.endsWith(".pdf") ? "application/pdf" : "image/jpeg";
+      try {
+        const data = await fileToBase64(file);
+        accepted.push({ filename: file.name, contentType, size: file.size, data });
+      } catch {
+        setMessengerError(`Nie udało się wczytać pliku: ${file.name}`);
+      }
+    }
+
+    setMessengerAttachments((prev) => {
+      const merged = [...prev, ...accepted];
+      const total = merged.reduce((sum, a) => sum + a.size, 0);
+      if (total > MAX_TOTAL_ATTACHMENT_BYTES) {
+        setMessengerError("Załączniki są zbyt duże (maks. 20 MB łącznie).");
+        return prev;
+      }
+      return merged;
+    });
+
+    // Allow re-selecting the same file
+    if (attachmentInputRef.current) attachmentInputRef.current.value = "";
+  }
+
+  function removeAttachment(index: number) {
+    setMessengerAttachments((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   function handleTemplateChange(tplId: string) {
@@ -654,6 +729,11 @@ export default function OfficeOrderDetailsPage() {
           templateId: messengerTemplate,
           finalContent: messengerContent,
           customSubject: messengerSubject,
+          attachments: messengerAttachments.map((a) => ({
+            filename: a.filename,
+            contentType: a.contentType,
+            data: a.data,
+          })),
         }),
       });
       const json = await res.json();
@@ -665,6 +745,7 @@ export default function OfficeOrderDetailsPage() {
       setShowMessenger(false);
       setMessengerContent("");
       setPreviewHtml("");
+      setMessengerAttachments([]);
       await loadEmailLogs();
     } catch (e) {
       setMessengerError(e instanceof Error ? e.message : "Nieznany błąd");
@@ -1351,6 +1432,56 @@ export default function OfficeOrderDetailsPage() {
                       className="flex-1 min-h-[280px] w-full rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-800 leading-relaxed resize-none focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 font-mono"
                       placeholder="Wpisz treść wiadomości…"
                     />
+                  </div>
+
+                  {/* Attachments */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Załączniki</Label>
+                      <span className="text-[10px] text-slate-400 font-medium">PDF, JPG — maks. 20 MB</span>
+                    </div>
+
+                    <input
+                      ref={attachmentInputRef}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,application/pdf,image/jpeg"
+                      multiple
+                      onChange={handleAttachmentSelect}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => attachmentInputRef.current?.click()}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50/80 px-4 py-2.5 text-sm font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-colors"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                      Dodaj załącznik
+                    </button>
+
+                    {messengerAttachments.length > 0 && (
+                      <ul className="mt-2 space-y-1.5">
+                        {messengerAttachments.map((att, i) => (
+                          <li
+                            key={`${att.filename}-${i}`}
+                            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2"
+                          >
+                            <FileText className="h-4 w-4 shrink-0 text-indigo-500" />
+                            <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700">
+                              {att.filename}
+                            </span>
+                            <span className="shrink-0 text-[10px] text-slate-400">{formatFileSize(att.size)}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeAttachment(i)}
+                              className="shrink-0 flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                              aria-label="Usuń załącznik"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
 
                   {messengerError && (

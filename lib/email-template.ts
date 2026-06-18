@@ -91,6 +91,36 @@ ${bodyContent}
 </html>`;
 }
 
+/**
+ * Converts plain-text (textarea) content into email-safe HTML.
+ *
+ * Unlike `white-space:pre-wrap` (which is unreliable across email clients
+ * like Outlook/Gmail), this produces explicit paragraphs and <br> tags:
+ * - blank lines (\n\n) → separate <p> paragraphs (with spacing)
+ * - single newlines (\n) → <br/>
+ * - HTML special chars are escaped to prevent broken markup
+ */
+export function plainTextToEmailHtml(text: string): string {
+  const escaped = (text ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  const paragraphs = escaped
+    .split(/\n{2,}/)
+    .map((block) => block.replace(/\n/g, "<br/>"))
+    .filter((block) => block.trim().length > 0);
+
+  if (paragraphs.length === 0) return "";
+
+  return paragraphs
+    .map(
+      (p) =>
+        `<p style="margin:0 0 16px;font-family:${BRAND.font};font-size:15px;color:#334155;line-height:1.65">${p}</p>`
+    )
+    .join("");
+}
+
 // ═══════════════════════════════════════════════════════════
 //  SHARED HTML HELPERS
 // ═══════════════════════════════════════════════════════════
