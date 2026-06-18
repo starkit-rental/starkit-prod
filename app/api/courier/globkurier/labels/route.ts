@@ -34,10 +34,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Collect order hashes
-    const orderHashes = shipments
-      .filter((s: any) => s.globkurier_order_hash)
-      .map((s: any) => s.globkurier_order_hash);
+    // Create GlobKurier API client
+    const api = await createGlobKurierAPI(supabase);
+    if (!api) {
+      return NextResponse.json(
+        { error: 'GlobKurier not configured' },
+        { status: 400 }
+      );
+    }
+
+    // Collect order hashes, fetching missing ones via getOrder
+    const orderHashes: string[] = [];
+
+    for (const shipment of shipments) {
+      if (shipment.globkurier_order_hash) {
+        orderHashes.push(shipment.globkurier_order_hash);
+      } else if (shipment.globkurier_order_number) {
+        console.log('[globkurier/labels] Fetching hash for order:', shipment.globkurier_order_number);
+        try {
+          const orderDetails = await api.getOrder(shipment.globkurier_order_number);
+          if (orderDetails.hash) {
+            await supabase
+              .from('courier_shipments')
+              .update({ globkurier_order_hash: orderDetails.hash, status: orderDetails.status })
+              .eq('id', shipment.id);
+
+            orderHashes.push(orderDetails.hash);
+            console.log('[globkurier/labels] Updated hash for shipment:', shipment.id);
+          }
+        } catch (error) {
+          console.error('[globkurier/labels] Failed to fetch hash for order:', shipment.globkurier_order_number, error);
+        }
+      }
+    }
 
     if (orderHashes.length === 0) {
       return NextResponse.json(
@@ -47,15 +76,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[globkurier/labels] Fetching labels for hashes:', orderHashes);
-
-    // Create GlobKurier API client
-    const api = await createGlobKurierAPI(supabase);
-    if (!api) {
-      return NextResponse.json(
-        { error: 'GlobKurier not configured' },
-        { status: 400 }
-      );
-    }
 
     // Fetch merged PDF directly from API using order hashes
     const pdfBuffer = await api.getLabelsByHashes(orderHashes, 'A4');

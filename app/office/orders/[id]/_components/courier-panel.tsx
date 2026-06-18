@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Package, Download, Loader2, Truck, RotateCcw, CheckCircle2, AlertCircle, ExternalLink, Copy, Check } from "lucide-react";
+import { Package, Download, Loader2, Truck, RotateCcw, CheckCircle2, AlertCircle, ExternalLink, Copy, Check, RefreshCw } from "lucide-react";
 import { CreateShipmentDialog } from "./create-shipment-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -42,6 +42,7 @@ export function CourierPanel({
   const [shipments, setShipments] = useState<any[]>([]);
   const [loadingShipments, setLoadingShipments] = useState(true);
   const [copiedTracking, setCopiedTracking] = useState<string | null>(null);
+  const [refreshingStatus, setRefreshingStatus] = useState(false);
 
   // Load existing shipments for this order
   async function loadShipments() {
@@ -231,6 +232,31 @@ export function CourierPanel({
       setError(err instanceof Error ? err.message : 'Wystąpił błąd');
     } finally {
       setDownloadingPDF(false);
+    }
+  };
+
+  const handleRefreshStatus = async () => {
+    setError(null);
+    setRefreshingStatus(true);
+
+    try {
+      const response = await fetch('/api/courier/globkurier/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Nie udało się zaktualizować statusu');
+      }
+
+      // Reload shipments to show updated statuses
+      await loadShipments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Wystąpił błąd');
+    } finally {
+      setRefreshingStatus(false);
     }
   };
 
@@ -473,6 +499,27 @@ export function CourierPanel({
                 <>
                   <Download className="mr-2 h-4 w-4" />
                   Pobierz etykiety PDF (A4)
+                </>
+              )}
+            </Button>
+          )}
+
+          {(outboundCreated || returnCreated) && (
+            <Button
+              onClick={handleRefreshStatus}
+              disabled={refreshingStatus}
+              className="w-full"
+              variant="outline"
+            >
+              {refreshingStatus ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Aktualizowanie...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Odśwież status przesyłek
                 </>
               )}
             </Button>

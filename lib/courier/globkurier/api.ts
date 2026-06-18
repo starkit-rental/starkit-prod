@@ -251,6 +251,7 @@ export class GlobKurierAPI {
 
     return {
       number: response.number,
+      hash: response.hash || response.orderHash,
       status: response.status || 'NEW_SHIPMENT',
       creationDate: response.creationDate,
       pricing: {
@@ -307,8 +308,15 @@ export class GlobKurierAPI {
       response.order?.trackingNumber ||
       (Array.isArray(response.orders) ? response.orders[0]?.trackingNumber : undefined);
 
+    const hash =
+      response.hash ||
+      response.orderHash ||
+      response.order?.hash ||
+      (Array.isArray(response.orders) ? response.orders[0]?.hash : undefined);
+
     return {
       number: orderNumber,
+      hash,
       status: response.status || response.order?.status || 'NEW_SHIPMENT',
       creationDate: response.creationDate || new Date().toISOString(),
       pricing: {
@@ -324,10 +332,25 @@ export class GlobKurierAPI {
 
   /**
    * Get order details
-   * GET /v1/order/{orderNumber}
+   * GET /v1/order?number={orderNumber}
    */
   async getOrder(orderNumber: string): Promise<GlobKurierOrderResponse> {
-    return this.request<GlobKurierOrderResponse>(`/order/${orderNumber}`);
+    const response = await this.request<any>(`/order?number=${encodeURIComponent(orderNumber)}`);
+
+    return {
+      number: response.number,
+      hash: response.hash || response.orderHash,
+      status: response.status || 'NEW_SHIPMENT',
+      creationDate: response.creationDate,
+      pricing: {
+        priceGross: response.pricing?.priceGross || 0,
+        priceNet: response.pricing?.priceNet || 0,
+        vatPercent: response.pricing?.vatPercent || 23,
+        currency: response.pricing?.currency || 'PLN',
+      },
+      trackingNumber: response.trackingNumber,
+      trackingUrl: response.trackingUrl,
+    };
   }
 
   /**
@@ -364,11 +387,11 @@ export class GlobKurierAPI {
   }
 
   /**
-   * Get order status
-   * GET /v1/order/{orderNumber}/status
+   * Get order status (derived from order details since /status endpoint is not available)
    */
   async getOrderStatus(orderNumber: string): Promise<{ status: string; events: any[] }> {
-    return this.request<{ status: string; events: any[] }>(`/order/${orderNumber}/status`);
+    const order = await this.getOrder(orderNumber);
+    return { status: order.status, events: [] };
   }
 
   /**
