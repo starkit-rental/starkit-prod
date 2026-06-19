@@ -4,6 +4,7 @@ import {
   withStarkitTemplate,
   renderAlertBox,
   renderCtaButton,
+  renderReviewBox,
   plainTextToEmailHtml,
 } from "@/lib/email-template";
 
@@ -89,6 +90,9 @@ export async function POST(req: NextRequest) {
       } else if (infoBoxHtml) {
         resolved += "\n" + infoBoxHtml;
       }
+
+      // Render {{review_box}} component tag
+      resolved = resolved.replace(/\{\{review_box\}\}/g, renderReviewBox());
 
       // Render CTA button if both fields present
       if (ctaText?.trim() && ctaLink?.trim()) {

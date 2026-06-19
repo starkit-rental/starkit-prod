@@ -191,6 +191,28 @@ function ctaButton(text: string, href: string): string {
   </table>`;
 }
 
+/** Review request link used in the order-returned email */
+export const REVIEW_FORM_URL = "https://forms.gle/S5ejJfi8EKNrsw3W6";
+
+/**
+ * {{review_box}} — friendly, encouraging call-to-action asking the customer
+ * to leave a review via Google Forms. Used in: Order Returned.
+ */
+export function renderReviewBox(): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0">
+    <tr><td style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid ${BRAND.gold};border-radius:14px;padding:28px 24px;text-align:center">
+      <p style="margin:0;font-size:30px;line-height:1">⭐️⭐️⭐️⭐️⭐️</p>
+      <p style="margin:12px 0 6px;font-size:19px;font-weight:700;color:${BRAND.dark}">Jak Ci się korzystało?</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#92400e;line-height:1.6">Twoja opinia zajmie tylko <strong>chwilę</strong>, a dla nas znaczy <strong>bardzo dużo</strong> — pomaga nam się rozwijać i lepiej obsługiwać kolejnych klientów. Będziemy wdzięczni za kilka słów! 🙏</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto" align="center">
+        <tr><td style="background-color:${BRAND.dark};border-radius:8px">
+          <a href="${REVIEW_FORM_URL}" target="_blank" style="display:inline-block;padding:15px 38px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;font-family:${BRAND.font}">✍️ Wystaw opinię</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>`;
+}
+
 // ═══════════════════════════════════════════════════════════
 //  KOZAK UX COMPONENTS — Rich email blocks
 // ═══════════════════════════════════════════════════════════
@@ -511,7 +533,7 @@ export function buildOrderReturnedHtml(v: OrderVars): string {
     alertBox(`� <strong>Zwrot kaucji:</strong> Kaucja zostanie przetworzona ręcznie przez nasz zespół. Środki powinny pojawić się na Twoim koncie w ciągu <strong>3–5 dni roboczych</strong>. Jeśli po tym czasie nie widzisz zwrotu, napisz do nas.`, "success"),
     v.info_box_content ? alertBox(v.info_box_content, "info") : "",
     paragraph(`Dziękujemy za skorzystanie z Starkit! Mamy nadzieję, że internet Starlink spełnił Twoje oczekiwania. 🛰️`),
-    paragraph(`Będziemy wdzięczni za Twoją opinię — <strong>odpowiedz na tego maila</strong> i powiedz, jak Ci się korzystało!`),
+    renderReviewBox(),
     signOff(),
   ].join("\n");
   return withStarkitTemplate(content, `Potwierdzenie zwrotu sprzętu ${v.order_number}`);

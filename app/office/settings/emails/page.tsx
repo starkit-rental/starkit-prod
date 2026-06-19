@@ -116,9 +116,9 @@ const TEMPLATES: TemplateDefinition[] = [
 </table>
 {{info_box}}
 <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Dziękujemy za skorzystanie z Starkit! Mamy nadzieję, że internet Starlink spełnił Twoje oczekiwania. 🛰️</p>
-<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Będziemy wdzięczni za Twoją opinię — <strong>odpowiedz na tego maila</strong> i powiedz, jak Ci się korzystało!</p>
+{{review_box}}
 <p style="margin:24px 0 0;font-size:15px;color:#334155;line-height:1.65">Pozdrawiamy,<br/><strong>Zespół Starkit</strong></p>`,
-    availableVars: ["customer_name", "order_number", "start_date", "end_date", "total_amount", "info_box"],
+    availableVars: ["customer_name", "order_number", "start_date", "end_date", "total_amount", "info_box", "review_box"],
   },
   {
     id: "order_cancelled",

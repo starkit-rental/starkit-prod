@@ -14,6 +14,8 @@ import {
   renderPickupBox,
   renderPersonalPickedUpBox,
   renderInstructionsBox,
+  renderReviewBox,
+  REVIEW_FORM_URL,
   buildAdminNotificationHtml,
   buildOrderReadyForPickupHtml,
   type OrderVars,
@@ -288,6 +290,7 @@ async function resolveEmailContent(
     ["pdf_box", () => renderPdfBox()],
     ["pickup_box", () => renderPickupBox(vars)],
     ["instructions_box", () => renderInstructionsBox()],
+    ["review_box", () => renderReviewBox()],
   ];
   for (const [tag, renderer] of componentTags) {
     const placeholder = `{{${tag}}}`;
@@ -730,15 +733,24 @@ export async function sendOrderReturnedEmail(params: StatusEmailParams) {
 </table>
 {{info_box}}
 <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Dziękujemy za skorzystanie z Starkit! Mamy nadzieję, że internet Starlink spełnił Twoje oczekiwania. 🛰️</p>
-<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Będziemy wdzięczni za Twoją opinię — <strong>odpowiedz na tego maila</strong> i powiedz, jak Ci się korzystało!</p>
+{{review_box}}
 <p style="margin:24px 0 0;font-size:15px;color:#334155;line-height:1.65">Pozdrawiamy,<br/><strong>Zespół Starkit</strong></p>`;
 
-  const { subject, html } = await resolveEmailContent(
+  const { subject, html: resolvedHtml } = await resolveEmailContent(
     "order_returned",
     vars,
     `Potwierdzenie zwrotu sprzętu SK-${displayId}`,
     fallbackBody
   );
+
+  // Ensure the review CTA is always present — even if a custom DB template
+  // (without the {{review_box}} tag) is used. Inject it just before the footer.
+  const html = resolvedHtml.includes(REVIEW_FORM_URL)
+    ? resolvedHtml
+    : resolvedHtml.replace(
+        "<!-- Footer -->",
+        `<!-- Review CTA --><tr><td style="padding:0 40px">${renderReviewBox()}</td></tr>\n\n<!-- Footer -->`
+      );
 
   try {
     return await sendAndLog({ to: params.customerEmail, subject, html, orderId: params.orderId, type: "order_returned" });
