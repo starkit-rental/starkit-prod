@@ -236,9 +236,6 @@ function buildInvoiceEmailHtml(params: {
                       &nbsp;·&nbsp;
                       <a href="https://www.starkit.pl" style="color: #1e293b; text-decoration: underline;">www.starkit.pl</a>
                     </p>
-                    <p style="margin: 8px 0 0; color: #94a3b8; font-size: 11px; line-height: 1.4;">
-                      Ta wiadomość została wygenerowana automatycznie. Możesz odpowiedzieć na tego maila.
-                    </p>
                   </td>
                 </tr>
               </table>

@@ -75,9 +75,6 @@ ${bodyContent}
       &nbsp;·&nbsp;
       <a href="${BRAND.website}" style="color:${BRAND.dark};text-decoration:underline">www.starkit.pl</a>
     </p>
-    <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;line-height:1.4">
-      Ta wiadomość została wygenerowana automatycznie. Możesz odpowiedzieć na tego maila.
-    </p>
   </td></tr>
   </table>
 </td></tr>
