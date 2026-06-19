@@ -168,7 +168,7 @@ export function AvailabilityCalendar({
                 !isCurrentMonth && "text-slate-300",
                 isCurrentMonth && "text-slate-700 hover:bg-slate-100",
                 isOccupied && !isBuffer && "bg-red-50 text-red-700",
-                isBuffer && "bg-amber-50 text-amber-700",
+                isBuffer && "bg-red-50 text-red-700",
                 isSelected && "bg-indigo-600 text-white hover:bg-indigo-700",
                 isToday && !isSelected && "ring-1 ring-indigo-400"
               )}
@@ -186,7 +186,7 @@ export function AvailabilityCalendar({
           <span>Zajęte</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-3 w-3 rounded bg-amber-50 border border-amber-200" />
+          <div className="h-3 w-3 rounded bg-red-50 border border-red-200" />
           <span>Bufor logistyczny</span>
         </div>
         <div className="flex items-center gap-1.5">

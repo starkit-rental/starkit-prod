@@ -559,10 +559,6 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
                     <span className="inline-block h-3 w-3 rounded-sm bg-red-100 border border-red-200" />
                     Zajęte
                   </span>
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="inline-block h-3 w-3 rounded-sm bg-amber-50 border border-amber-200" />
-                    Bufor wysyłki (±2 dni)
-                  </span>
                 </div>
               </PopoverContent>
             </Popover>
