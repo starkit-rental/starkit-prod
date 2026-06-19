@@ -29,13 +29,14 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { calculatePrice } from "@/lib/rental-engine";
 import { cn } from "@/lib/utils";
-import { AddonCarousel } from "./addon-carousel";
+import { AddonSelector } from "./addon-selector";
 
 type AddonProduct = {
   _id: string;
   title: string;
   slug: string;
   excerpt?: string;
+  description?: string;
   pricePerDay: number;
   deposit: number;
   images?: string[];
@@ -118,7 +119,7 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
 
   // ── Addons state ──
   const [selectedAddonIds, setSelectedAddonIds] = useState<Set<string>>(new Set());
-  const [addonAvailability, setAddonAvailability] = useState<Record<string, { available: boolean; reason?: string }>>({});
+  const [addonAvailability, setAddonAvailability] = useState<Record<string, { available: boolean; reason?: string; notConfigured?: boolean }>>({});
   const [loadingAddonAvailability, setLoadingAddonAvailability] = useState(false);
 
   // ── Load product ──
@@ -304,6 +305,25 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
     }
   }, [product, dateRange, pricingTiers, autoIncrementMultiplier]);
 
+  // ── Calculate addon costs (live) ──
+  const addonCosts = useMemo(() => {
+    const days = pricing?.days ?? 0;
+    const selected = availableAddons.filter(
+      (a) =>
+        selectedAddonIds.has(a._id) &&
+        addonAvailability[a._id]?.available !== false,
+    );
+    const rentalCents = selected.reduce(
+      (sum, a) => sum + Math.round((a.pricePerDay || 0) * 100) * days,
+      0,
+    );
+    const depositCents = selected.reduce(
+      (sum, a) => sum + Math.round((a.deposit || 0) * 100),
+      0,
+    );
+    return { selected, rentalCents, depositCents };
+  }, [availableAddons, selectedAddonIds, addonAvailability, pricing]);
+
   // ── Auto-check availability ──
   useEffect(() => {
     const controller = new AbortController();
@@ -358,7 +378,7 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
 
     async function checkAddons() {
       setLoadingAddonAvailability(true);
-      const results: Record<string, { available: boolean; reason?: string }> = {};
+      const results: Record<string, { available: boolean; reason?: string; notConfigured?: boolean }> = {};
 
       for (const addon of availableAddons) {
         try {
@@ -370,7 +390,7 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
             .maybeSingle();
 
           if (!addonProduct?.id) {
-            results[addon._id] = { available: false, reason: "Produkt nie znaleziony" };
+            results[addon._id] = { available: false, reason: "Produkt nie znaleziony", notConfigured: true };
             continue;
           }
 
@@ -578,6 +598,18 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
             </div>
           )}
 
+          {/* ── Addon Selector ── */}
+          {rangeValid && meetsMinimumDays && availableAddons.length > 0 && (
+            <AddonSelector
+              addons={availableAddons}
+              selectedAddonIds={selectedAddonIds}
+              onToggleAddon={toggleAddon}
+              addonAvailability={addonAvailability}
+              isLoadingAvailability={loadingAddonAvailability}
+              days={pricing?.days ?? 0}
+            />
+          )}
+
           {/* ── Summary Card ── */}
           {rangeValid && meetsMinimumDays && pricing && !loadingTiers && (
             <div className="rounded-xl border border-border bg-muted p-4">
@@ -593,17 +625,41 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
                     {(pricing.rentalSubtotalCents / 100).toFixed(2)} zł
                   </span>
                 </div>
+
+                {/* Addon line items */}
+                {addonCosts.selected.map((a) => {
+                  const isFree = !a.pricePerDay || a.pricePerDay <= 0;
+                  return (
+                    <div
+                      key={a._id}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-muted-foreground">+ {a.title}</span>
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          isFree ? "text-emerald-600" : "text-foreground",
+                        )}
+                      >
+                        {isFree
+                          ? "GRATIS"
+                          : `${((a.pricePerDay * pricing.days)).toFixed(2)} zł`}
+                      </span>
+                    </div>
+                  );
+                })}
+
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Kaucja zwrotna</span>
                   <span className="font-semibold text-foreground">
-                    {(pricing.depositCents / 100).toFixed(2)} zł
+                    {((pricing.depositCents + addonCosts.depositCents) / 100).toFixed(2)} zł
                   </span>
                 </div>
                 <div className="border-t border-border pt-2.5">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-foreground">Razem</span>
                     <span className="text-xl font-bold text-foreground">
-                      {(pricing.totalCents / 100).toFixed(2)} zł
+                      {((pricing.totalCents + addonCosts.rentalCents + addonCosts.depositCents) / 100).toFixed(2)} zł
                     </span>
                   </div>
                 </div>
@@ -654,16 +710,6 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
         </div>
       )}
 
-      {/* ── Addon Carousel ── */}
-      {availableAddons && availableAddons.length > 0 && rangeValid && (
-        <AddonCarousel
-          addons={availableAddons}
-          selectedAddonIds={selectedAddonIds}
-          onToggleAddon={toggleAddon}
-          addonAvailability={addonAvailability}
-          isLoadingAvailability={loadingAddonAvailability}
-        />
-      )}
     </div>
   );
 }

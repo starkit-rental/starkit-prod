@@ -47,7 +47,7 @@ async function getPostsSitemap(): Promise<MetadataRoute.Sitemap[]> {
 
 async function getProductsSitemap(): Promise<MetadataRoute.Sitemap[]> {
   const productsQuery = groq`
-    *[_type == 'product'] | order(orderRank) {
+    *[_type == 'product' && isAddon != true && noindex != true] | order(orderRank) {
       'url': $baseUrl + '/products/' + slug.current,
       'lastModified': _updatedAt,
       'changeFrequency': 'daily',

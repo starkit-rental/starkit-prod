@@ -17,7 +17,7 @@ import { featureCarouselQuery } from "./carousel/feature-carousel";
 import { blogCarouselQuery } from "./blog-carousel";
 
 export const allProductsQuery = groq`
-  *[_type == "product"] | order(orderRank) {
+  *[_type == "product" && isAddon != true] | order(orderRank) {
     _id,
     title,
     "slug": slug.current,
@@ -50,6 +50,7 @@ export const singleProductQuery = groq`
       title,
       "slug": slug.current,
       excerpt,
+      "description": pt::text(description),
       pricePerDay,
       deposit,
       "images": images[].asset->url,

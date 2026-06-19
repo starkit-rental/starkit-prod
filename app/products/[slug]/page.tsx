@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title,
     description,
-    robots: product.noindex ? { index: false, follow: false } : { index: true, follow: true },
+    robots: (product.noindex || product.isAddon) ? { index: false, follow: false } : { index: true, follow: true },
     alternates: { canonical: `${siteUrl}/products/${product.slug}` },
     openGraph: {
       title,
