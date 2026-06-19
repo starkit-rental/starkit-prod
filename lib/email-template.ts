@@ -224,6 +224,9 @@ export function renderSummaryBox(vars: Record<string, string>): string {
     ["Okres wynajmu:", `${vars.start_date || "—"} – ${vars.end_date || "—"}`],
     ["Łączna kwota:", vars.total_amount || "—"],
   ];
+  if (vars.product_name) {
+    rows.splice(1, 0, ["Urządzenie:", `<strong>${vars.product_name}</strong>`]);
+  }
   return infoBox("📋 Podsumowanie zamówienia", rows);
 }
 
@@ -236,6 +239,9 @@ export function renderReservationDetailsBox(vars: Record<string, string>): strin
     ["Numer zamówienia:", `<strong>${vars.order_number || "—"}</strong>`],
     ["Okres wynajmu:", `${vars.start_date || "—"} – ${vars.end_date || "—"}`],
   ];
+  if (vars.product_name) {
+    rows.splice(1, 0, ["Urządzenie:", `<strong>${vars.product_name}</strong>`]);
+  }
   if (vars.rental_days) rows.push(["Liczba dni:", `${vars.rental_days} dni`]);
   const isPickup = vars.delivery_method === "personal_pickup";
   if (isPickup) {
@@ -371,7 +377,7 @@ export function renderInstructionsBox(): string {
 
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin:20px 0">
     <tr><td style="padding:20px 24px">
-      <p style="margin:0 0 16px;font-size:15px;font-weight:700;color:${BRAND.dark}">📡 Instrukcja uruchomienia Starlink Mini</p>
+      <p style="margin:0 0 16px;font-size:15px;font-weight:700;color:${BRAND.dark}">📡 Instrukcja uruchomienia</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         ${stepsHtml}
       </table>
@@ -526,7 +532,7 @@ export function buildOrderReturnedHtml(v: OrderVars): string {
   const content = [
     heading("Dziękujemy za zwrot sprzętu", "✅"),
     subtitle(`Zamówienie ${v.order_number}, ${v.customer_name}`),
-    paragraph(`Potwierdzamy odbiór zwróconego zestawu Starlink Mini z zamówienia <strong>${v.order_number}</strong>. Sprzęt został sprawdzony i przyjęty.`),
+    paragraph(`Potwierdzamy odbiór zwróconego zestawu z zamówienia <strong>${v.order_number}</strong>. Sprzęt został sprawdzony i przyjęty.`),
     alertBox(`� <strong>Zwrot kaucji:</strong> Kaucja zostanie przetworzona ręcznie przez nasz zespół. Środki powinny pojawić się na Twoim koncie w ciągu <strong>3–5 dni roboczych</strong>. Jeśli po tym czasie nie widzisz zwrotu, napisz do nas.`, "success"),
     v.info_box_content ? alertBox(v.info_box_content, "info") : "",
     paragraph(`Dziękujemy za skorzystanie z Starkit! Mamy nadzieję, że internet Starlink spełnił Twoje oczekiwania. 🛰️`),

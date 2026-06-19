@@ -35,7 +35,7 @@ const TEMPLATES: TemplateDefinition[] = [
     infoBoxKey: "email_info_box_order_received",
     ctaTextKey: "email_cta_text_order_received",
     ctaLinkKey: "email_cta_link_order_received",
-    defaultSubject: "Otrzymaliśmy Twoją rezerwację Starlink Mini — {{order_number}}",
+    defaultSubject: "Otrzymaliśmy Twoją rezerwację — {{order_number}}",
     defaultBody: `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">📡 Dziękujemy za złożenie zamówienia!</h1>
 <p style="margin:0 0 24px;font-size:15px;color:#64748b;text-align:center">Cześć {{customer_name}}, mamy Twoje zamówienie</p>
 <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Twoja rezerwacja <strong>{{order_number}}</strong> została zarejestrowana w naszym systemie. Płatność została potwierdzona.</p>
@@ -45,7 +45,7 @@ const TEMPLATES: TemplateDefinition[] = [
 {{info_box}}
 <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Jeśli masz pytania, śmiało odpowiedz na tego maila lub napisz na <a href="mailto:wynajem@starkit.pl" style="color:#1a1a2e;font-weight:600">wynajem@starkit.pl</a>.</p>
 <p style="margin:24px 0 0;font-size:15px;color:#334155;line-height:1.65">Pozdrawiamy,<br/><strong>Zespół Starkit</strong></p>`,
-    availableVars: ["customer_name", "order_number", "start_date", "end_date", "total_amount", "summary_box", "info_box"],
+    availableVars: ["customer_name", "order_number", "start_date", "end_date", "total_amount", "product_name", "summary_box", "info_box"],
   },
   {
     id: "order_confirmed",
@@ -73,7 +73,7 @@ const TEMPLATES: TemplateDefinition[] = [
 </ul>
 <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Dziękujemy za wybór Starkit i życzymy udanego wynajmu!</p>
 <p style="margin:24px 0 0;font-size:15px;color:#334155;line-height:1.65">Pozdrawiamy,<br/><strong>Zespół Starkit</strong></p>`,
-    availableVars: ["customer_name", "order_number", "start_date", "end_date", "rental_days", "rental_price", "deposit", "total_amount", "inpost_point_id", "inpost_point_address", "reservation_details_box", "pdf_box", "financial_box", "info_box", "order_link"],
+    availableVars: ["customer_name", "order_number", "start_date", "end_date", "rental_days", "rental_price", "deposit", "total_amount", "product_name", "inpost_point_id", "inpost_point_address", "reservation_details_box", "pdf_box", "financial_box", "info_box", "order_link"],
   },
   {
     id: "order_picked_up",
@@ -87,7 +87,7 @@ const TEMPLATES: TemplateDefinition[] = [
     defaultSubject: "Sprzęt w drodze! SK-{{order_number}}",
     defaultBody: `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">🚀 Sprzęt jest już w drodze!</h1>
 <p style="margin:0 0 24px;font-size:15px;color:#64748b;text-align:center">Zamówienie {{order_number}} zostało wysłane, {{customer_name}}</p>
-<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Twój zestaw Starlink Mini został nadany i wkrótce będzie gotowy do odbioru. Poniżej znajdziesz dane punktu odbioru oraz instrukcję uruchomienia.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Twój zestaw został nadany i wkrótce będzie gotowy do odbioru. Poniżej znajdziesz dane punktu odbioru oraz instrukcję uruchomienia.</p>
 {{pickup_box}}
 {{instructions_box}}
 {{info_box}}
@@ -108,7 +108,7 @@ const TEMPLATES: TemplateDefinition[] = [
     defaultSubject: "Potwierdzenie zwrotu sprzętu SK-{{order_number}}",
     defaultBody: `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">✅ Dziękujemy za zwrot sprzętu</h1>
 <p style="margin:0 0 24px;font-size:15px;color:#64748b;text-align:center">Zamówienie {{order_number}}, {{customer_name}}</p>
-<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Potwierdzamy odbiór zwróconego zestawu Starlink Mini z zamówienia <strong>{{order_number}}</strong>. Sprzęt został sprawdzony i przyjęty.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Potwierdzamy odbiór zwróconego zestawu z zamówienia <strong>{{order_number}}</strong>. Sprzęt został sprawdzony i przyjęty.</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0">
 <tr><td style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #22c55e;border-radius:8px;padding:16px 20px">
 <p style="margin:0;font-size:14px;line-height:1.6;color:#166534">💳 <strong>Zwrot kaucji:</strong> Kaucja zostanie przetworzona ręcznie przez nasz zespół. Środki powinny pojawić się na Twoim koncie w ciągu <strong>3–5 dni roboczych</strong>. Jeśli po tym czasie nie widzisz zwrotu, napisz do nas.</p>

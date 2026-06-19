@@ -21,6 +21,7 @@ const SAMPLE_VARS: Record<string, string> = {
   rental_price: "560 zł",
   deposit: "500 zł",
   rental_days: "7",
+  product_name: "Starlink Mini",
   inpost_point_id: "KRA010",
   inpost_point_address: "ul. Floriańska 1, 31-019 Kraków",
   customer_email: "jan.kowalski@example.com",

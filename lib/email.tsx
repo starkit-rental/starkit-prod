@@ -365,6 +365,31 @@ export async function sendAndLog(opts: {
 
 export async function sendOrderReceivedEmail(params: StatusEmailParams) {
   const displayId = params.orderNumber || params.orderId;
+  const supabase = createEmailSupabaseClient();
+
+  // Fetch product names
+  let productNames = "Starlink";
+  try {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (UUID_RE.test(params.orderId)) {
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("order_items(stock_items(products(name)))")
+        .eq("id", params.orderId)
+        .maybeSingle();
+      const items = (orderData?.order_items ?? []) as any[];
+      const names = items
+        .map((it) => {
+          const stock = Array.isArray(it?.stock_items) ? it.stock_items[0] : it?.stock_items;
+          const product = Array.isArray(stock?.products) ? stock.products[0] : stock?.products;
+          return product?.name ? String(product.name) : null;
+        })
+        .filter(Boolean);
+      if (names.length > 0) productNames = names.join(", ");
+    }
+  } catch (e) {
+    console.warn("[email] Could not fetch product names for order_received:", e);
+  }
 
   const vars: Record<string, string> = {
     customer_name: params.customerName,
@@ -372,6 +397,7 @@ export async function sendOrderReceivedEmail(params: StatusEmailParams) {
     start_date: params.startDate,
     end_date: params.endDate,
     total_amount: `${params.totalAmount} zł`,
+    product_name: productNames,
   };
 
   const fallbackBody = `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">📡 Dziękujemy za złożenie zamówienia!</h1>
@@ -445,6 +471,11 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
     console.warn("[email] Could not fetch order items for PDF §2:", e);
   }
 
+  // Extract product names from already-fetched items
+  const productNames = pdfOrderItems.length > 0
+    ? pdfOrderItems.map(it => it.name).join(", ")
+    : "Starlink";
+
   const vars: Record<string, string> = {
     customer_name: params.customerName,
     order_number: displayId,
@@ -457,6 +488,7 @@ export async function sendOrderConfirmedEmail(params: ConfirmedEmailParams) {
     inpost_point_id: params.inpostPointId,
     inpost_point_address: params.inpostPointAddress,
     delivery_method: params.deliveryMethod ?? "inpost",
+    product_name: productNames,
   };
 
   const fallbackBody = `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">🎉 Mamy to! Twoja rezerwacja jest potwierdzona</h1>
@@ -675,7 +707,7 @@ export async function sendOrderPickedUpEmail(params: PickedUpEmailParams) {
     subject = `Potwierdzenie wydania sprzętu SK-${displayId}`;
     const personalBody = `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">✅ Sprzęt wydany!</h1>
 <p style="margin:0 0 24px;font-size:15px;color:#64748b;text-align:center">Zamówienie {{order_number}}, {{customer_name}}</p>
-<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Potwierdzamy wydanie zestawu Starlink Mini z zamówienia <strong>{{order_number}}</strong>. Sprzęt jest już w Twoich rękach — miłego korzystania!</p>
+<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Potwierdzamy wydanie zestawu z zamówienia <strong>{{order_number}}</strong>. Sprzęt jest już w Twoich rękach — miłego korzystania!</p>
 ${renderPersonalPickedUpBox()}
 {{instructions_box}}
 {{info_box}}
@@ -688,7 +720,7 @@ ${renderPersonalPickedUpBox()}
   } else {
     const fallbackBody = `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">🚀 Sprzęt jest już w drodze!</h1>
 <p style="margin:0 0 24px;font-size:15px;color:#64748b;text-align:center">Zamówienie {{order_number}} zostało wysłane, {{customer_name}}</p>
-<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Twój zestaw Starlink Mini został nadany i wkrótce będzie gotowy do odbioru. Poniżej znajdziesz dane punktu odbioru oraz instrukcję uruchomienia.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Twój zestaw został nadany i wkrótce będzie gotowy do odbioru. Poniżej znajdziesz dane punktu odbioru oraz instrukcję uruchomienia.</p>
 {{pickup_box}}
 {{instructions_box}}
 {{info_box}}
@@ -725,7 +757,7 @@ export async function sendOrderReturnedEmail(params: StatusEmailParams) {
 
   const fallbackBody = `<h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1a1a2e;line-height:1.3;text-align:center">✅ Dziękujemy za zwrot sprzętu</h1>
 <p style="margin:0 0 24px;font-size:15px;color:#64748b;text-align:center">Zamówienie {{order_number}}, {{customer_name}}</p>
-<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Potwierdzamy odbiór zwróconego zestawu Starlink Mini z zamówienia <strong>{{order_number}}</strong>. Sprzęt został sprawdzony i przyjęty.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.65">Potwierdzamy odbiór zwróconego zestawu z zamówienia <strong>{{order_number}}</strong>. Sprzęt został sprawdzony i przyjęty.</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0">
 <tr><td style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #22c55e;border-radius:8px;padding:16px 20px">
 <p style="margin:0;font-size:14px;line-height:1.6;color:#166534">💳 <strong>Zwrot kaucji:</strong> Kaucja zostanie przetworzona ręcznie przez nasz zespół. Środki powinny pojawić się na Twoim koncie w ciągu <strong>3–5 dni roboczych</strong>. Jeśli po tym czasie nie widzisz zwrotu, napisz do nas.</p>
