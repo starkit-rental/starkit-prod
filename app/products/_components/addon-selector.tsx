@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Check, Plus, Info, Loader2, Gift } from "lucide-react";
+import { Check, Plus, ChevronRight, Loader2, Gift } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -233,9 +233,10 @@ function AddonDetailsDialog({
         <button
           type="button"
           aria-label={`Szczegóły: ${addon.title}`}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
         >
-          <Info className="h-4 w-4" />
+          Szczegóły
+          <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
