@@ -31,6 +31,22 @@ export const allProductsQuery = groq`
   }
 `;
 
+export const allAddonsQuery = groq`
+  *[_type == "product" && isAddon == true] | order(orderRank) {
+    _id,
+    title,
+    "slug": slug.current,
+    excerpt,
+    description,
+    pricePerDay,
+    deposit,
+    "images": images[].asset->url,
+    status,
+    "category": category->title,
+    specs
+  }
+`;
+
 export const singleProductQuery = groq`
   *[_type == "product" && slug.current == $slug][0] {
     _id,

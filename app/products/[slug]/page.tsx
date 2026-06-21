@@ -288,6 +288,7 @@ export default async function ProductPage({ params }: PageProps) {
             ))}
           </div>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+            <Link href="/akcesoria" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Akcesoria do Starlink →</Link>
             <Link href="/ile-kosztuje-wynajem-starlink" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cennik wynajmu →</Link>
             <Link href="/starlink-mini-vs-standard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Mini vs Standard →</Link>
             <Link href="/jak-dziala-wynajem-starlink" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Jak działa wynajem? →</Link>
