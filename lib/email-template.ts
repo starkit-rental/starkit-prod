@@ -408,6 +408,7 @@ export interface OrderVars {
   nip?: string;
   order_url?: string;
   info_box_content?: string;
+  product_name?: string;
 }
 
 /** 1. Order Received — tuż po płatności */
@@ -589,6 +590,7 @@ export function buildAdminNotificationHtml(v: OrderVars): string {
     infoBox("👤 Klient", clientRows),
     infoBox("📦 Logistyka", [
       ["Termin:", `${v.start_date} – ${v.end_date}`],
+      ...(v.product_name ? [["Sprzęt do spakowania:", `<strong>${v.product_name}</strong>`] as [string, string]] : []),
       ...(v.inpost_point_id ? [["Paczkomat:", v.inpost_point_id] as [string, string]] : []),
       ...(v.inpost_point_address ? [["Adres:", v.inpost_point_address] as [string, string]] : []),
     ]),

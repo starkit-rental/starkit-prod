@@ -54,6 +54,13 @@ type ProductRow = {
   deposit_amount: any;
 };
 
+type AddonRow = {
+  id: string;
+  name: string | null;
+  rentalCents: number;
+  depositCents: number;
+};
+
 type InpostPointData = {
   name: string;
   address: string;
@@ -316,6 +323,7 @@ function CheckoutContent() {
   const productId = searchParams.get("productId") ?? "";
   const fromDate = searchParams.get("from") ?? "";
   const toDate = searchParams.get("to") ?? "";
+  const addonIdsParam = searchParams.get("addonIds") ?? "";
 
   // Product state
   const [product, setProduct] = useState<ProductRow | null>(null);
@@ -323,6 +331,9 @@ function CheckoutContent() {
   const [productError, setProductError] = useState<string | null>(null);
   const [pricingTiers, setPricingTiers] = useState<{ tier_days: number; multiplier: number; label?: string }[]>([]);
   const [autoIncrementMultiplier, setAutoIncrementMultiplier] = useState<number>(1.0);
+
+  // Addons state (selected accessories carried over from the rental widget)
+  const [addons, setAddons] = useState<AddonRow[]>([]);
 
   // ── Form state ──
   const [firstName, setFirstName] = useState("");
@@ -411,6 +422,66 @@ function CheckoutContent() {
     };
   }, [product?.id]);
 
+  // ── Load selected addons + compute their pricing (mirrors server logic) ──
+  useEffect(() => {
+    const ids = addonIdsParam
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (ids.length === 0 || !fromDate || !toDate) {
+      setAddons([]);
+      return;
+    }
+    let active = true;
+    (async () => {
+      const { data: prods } = await supabase
+        .from("products")
+        .select("id,name,base_price_day,deposit_amount")
+        .in("id", ids);
+      if (!active || !prods) return;
+
+      const computed: AddonRow[] = [];
+      for (const p of prods) {
+        let tiers: { tier_days: number; multiplier: number }[] = [];
+        try {
+          const res = await fetch(`/api/pricing-tiers?productId=${p.id}`);
+          const json = await res.json();
+          tiers = json?.tiers ?? [];
+        } catch {
+          tiers = [];
+        }
+        const pr = calculatePrice({
+          startDate: fromDate,
+          endDate: toDate,
+          dailyRateCents: Math.round(decimalToNumber(p.base_price_day) * 100),
+          depositCents: Math.round(decimalToNumber(p.deposit_amount) * 100),
+          pricingTiers: tiers.length > 0 ? tiers : undefined,
+          autoIncrementMultiplier: 1.0,
+        });
+        computed.push({
+          id: p.id,
+          name: p.name,
+          rentalCents: pr.rentalSubtotalCents,
+          depositCents: pr.depositCents,
+        });
+      }
+      if (active) setAddons(computed);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [addonIdsParam, fromDate, toDate, supabase]);
+
+  // ── Addon cost aggregates ──
+  const addonRentalCents = useMemo(
+    () => addons.reduce((s, a) => s + a.rentalCents, 0),
+    [addons],
+  );
+  const addonDepositCents = useMemo(
+    () => addons.reduce((s, a) => s + a.depositCents, 0),
+    [addons],
+  );
+
   // ── Pricing ──
   const pricing = useMemo(() => {
     if (!product || !fromDate || !toDate) return null;
@@ -462,6 +533,7 @@ function CheckoutContent() {
           productId: product.id,
           startDate: fromDate,
           endDate: toDate,
+          ...(addonIdsParam ? { addonIds: addonIdsParam } : {}),
           customerEmail: email.trim(),
           customerName: `${firstName.trim()} ${lastName.trim()}`,
           customerPhone: phone.trim(),
@@ -954,10 +1026,31 @@ function CheckoutContent() {
                       {(pricing.rentalSubtotalCents / 100).toFixed(2)} zł
                     </span>
                   </div>
+
+                  {/* Addon line items */}
+                  {addons.map((a) => {
+                    const isFree = a.rentalCents <= 0;
+                    return (
+                      <div key={a.id} className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          + {a.name || "Akcesorium"}
+                        </span>
+                        <span
+                          className={cn(
+                            "font-semibold",
+                            isFree ? "text-emerald-600" : "text-foreground",
+                          )}
+                        >
+                          {isFree ? "GRATIS" : `${(a.rentalCents / 100).toFixed(2)} zł`}
+                        </span>
+                      </div>
+                    );
+                  })}
+
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Kaucja zwrotna</span>
                     <span className="font-semibold text-foreground">
-                      {(pricing.depositCents / 100).toFixed(2)} zł
+                      {((pricing.depositCents + addonDepositCents) / 100).toFixed(2)} zł
                     </span>
                   </div>
                   <div className="border-t border-border pt-3">
@@ -966,7 +1059,7 @@ function CheckoutContent() {
                         Kwota do zapłaty
                       </span>
                       <span className="text-xl font-bold text-foreground">
-                        {(pricing.totalCents / 100).toFixed(2)} zł
+                        {((pricing.totalCents + addonRentalCents + addonDepositCents) / 100).toFixed(2)} zł
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">

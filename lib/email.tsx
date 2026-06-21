@@ -844,6 +844,30 @@ export async function sendAdminNotificationEmail(params: AdminEmailParams) {
   const displayId = params.orderNumber || params.orderId.substring(0, 8);
   const orderUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl"}/office/orders/${params.orderId}`;
 
+  // Fetch product + addon names so the team knows what to pack
+  let productNames = "";
+  try {
+    if (UUID_RE.test(params.orderId)) {
+      const supabase = createEmailSupabaseClient();
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("order_items(stock_items(products(name)))")
+        .eq("id", params.orderId)
+        .maybeSingle();
+      const items = (orderData?.order_items ?? []) as any[];
+      const names = items
+        .map((it) => {
+          const stock = Array.isArray(it?.stock_items) ? it.stock_items[0] : it?.stock_items;
+          const product = Array.isArray(stock?.products) ? stock.products[0] : stock?.products;
+          return product?.name ? String(product.name) : null;
+        })
+        .filter(Boolean);
+      productNames = names.join(", ");
+    }
+  } catch (e) {
+    console.warn("[email] Could not fetch product names for admin notification:", e);
+  }
+
   const vars: OrderVars = {
     customer_name: params.customerName,
     order_number: displayId,
@@ -857,6 +881,7 @@ export async function sendAdminNotificationEmail(params: AdminEmailParams) {
     nip: params.nip,
     inpost_point_id: params.inpostCode,
     order_url: orderUrl,
+    ...(productNames ? { product_name: productNames } : {}),
   };
 
   const subject = `Nowe zamówienie SK-${displayId} od ${params.customerName} 💸`;

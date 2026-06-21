@@ -299,8 +299,64 @@ export async function POST(req: Request) {
       body.successUrl ?? `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = body.cancelUrl ?? `${siteUrl}/checkout/cancel`;
 
-    const totalRentalDecimal = pricing.rentalSubtotalCents / 100;
-    const totalDepositDecimal = pricing.depositCents / 100;
+    // Pre-compute addon pricing so it can be reflected in BOTH the order totals
+    // (DB / emails / panel) and the Stripe line items — keeping them in sync.
+    type AddonLine = {
+      productId: string;
+      stockItemId: string;
+      name: string;
+      rentalCents: number;
+      depositCents: number;
+    };
+    const addonLines: AddonLine[] = [];
+    let addonRentalCentsTotal = 0;
+    let addonDepositCentsTotal = 0;
+
+    for (const addon of addonStockAssignments) {
+      const { data: addonProduct } = await supabase
+        .from("products")
+        .select("id,name,base_price_day,deposit_amount")
+        .eq("id", addon.productId)
+        .maybeSingle();
+
+      if (!addonProduct) continue;
+
+      const addonDailyRateCents = decimalToCents((addonProduct as any).base_price_day);
+      const addonDepositCents = decimalToCents((addonProduct as any).deposit_amount);
+
+      const { data: addonTiersData } = await supabase
+        .from("pricing_tiers")
+        .select("tier_days,multiplier")
+        .eq("product_id", addon.productId)
+        .order("tier_days", { ascending: true });
+
+      const addonPricingTiers = (addonTiersData ?? []) as {
+        tier_days: number;
+        multiplier: number;
+      }[];
+
+      const addonPricing = calculatePrice({
+        startDate,
+        endDate,
+        dailyRateCents: addonDailyRateCents,
+        depositCents: addonDepositCents,
+        pricingTiers: addonPricingTiers.length > 0 ? addonPricingTiers : undefined,
+        autoIncrementMultiplier: 1.0,
+      });
+
+      addonLines.push({
+        productId: addon.productId,
+        stockItemId: addon.stockItemId,
+        name: (addonProduct as any).name ? String((addonProduct as any).name) : "Dodatek",
+        rentalCents: addonPricing.rentalSubtotalCents,
+        depositCents: addonPricing.depositCents,
+      });
+      addonRentalCentsTotal += addonPricing.rentalSubtotalCents;
+      addonDepositCentsTotal += addonPricing.depositCents;
+    }
+
+    const totalRentalDecimal = (pricing.rentalSubtotalCents + addonRentalCentsTotal) / 100;
+    const totalDepositDecimal = (pricing.depositCents + addonDepositCentsTotal) / 100;
 
     const orderPayload: Record<string, unknown> = {
       customer_id: customerId,
@@ -390,69 +446,35 @@ export async function POST(req: Request) {
       },
     });
 
-    // Add addon line items to Stripe session
-    if (addonStockAssignments.length > 0) {
-      for (const addon of addonStockAssignments) {
-        // Fetch addon product details
-        const { data: addonProduct } = await supabase
-          .from("products")
-          .select("id,name,base_price_day,deposit_amount")
-          .eq("id", addon.productId)
-          .maybeSingle();
-
-        if (!addonProduct) continue;
-
-        const addonDailyRateCents = decimalToCents((addonProduct as any).base_price_day);
-        const addonDepositCents = decimalToCents((addonProduct as any).deposit_amount);
-
-        // Fetch addon pricing tiers
-        const { data: addonTiersData } = await supabase
-          .from("pricing_tiers")
-          .select("tier_days,multiplier")
-          .eq("product_id", addon.productId)
-          .order("tier_days", { ascending: true });
-
-        const addonPricingTiers = (addonTiersData ?? []) as { tier_days: number; multiplier: number }[];
-
-        // Calculate addon pricing
-        const addonPricing = calculatePrice({
-          startDate,
-          endDate,
-          dailyRateCents: addonDailyRateCents,
-          depositCents: addonDepositCents,
-          pricingTiers: addonPricingTiers.length > 0 ? addonPricingTiers : undefined,
-          autoIncrementMultiplier: 1.0,
+    // Add addon line items to Stripe session — reuse the pricing computed
+    // earlier (addonLines) so Stripe charges exactly match the order totals.
+    for (const addonLine of addonLines) {
+      // Add addon rental line item
+      if (addonLine.rentalCents > 0) {
+        sessionParams.line_items!.push({
+          price_data: {
+            currency: currency || "pln",
+            product_data: {
+              name: `${addonLine.name} (dodatek)`,
+            },
+            unit_amount: addonLine.rentalCents,
+          },
+          quantity: 1,
         });
+      }
 
-        const addonName = (addonProduct as any).name ? String((addonProduct as any).name) : "Dodatek";
-
-        // Add addon rental line item
-        if (addonPricing.rentalSubtotalCents > 0) {
-          sessionParams.line_items!.push({
-            price_data: {
-              currency: currency || "pln",
-              product_data: {
-                name: `${addonName} (dodatek)`,
-              },
-              unit_amount: addonPricing.rentalSubtotalCents,
+      // Add addon deposit line item (if any)
+      if (addonLine.depositCents > 0) {
+        sessionParams.line_items!.push({
+          price_data: {
+            currency: currency || "pln",
+            product_data: {
+              name: `${addonLine.name} — kaucja`,
             },
-            quantity: 1,
-          });
-        }
-
-        // Add addon deposit line item (if any)
-        if (addonPricing.depositCents > 0) {
-          sessionParams.line_items!.push({
-            price_data: {
-              currency: currency || "pln",
-              product_data: {
-                name: `${addonName} — kaucja`,
-              },
-              unit_amount: addonPricing.depositCents,
-            },
-            quantity: 1,
-          });
-        }
+            unit_amount: addonLine.depositCents,
+          },
+          quantity: 1,
+        });
       }
     }
 
