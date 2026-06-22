@@ -123,6 +123,8 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
   const [loadingAddonAvailability, setLoadingAddonAvailability] = useState(false);
   // Maps Sanity addon _id -> Supabase product id (captured during availability check)
   const [addonSupabaseIds, setAddonSupabaseIds] = useState<Record<string, string>>({});
+  // Maps Supabase product id -> pricing tiers (captured during availability check)
+  const [addonTiers, setAddonTiers] = useState<Record<string, { tier_days: number; multiplier: number }[]>>({});
 
   // ── Load product ──
   useEffect(() => {
@@ -309,22 +311,32 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
 
   // ── Calculate addon costs (live) ──
   const addonCosts = useMemo(() => {
-    const days = pricing?.days ?? 0;
+    if (!startDate || !endDate) {
+      return { selected: [], rentalCents: 0, depositCents: 0 };
+    }
     const selected = availableAddons.filter(
       (a) =>
         selectedAddonIds.has(a._id) &&
         addonAvailability[a._id]?.available !== false,
     );
-    const rentalCents = selected.reduce(
-      (sum, a) => sum + Math.round((a.pricePerDay || 0) * 100) * days,
-      0,
-    );
-    const depositCents = selected.reduce(
-      (sum, a) => sum + Math.round((a.deposit || 0) * 100),
-      0,
-    );
+    let rentalCents = 0;
+    let depositCents = 0;
+    for (const addon of selected) {
+      const supabaseId = addonSupabaseIds[addon._id];
+      const tiers = supabaseId ? addonTiers[supabaseId] ?? [] : [];
+      const pr = calculatePrice({
+        startDate,
+        endDate,
+        dailyRateCents: Math.round((addon.pricePerDay || 0) * 100),
+        depositCents: Math.round((addon.deposit || 0) * 100),
+        pricingTiers: tiers.length > 0 ? tiers : undefined,
+        autoIncrementMultiplier: 1.0,
+      });
+      rentalCents += pr.rentalSubtotalCents;
+      depositCents += pr.depositCents;
+    }
     return { selected, rentalCents, depositCents };
-  }, [availableAddons, selectedAddonIds, addonAvailability, pricing]);
+  }, [availableAddons, selectedAddonIds, addonAvailability, startDate, endDate, addonSupabaseIds, addonTiers]);
 
   // ── Auto-check availability ──
   useEffect(() => {
@@ -382,15 +394,38 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
       setLoadingAddonAvailability(true);
       const results: Record<string, { available: boolean; reason?: string; notConfigured?: boolean }> = {};
       const idMap: Record<string, string> = {};
+      const tiersMap: Record<string, { tier_days: number; multiplier: number }[]> = {};
+
+      // Fetch all addon products first
+      const addonSlugs = availableAddons.map(a => a.slug);
+      const { data: addonProducts } = await supabase
+        .from("products")
+        .select("id,sanity_slug")
+        .in("sanity_slug", addonSlugs);
+
+      if (!addonProducts || addonProducts.length === 0) {
+        setLoadingAddonAvailability(false);
+        return;
+      }
+
+      // Fetch pricing tiers for all addon products
+      const addonProductIds = addonProducts.map(p => p.id);
+      const { data: allTiers } = await supabase
+        .from("pricing_tiers")
+        .select("product_id,tier_days,multiplier")
+        .in("product_id", addonProductIds)
+        .order("tier_days", { ascending: true });
+
+      // Group tiers by product_id
+      for (const tier of allTiers ?? []) {
+        const pid = String(tier.product_id);
+        if (!tiersMap[pid]) tiersMap[pid] = [];
+        tiersMap[pid].push({ tier_days: tier.tier_days, multiplier: tier.multiplier });
+      }
 
       for (const addon of availableAddons) {
         try {
-          // Get product_id from Supabase by sanity slug
-          const { data: addonProduct } = await supabase
-            .from("products")
-            .select("id")
-            .eq("sanity_slug", addon.slug)
-            .maybeSingle();
+          const addonProduct = addonProducts?.find(p => p.sanity_slug === addon.slug);
 
           if (!addonProduct?.id) {
             results[addon._id] = { available: false, reason: "Produkt nie znaleziony", notConfigured: true };
@@ -430,6 +465,7 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
 
       setAddonAvailability(results);
       setAddonSupabaseIds(idMap);
+      setAddonTiers(tiersMap);
       setLoadingAddonAvailability(false);
     }
 
@@ -643,7 +679,17 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
 
                 {/* Addon line items */}
                 {addonCosts.selected.map((a) => {
-                  const isFree = !a.pricePerDay || a.pricePerDay <= 0;
+                  const supabaseId = addonSupabaseIds[a._id];
+                  const tiers = supabaseId ? addonTiers[supabaseId] ?? [] : [];
+                  const pr = calculatePrice({
+                    startDate,
+                    endDate,
+                    dailyRateCents: Math.round((a.pricePerDay || 0) * 100),
+                    depositCents: Math.round((a.deposit || 0) * 100),
+                    pricingTiers: tiers.length > 0 ? tiers : undefined,
+                    autoIncrementMultiplier: 1.0,
+                  });
+                  const isFree = pr.rentalSubtotalCents <= 0;
                   return (
                     <div
                       key={a._id}
@@ -658,7 +704,7 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
                       >
                         {isFree
                           ? "GRATIS"
-                          : `${((a.pricePerDay * pricing.days)).toFixed(2)} zł`}
+                          : `${(pr.rentalSubtotalCents / 100).toFixed(2)} zł`}
                       </span>
                     </div>
                   );

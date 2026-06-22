@@ -434,22 +434,35 @@ function CheckoutContent() {
     }
     let active = true;
     (async () => {
-      const { data: prods } = await supabase
-        .from("products")
-        .select("id,name,base_price_day,deposit_amount")
-        .in("id", ids);
+      // Fetch products and all their pricing tiers in parallel (single query)
+      const [{ data: prods }, { data: allTiers }] = await Promise.all([
+        supabase
+          .from("products")
+          .select("id,name,base_price_day,deposit_amount")
+          .in("id", ids),
+        supabase
+          .from("pricing_tiers")
+          .select("product_id,tier_days,multiplier")
+          .in("product_id", ids)
+          .order("tier_days", { ascending: true }),
+      ]);
       if (!active || !prods) return;
+
+      // Group tiers by product_id
+      const tiersByProduct = new Map<string, { tier_days: number; multiplier: number }[]>();
+      for (const tier of allTiers ?? []) {
+        if (!tiersByProduct.has(tier.product_id)) {
+          tiersByProduct.set(tier.product_id, []);
+        }
+        tiersByProduct.get(tier.product_id)!.push({
+          tier_days: tier.tier_days,
+          multiplier: tier.multiplier,
+        });
+      }
 
       const computed: AddonRow[] = [];
       for (const p of prods) {
-        let tiers: { tier_days: number; multiplier: number }[] = [];
-        try {
-          const res = await fetch(`/api/pricing-tiers?productId=${p.id}`);
-          const json = await res.json();
-          tiers = json?.tiers ?? [];
-        } catch {
-          tiers = [];
-        }
+        const tiers = tiersByProduct.get(String(p.id)) ?? [];
         const pr = calculatePrice({
           startDate: fromDate,
           endDate: toDate,
