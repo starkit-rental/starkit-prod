@@ -292,8 +292,8 @@ export default function OfficeDashboardPage() {
       if (!ACTIVE_DISPATCH_STATUSES.has(status)) continue;
 
       const info = getDispatchInfo(order, today);
-      // Keep overdue + the next three days (today, tomorrow, day after).
-      if (info.daysUntil > 2) continue;
+      // Keep overdue + the next 7 days.
+      if (info.daysUntil > 6) continue;
 
       const customer = Array.isArray(order.customers) ? order.customers[0] : order.customers;
       const productNames = Array.from(
@@ -317,7 +317,11 @@ export default function OfficeDashboardPage() {
       overdue: items.filter((i) => i.info.daysUntil < 0),
       today: items.filter((i) => i.info.daysUntil === 0),
       tomorrow: items.filter((i) => i.info.daysUntil === 1),
-      dayAfter: items.filter((i) => i.info.daysUntil === 2),
+      day2: items.filter((i) => i.info.daysUntil === 2),
+      day3: items.filter((i) => i.info.daysUntil === 3),
+      day4: items.filter((i) => i.info.daysUntil === 4),
+      day5: items.filter((i) => i.info.daysUntil === 5),
+      day6: items.filter((i) => i.info.daysUntil === 6),
       total: items.length,
     };
   }, [orders, stockItemNameById]);
@@ -418,7 +422,11 @@ export default function OfficeDashboardPage() {
                     { key: "overdue", items: dispatch.overdue, label: "Zaległe — wyślij natychmiast", icon: AlertTriangle, headerCls: "bg-red-100 text-red-700" },
                     { key: "today", items: dispatch.today, label: "Dziś", icon: Send, headerCls: "bg-red-100 text-red-700" },
                     { key: "tomorrow", items: dispatch.tomorrow, label: "Jutro", icon: Send, headerCls: "bg-amber-100 text-amber-700" },
-                    { key: "dayAfter", items: dispatch.dayAfter, label: "Pojutrze", icon: Send, headerCls: "bg-slate-100 text-slate-600" },
+                    { key: "day2", items: dispatch.day2, label: "Za 2 dni", icon: Send, headerCls: "bg-blue-100 text-blue-700" },
+                    { key: "day3", items: dispatch.day3, label: "Za 3 dni", icon: Send, headerCls: "bg-slate-100 text-slate-600" },
+                    { key: "day4", items: dispatch.day4, label: "Za 4 dni", icon: Send, headerCls: "bg-slate-100 text-slate-600" },
+                    { key: "day5", items: dispatch.day5, label: "Za 5 dni", icon: Send, headerCls: "bg-slate-100 text-slate-600" },
+                    { key: "day6", items: dispatch.day6, label: "Za 6 dni", icon: Send, headerCls: "bg-slate-100 text-slate-600" },
                   ].map((group) => {
                     if (group.items.length === 0) return null;
                     const GroupIcon = group.icon;
