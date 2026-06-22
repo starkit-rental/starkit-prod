@@ -121,6 +121,8 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
   const [selectedAddonIds, setSelectedAddonIds] = useState<Set<string>>(new Set());
   const [addonAvailability, setAddonAvailability] = useState<Record<string, { available: boolean; reason?: string; notConfigured?: boolean }>>({});
   const [loadingAddonAvailability, setLoadingAddonAvailability] = useState(false);
+  // Maps Sanity addon _id -> Supabase product id (captured during availability check)
+  const [addonSupabaseIds, setAddonSupabaseIds] = useState<Record<string, string>>({});
 
   // ── Load product ──
   useEffect(() => {
@@ -379,6 +381,7 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
     async function checkAddons() {
       setLoadingAddonAvailability(true);
       const results: Record<string, { available: boolean; reason?: string; notConfigured?: boolean }> = {};
+      const idMap: Record<string, string> = {};
 
       for (const addon of availableAddons) {
         try {
@@ -393,6 +396,9 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
             results[addon._id] = { available: false, reason: "Produkt nie znaleziony", notConfigured: true };
             continue;
           }
+
+          // Remember the resolved Supabase id so checkout receives the correct id
+          idMap[addon._id] = String(addonProduct.id);
 
           // Check availability
           const res = await fetch("/api/check-availability", {
@@ -423,6 +429,7 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
       }
 
       setAddonAvailability(results);
+      setAddonSupabaseIds(idMap);
       setLoadingAddonAvailability(false);
     }
 
@@ -460,12 +467,20 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
       from: startDate,
       to: endDate,
     });
-    
-    // Add selected addon IDs
+
+    // Map selected Sanity addon _ids to their resolved Supabase product ids.
+    // This map is captured during the availability check, guaranteeing the
+    // exact ids that were verified available are the ones sent to checkout.
     if (selectedAddonIds.size > 0) {
-      params.set('addonIds', Array.from(selectedAddonIds).join(','));
+      const supabaseIds = Array.from(selectedAddonIds)
+        .map((sanityId) => addonSupabaseIds[sanityId])
+        .filter(Boolean);
+
+      if (supabaseIds.length > 0) {
+        params.set("addonIds", supabaseIds.join(","));
+      }
     }
-    
+
     window.location.href = `/checkout?${params.toString()}`;
   }
 

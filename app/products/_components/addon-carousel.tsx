@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { Check, Plus, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -182,14 +181,6 @@ function AddonCard({
               )}
             </Button>
           )}
-
-          {/* Link to product page */}
-          <Link
-            href={`/products/${addon.slug}`}
-            className="block text-center text-sm text-blue-600 hover:underline py-1"
-          >
-            Zobacz więcej →
-          </Link>
         </div>
       </div>
     </div>

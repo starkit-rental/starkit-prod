@@ -139,7 +139,7 @@ function AddonRow({
         disabled={disabled}
         aria-pressed={isSelected}
         className={cn(
-          "flex flex-1 items-center gap-3 text-left focus:outline-none",
+          "flex min-w-0 flex-1 items-center gap-3 text-left focus:outline-none",
           disabled ? "cursor-not-allowed" : "cursor-pointer",
         )}
       >
@@ -233,7 +233,7 @@ function AddonDetailsDialog({
         <button
           type="button"
           aria-label={`Szczegóły: ${addon.title}`}
-          className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+          className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10 sm:px-2"
         >
           Szczegóły
           <ChevronRight className="h-3.5 w-3.5" />
