@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { addDays, addMonths, format, isAfter, isBefore, parseISO, startOfDay, isPast } from "date-fns";
+import { addDays, addMonths, format, isAfter, isBefore, parseISO, startOfDay, isPast, differenceInCalendarDays } from "date-fns";
 import { pl } from "date-fns/locale";
-import { CalendarDays, Plus, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
+import { CalendarDays, Plus, ChevronLeft, ChevronRight, Filter, X, Truck, Store, AlertTriangle, Package, ArrowRight, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { moneyPln } from "@/lib/order-helpers";
+import { moneyPln, shortOrderNumber } from "@/lib/order-helpers";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Tooltip,
@@ -51,13 +51,18 @@ type OrderRow = {
   order_status: string | null;
   total_rental_price: unknown;
   total_deposit: unknown;
+  delivery_method: string | null;
+  inpost_point_id: string | null;
+  inpost_point_address: string | null;
   order_items?: Array<{ stock_item_id: string }>;
   customers?: {
     full_name: string | null;
     email: string | null;
+    phone: string | null;
   } | Array<{
     full_name: string | null;
     email: string | null;
+    phone: string | null;
   }> | null;
 };
 
@@ -76,8 +81,56 @@ function clampToDate(date: Date): Date {
   return startOfDay(date);
 }
 
+// ── Dispatch ("Wkrótce do wysłania") helpers ─────────────────
+// Orders that still need to leave the warehouse before the rental starts.
+const ACTIVE_DISPATCH_STATUSES = new Set(["pending", "reserved", "ready_for_pickup"]);
+
+function isWeekend(d: Date): boolean {
+  const day = d.getDay();
+  return day === 0 || day === 6; // Sunday or Saturday
+}
+
+function previousBusinessDay(d: Date): Date {
+  let result = d;
+  while (isWeekend(result)) {
+    result = addDays(result, -1);
+  }
+  return result;
+}
+
+type DispatchInfo = {
+  isPickup: boolean;
+  actionDate: Date; // ship-by date (InPost) or pickup date (personal)
+  daysUntil: number; // calendar days from today to actionDate
+  weekendDelivery: boolean; // rental starts on a weekend
+};
+
+function getDispatchInfo(order: OrderRow, today: Date): DispatchInfo {
+  const start = startOfDay(parseISO(order.start_date));
+  const isPickup = order.delivery_method === "personal_pickup";
+  const weekendDelivery = isWeekend(start);
+
+  let actionDate: Date;
+  if (isPickup) {
+    // Customer comes in person on the rental start date — nothing to ship.
+    actionDate = start;
+  } else {
+    // Ship one day before the rental starts (transit), but couriers don't
+    // collect from parcel lockers on weekends — move to the previous business day.
+    actionDate = previousBusinessDay(addDays(start, -1));
+  }
+
+  return {
+    isPickup,
+    actionDate,
+    daysUntil: differenceInCalendarDays(actionDate, today),
+    weekendDelivery,
+  };
+}
+
 export default function OfficeDashboardPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +177,7 @@ export default function OfficeDashboardPage() {
 
     const { data: ordersData, error: ordersError } = await supabase
       .from("orders")
-      .select("id,order_number,start_date,end_date,payment_status,order_status,total_rental_price,total_deposit,order_items(stock_item_id),customers:customer_id(full_name,email)")
+      .select("id,order_number,start_date,end_date,payment_status,order_status,total_rental_price,total_deposit,delivery_method,inpost_point_id,inpost_point_address,order_items(stock_item_id),customers:customer_id(full_name,email,phone)")
       .not("order_status", "eq", "cancelled")
       .order("start_date", { ascending: true });
 
@@ -212,6 +265,63 @@ export default function OfficeDashboardPage() {
     return { active, pending, revenue, depositsToReturn };
   }, [orders]);
 
+  // Map stock item id -> product name, so we can label dispatch cards.
+  const stockItemNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const si of stockItems) {
+      const product = Array.isArray(si.products) ? si.products[0] : si.products;
+      if (product?.name) map.set(si.id, product.name);
+    }
+    return map;
+  }, [stockItems]);
+
+  // ── "Wkrótce do wysłania": orders to ship / hand over in the next 3 days ──
+  const dispatch = useMemo(() => {
+    const today = startOfDay(new Date());
+
+    type DispatchItem = {
+      order: OrderRow;
+      info: DispatchInfo;
+      customerName: string;
+      products: string;
+    };
+
+    const items: DispatchItem[] = [];
+    for (const order of orders) {
+      const status = String(order.order_status ?? "").toLowerCase();
+      if (!ACTIVE_DISPATCH_STATUSES.has(status)) continue;
+
+      const info = getDispatchInfo(order, today);
+      // Keep overdue + the next three days (today, tomorrow, day after).
+      if (info.daysUntil > 2) continue;
+
+      const customer = Array.isArray(order.customers) ? order.customers[0] : order.customers;
+      const productNames = Array.from(
+        new Set((order.order_items ?? []).map((it) => stockItemNameById.get(it.stock_item_id)).filter(Boolean) as string[])
+      );
+
+      items.push({
+        order,
+        info,
+        customerName: customer?.full_name?.trim() || customer?.email || "Klient",
+        products: productNames.join(", "),
+      });
+    }
+
+    items.sort((a, b) => {
+      if (a.info.daysUntil !== b.info.daysUntil) return a.info.daysUntil - b.info.daysUntil;
+      return a.order.start_date.localeCompare(b.order.start_date);
+    });
+
+    return {
+      overdue: items.filter((i) => i.info.daysUntil < 0),
+      today: items.filter((i) => i.info.daysUntil === 0),
+      tomorrow: items.filter((i) => i.info.daysUntil === 1),
+      dayAfter: items.filter((i) => i.info.daysUntil === 2),
+      total: items.length,
+    };
+  }, [orders, stockItemNameById]);
+
   return (
     <div className="flex flex-col gap-6">
       {/* Page Header */}
@@ -282,6 +392,61 @@ export default function OfficeDashboardPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Wkrótce do wysłania */}
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader className="pb-2 px-4 pt-4 border-b border-slate-100">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <Send className="h-4 w-4 text-indigo-600" />
+                  Wkrótce do wysłania
+                </CardTitle>
+                {dispatch.total > 0 && (
+                  <Badge variant="secondary">{dispatch.total}</Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              {dispatch.total === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <Package className="h-8 w-8 text-slate-300 mb-2" />
+                  <p className="text-sm text-slate-500">Brak wysyłek i odbiorów na najbliższe dni 🎉</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {[
+                    { key: "overdue", items: dispatch.overdue, label: "Zaległe — wyślij natychmiast", icon: AlertTriangle, headerCls: "bg-red-100 text-red-700" },
+                    { key: "today", items: dispatch.today, label: "Dziś", icon: Send, headerCls: "bg-red-100 text-red-700" },
+                    { key: "tomorrow", items: dispatch.tomorrow, label: "Jutro", icon: Send, headerCls: "bg-amber-100 text-amber-700" },
+                    { key: "dayAfter", items: dispatch.dayAfter, label: "Pojutrze", icon: Send, headerCls: "bg-slate-100 text-slate-600" },
+                  ].map((group) => {
+                    if (group.items.length === 0) return null;
+                    const GroupIcon = group.icon;
+                    return (
+                      <div key={group.key}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold", group.headerCls)}>
+                            <GroupIcon className="h-3.5 w-3.5" />
+                            {group.label}
+                          </span>
+                          <span className="text-xs text-slate-400">{group.items.length}</span>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {group.items.map((item) => (
+                            <DispatchCard
+                              key={item.order.id}
+                              item={item}
+                              onOpen={() => router.push(`/office/orders/${item.order.id}`)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Product Filter */}
           <Card className="bg-white border-slate-200 shadow-sm">
@@ -620,5 +785,74 @@ function getCellData(dayIso: string, orders: OrderRow[], bufferBefore: number, b
   }
 
   return { state: "none", order: null };
+}
+
+type DispatchCardItem = {
+  order: OrderRow;
+  info: DispatchInfo;
+  customerName: string;
+  products: string;
+};
+
+function DispatchCard({ item, onOpen }: { item: DispatchCardItem; onOpen: () => void }) {
+  const { order, info, customerName, products } = item;
+  const Icon = info.isPickup ? Store : Truck;
+  const start = parseISO(order.start_date);
+  const orderNumber = order.order_number || `#${shortOrderNumber(order.id)}`;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group flex w-full items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50/40"
+    >
+      <div
+        className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+          info.isPickup ? "bg-violet-50 text-violet-600" : "bg-sky-50 text-sky-600"
+        )}
+      >
+        <Icon className="h-4.5 w-4.5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="truncate text-sm font-semibold text-slate-900">{customerName}</span>
+          <span className="shrink-0 text-[11px] font-medium text-slate-400">{orderNumber}</span>
+        </div>
+        {products && <p className="truncate text-xs text-slate-500">{products}</p>}
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {info.isPickup ? (
+            <span className="inline-flex items-center gap-1 rounded-md bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700">
+              🏪 Odbiór osobisty
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-md bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700">
+              📦 InPost
+            </span>
+          )}
+          {info.weekendDelivery && !info.isPickup && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+              Dostawa w weekend
+            </span>
+          )}
+        </div>
+        <p className="mt-1.5 text-xs text-slate-600">
+          {info.isPickup ? (
+            <>
+              Odbiór:{" "}
+              <span className="font-semibold text-slate-900">{format(start, "EEEE, d MMM", { locale: pl })}</span>
+            </>
+          ) : (
+            <>
+              Wyślij:{" "}
+              <span className="font-semibold text-slate-900">{format(info.actionDate, "EEEE, d MMM", { locale: pl })}</span>
+              <span className="text-slate-400"> · dostawa {format(start, "EEE, d MMM", { locale: pl })}</span>
+            </>
+          )}
+        </p>
+      </div>
+      <ArrowRight className="h-4 w-4 shrink-0 self-center text-slate-300 transition-colors group-hover:text-indigo-500" />
+    </button>
+  );
 }
 
