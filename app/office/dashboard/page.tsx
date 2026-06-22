@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { addDays, addMonths, format, isAfter, isBefore, parseISO, startOfDay, isPast } from "date-fns";
 import { pl } from "date-fns/locale";
 import { CalendarDays, Plus, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
@@ -99,12 +100,12 @@ export default function OfficeDashboardPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const daysCount = isMobile ? 7 : 30;
+  const daysCount = 30;
   const days = useMemo(() => rangeDays(viewStart, daysCount), [viewStart, daysCount]);
 
   const goToToday = () => setViewStart(clampToDate(new Date()));
-  const goToPrev = () => setViewStart(prev => clampToDate(isMobile ? addDays(prev, -7) : addMonths(prev, -1)));
-  const goToNext = () => setViewStart(prev => clampToDate(isMobile ? addDays(prev, 7) : addMonths(prev, 1)));
+  const goToPrev = () => setViewStart(prev => clampToDate(addMonths(prev, -1)));
+  const goToNext = () => setViewStart(prev => clampToDate(addMonths(prev, 1)));
 
   async function load() {
     setLoading(true);
@@ -398,7 +399,7 @@ export default function OfficeDashboardPage() {
             <CardContent className="p-0">
               <ScrollArea className="w-full">
                 <div className="min-w-max">
-                  <div className="grid" style={{ gridTemplateColumns: `${isMobile ? '140px' : '280px'} repeat(${days.length}, ${isMobile ? '48px' : '48px'})` }}>
+                  <div className="grid" style={{ gridTemplateColumns: `${isMobile ? '200px' : '280px'} repeat(${days.length}, ${isMobile ? '48px' : '48px'})` }}>
                     <div className={cn(
                       "sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 font-bold uppercase tracking-wide text-slate-600",
                       isMobile ? "p-2 text-[10px]" : "p-3 text-xs"
@@ -476,8 +477,8 @@ function TimelineRow(props: {
         isMobile ? "p-2" : "p-3"
       )}>
         <div className={cn(
-          "truncate font-medium text-slate-700 leading-tight",
-          isMobile ? "text-[11px]" : "text-xs"
+          "font-medium text-slate-700 leading-tight",
+          isMobile ? "text-[11px] whitespace-normal break-words" : "text-xs truncate"
         )}>
           {label}
         </div>
@@ -505,6 +506,8 @@ function TimelineCell(props: {
 }) {
   const { cellData, isMobile } = props;
   const { state, order } = cellData;
+  const router = useRouter();
+  const [tooltipOpen, setTooltipOpen] = useState(false);
 
   const baseClasses = "border-b border-slate-200 transition-all hover:opacity-80";
   
@@ -516,7 +519,14 @@ function TimelineCell(props: {
   }[state];
 
   const cellContent = (
-    <div className={cn(baseClasses, stateClasses, isMobile ? "h-10" : "h-10")} />
+    <div 
+      className={cn(baseClasses, stateClasses, isMobile ? "h-10" : "h-10", state !== "none" && isMobile && "cursor-pointer")} 
+      onClick={() => {
+        if (isMobile && state !== "none" && order) {
+          setTooltipOpen(!tooltipOpen);
+        }
+      }}
+    />
   );
 
   if (state === "none" || !order) {
@@ -540,14 +550,19 @@ function TimelineCell(props: {
     overdue: "Przeterminowane",
   }[state];
 
+  const handleOrderClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/office/orders/${order.id}`);
+  };
+
   return (
     <TooltipProvider delayDuration={100}>
-      <Tooltip>
+      <Tooltip open={isMobile ? tooltipOpen : undefined} onOpenChange={isMobile ? setTooltipOpen : undefined}>
         <TooltipTrigger asChild>
           {cellContent}
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
-          <div className="space-y-1">
+          <div className="space-y-2">
             <div className="font-semibold text-xs">{stateLabel}</div>
             <div className="text-xs space-y-0.5">
               <div><span className="text-slate-400">Klient:</span> {customerName}</div>
@@ -557,6 +572,12 @@ function TimelineCell(props: {
                 {format(parseISO(order.start_date), 'dd.MM')} - {format(parseISO(order.end_date), 'dd.MM')}
               </div>
             </div>
+            <button
+              onClick={handleOrderClick}
+              className="w-full mt-2 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded transition-colors"
+            >
+              Zobacz zamówienie
+            </button>
           </div>
         </TooltipContent>
       </Tooltip>
