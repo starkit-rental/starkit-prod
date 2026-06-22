@@ -168,27 +168,28 @@ function AddonRow({
               {unavailableReason || "Niedostępny w tym terminie"}
             </span>
           ) : (
-            <span
-              className={cn(
-                "text-xs font-medium",
-                isFree ? "text-emerald-600" : "text-muted-foreground",
-              )}
-            >
-              {priceLabel}
-              {!isFree && days > 0 && (
-                <span className="text-muted-foreground">
-                  {" · "}
-                  {formatPrice(addon.pricePerDay * days)} zł / {days}{" "}
-                  {days === 1 ? "dzień" : "dni"}
-                </span>
-              )}
-            </span>
+            <div className="flex flex-col gap-0.5">
+              <span
+                className={cn(
+                  "text-xs font-medium",
+                  isFree ? "text-emerald-600" : "text-muted-foreground",
+                )}
+              >
+                {priceLabel}
+                {!isFree && days > 0 && (
+                  <span className="text-muted-foreground">
+                    {" · "}
+                    {formatPrice(addon.pricePerDay * days)} zł / {days}{" "}
+                    {days === 1 ? "dzień" : "dni"}
+                  </span>
+                )}
+              </span>
+              {/* Details button - now below price */}
+              <AddonDetailsDialog addon={addon} priceLabel={priceLabel} inline />
+            </div>
           )}
         </div>
       </button>
-
-      {/* Details dialog */}
-      <AddonDetailsDialog addon={addon} priceLabel={priceLabel} />
 
       {/* Toggle indicator */}
       <button
@@ -220,9 +221,11 @@ function AddonRow({
 function AddonDetailsDialog({
   addon,
   priceLabel,
+  inline = false,
 }: {
   addon: AddonProduct;
   priceLabel: string;
+  inline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const imageUrl = addon.images?.[0] || "/placeholder-product.jpg";
@@ -233,7 +236,10 @@ function AddonDetailsDialog({
         <button
           type="button"
           aria-label={`Szczegóły: ${addon.title}`}
-          className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10 sm:px-2"
+          className={cn(
+            "flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10",
+            inline ? "w-fit rounded px-0 py-0" : "shrink-0 rounded-md px-1.5 py-1 sm:px-2"
+          )}
         >
           Szczegóły
           <ChevronRight className="h-3.5 w-3.5" />
