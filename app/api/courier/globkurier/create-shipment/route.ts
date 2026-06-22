@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       apartmentNumber: senderConfig.flatNumber || undefined,
       postCode: senderConfig.postCode,
       country: 'PL',
-      pointId: senderConfig.postingCode,
+      pointId: undefined as string | undefined,
       phone: senderConfig.phoneNumber,
       email: senderConfig.email,
       contactPerson: `${senderConfig.firstName} ${senderConfig.lastName}`,
@@ -173,11 +173,11 @@ export async function POST(request: NextRequest) {
       apartmentNumber: customerApartmentNo,
       postCode: customer.address_zip || '00-000',
       country: 'PL',
-      pointId: order.inpost_point_id,
       phone: customer.phone,
       email: customer.email,
       contactPerson: customer.full_name || `${customerFirstName} ${customerLastName}`,
       nip: customer.nip || undefined,
+      pointId: undefined as string | undefined,
     };
 
     // Apply overrides from modal if provided
@@ -196,6 +196,19 @@ export async function POST(request: NextRequest) {
         customerAddr.pointId = receiverOverride.destinationCode;
       } else if (!isOutbound && receiverOverride.postingCode) {
         myAddress.pointId = receiverOverride.postingCode;
+      }
+    } else {
+      // Set paczkomat codes based on shipment type
+      if (order.inpost_point_id) {
+        if (shipmentType === 'outbound') {
+          // Outbound: customer receives at paczkomat
+          customerAddr.pointId = order.inpost_point_id;
+          myAddress.pointId = senderConfig.postingCode;
+        } else {
+          // Return: customer sends from paczkomat
+          customerAddr.pointId = order.inpost_point_id;
+          myAddress.pointId = senderConfig.postingCode;
+        }
       }
     }
 
