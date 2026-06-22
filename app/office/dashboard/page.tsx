@@ -103,8 +103,8 @@ export default function OfficeDashboardPage() {
   const days = useMemo(() => rangeDays(viewStart, daysCount), [viewStart, daysCount]);
 
   const goToToday = () => setViewStart(clampToDate(new Date()));
-  const goToPrevMonth = () => setViewStart(prev => clampToDate(addMonths(prev, -1)));
-  const goToNextMonth = () => setViewStart(prev => clampToDate(addMonths(prev, 1)));
+  const goToPrev = () => setViewStart(prev => clampToDate(isMobile ? addDays(prev, -7) : addMonths(prev, -1)));
+  const goToNext = () => setViewStart(prev => clampToDate(isMobile ? addDays(prev, 7) : addMonths(prev, 1)));
 
   async function load() {
     setLoading(true);
@@ -338,27 +338,58 @@ export default function OfficeDashboardPage() {
           </Card>
 
           {/* Timeline Controls */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={goToPrevMonth} className="h-8 px-3 border-slate-200">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={goToToday} className="h-8 px-3 border-slate-200 font-medium">
-                Dzisiaj
-              </Button>
-              <Button variant="outline" size="sm" onClick={goToNextMonth} className="h-8 px-3 border-slate-200">
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <span className="text-sm font-medium text-slate-700">
-                {format(viewStart, 'd MMM', { locale: pl })} – {format(addDays(viewStart, daysCount - 1), 'd MMM yyyy', { locale: pl })}
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-xs text-slate-500">
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-blue-500 inline-block" /> Wynajem</span>
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-amber-400 inline-block" /> Bufor</span>
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-red-500 inline-block" /> Przeterminowane</span>
-            </div>
-          </div>
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-2">
+                  <Button variant="outline" size={isMobile ? "default" : "sm"} onClick={goToPrev} className={cn(
+                    "border-slate-200 flex-shrink-0",
+                    isMobile ? "h-10 w-10 p-0" : "h-8 px-3"
+                  )}>
+                    <ChevronLeft className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
+                  </Button>
+                  <div className="flex-1 text-center">
+                    <div className={cn(
+                      "font-bold text-slate-900",
+                      isMobile ? "text-base" : "text-sm"
+                    )}>
+                      {format(viewStart, 'd MMM', { locale: pl })} – {format(addDays(viewStart, daysCount - 1), 'd MMM yyyy', { locale: pl })}
+                    </div>
+                    {isMobile && (
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {daysCount} dni
+                      </div>
+                    )}
+                  </div>
+                  <Button variant="outline" size={isMobile ? "default" : "sm"} onClick={goToNext} className={cn(
+                    "border-slate-200 flex-shrink-0",
+                    isMobile ? "h-10 w-10 p-0" : "h-8 px-3"
+                  )}>
+                    <ChevronRight className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Button variant="outline" size="sm" onClick={goToToday} className="h-8 px-3 border-slate-200 font-medium">
+                    Dzisiaj
+                  </Button>
+                  <div className="flex items-center gap-3 text-xs text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-3 w-3 rounded bg-blue-500 inline-block" />
+                      {isMobile ? "Wyn." : "Wynajem"}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-3 w-3 rounded bg-amber-400 inline-block" />
+                      {isMobile ? "Buf." : "Bufor"}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-3 w-3 rounded bg-red-500 inline-block" />
+                      {isMobile ? "Prz." : "Przeterminowane"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <Card className="bg-white border-slate-200 shadow-sm">
             <CardHeader className="pb-2 px-4 pt-4 border-b border-slate-100">
@@ -367,23 +398,30 @@ export default function OfficeDashboardPage() {
             <CardContent className="p-0">
               <ScrollArea className="w-full">
                 <div className="min-w-max">
-                  <div className="grid" style={{ gridTemplateColumns: `${isMobile ? '180px' : '280px'} repeat(${days.length}, ${isMobile ? '40px' : '48px'})` }}>
-                    <div className="sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 p-3 text-xs font-bold uppercase tracking-wide text-slate-600">
-                      Urządzenie
+                  <div className="grid" style={{ gridTemplateColumns: `${isMobile ? '140px' : '280px'} repeat(${days.length}, ${isMobile ? '48px' : '48px'})` }}>
+                    <div className={cn(
+                      "sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 font-bold uppercase tracking-wide text-slate-600",
+                      isMobile ? "p-2 text-[10px]" : "p-3 text-xs"
+                    )}>
+                      {isMobile ? "Urządz." : "Urządzenie"}
                     </div>
                     {days.map((d) => (
-                      <div key={d.toISOString()} className="border-b border-slate-200 bg-slate-50 p-2 text-center">
+                      <div key={d.toISOString()} className={cn(
+                        "border-b border-slate-200 bg-slate-50 text-center",
+                        isMobile ? "p-1.5" : "p-2"
+                      )}>
                         <div className={cn(
-                          "text-[10px] font-medium",
-                          isMobile ? "text-slate-600" : "text-slate-500"
+                          "font-semibold",
+                          isMobile ? "text-xs text-slate-700" : "text-[10px] text-slate-500"
                         )}>
                           {format(d, isMobile ? 'dd' : 'dd MMM', { locale: pl })}
                         </div>
-                        {!isMobile && (
-                          <div className="text-[9px] text-slate-400">
-                            {format(d, 'EEE', { locale: pl })}
-                          </div>
-                        )}
+                        <div className={cn(
+                          "text-slate-400",
+                          isMobile ? "text-[10px] mt-0.5" : "text-[9px]"
+                        )}>
+                          {format(d, 'EEE', { locale: pl })}
+                        </div>
                       </div>
                     ))}
 
@@ -434,12 +472,12 @@ function TimelineRow(props: {
   return (
     <>
       <div className={cn(
-        "sticky left-0 z-10 border-b border-r border-slate-200 bg-white",
+        "sticky left-0 z-10 border-b border-r border-slate-200 bg-white flex items-center",
         isMobile ? "p-2" : "p-3"
       )}>
         <div className={cn(
-          "truncate font-medium text-slate-700",
-          isMobile ? "text-[10px]" : "text-xs"
+          "truncate font-medium text-slate-700 leading-tight",
+          isMobile ? "text-[11px]" : "text-xs"
         )}>
           {label}
         </div>
@@ -478,7 +516,7 @@ function TimelineCell(props: {
   }[state];
 
   const cellContent = (
-    <div className={cn(baseClasses, stateClasses, isMobile ? "h-8" : "h-10")} />
+    <div className={cn(baseClasses, stateClasses, isMobile ? "h-10" : "h-10")} />
   );
 
   if (state === "none" || !order) {
