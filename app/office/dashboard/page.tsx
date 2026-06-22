@@ -538,7 +538,7 @@ export default function OfficeDashboardPage() {
                   <Button variant="outline" size="sm" onClick={goToToday} className="h-8 px-3 border-slate-200 font-medium">
                     Dzisiaj
                   </Button>
-                  <div className="flex items-center gap-3 text-xs text-slate-600">
+                  <div className="flex items-center gap-3 text-xs text-slate-600 flex-wrap">
                     <span className="flex items-center gap-1.5">
                       <span className="h-3 w-3 rounded bg-blue-500 inline-block" />
                       {isMobile ? "Wyn." : "Wynajem"}
@@ -550,6 +550,10 @@ export default function OfficeDashboardPage() {
                     <span className="flex items-center gap-1.5">
                       <span className="h-3 w-3 rounded bg-red-500 inline-block" />
                       {isMobile ? "Prz." : "Przeterminowane"}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-3 w-3 rounded bg-gradient-to-br from-purple-600 to-pink-600 inline-block" />
+                      {isMobile ? "Konf." : "Konflikt"}
                     </span>
                   </div>
                 </div>
@@ -680,6 +684,7 @@ function TimelineCell(props: {
     rent: "bg-[#3b82f6]",
     buffer: "bg-[#f59e0b]",
     overdue: "bg-[#ef4444]",
+    conflict: "bg-gradient-to-br from-purple-600 to-pink-600 relative",
     none: "bg-white hover:bg-slate-50",
   }[state];
 
@@ -691,7 +696,15 @@ function TimelineCell(props: {
           setTooltipOpen(!tooltipOpen);
         }
       }}
-    />
+    >
+      {state === "conflict" && cellData.conflictCount && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[10px] font-bold text-white bg-black/30 rounded-full h-5 w-5 flex items-center justify-center">
+            {cellData.conflictCount}
+          </span>
+        </div>
+      )}
+    </div>
   );
 
   if (state === "none" || !order) {
@@ -713,6 +726,7 @@ function TimelineCell(props: {
     rent: "Wynajem",
     buffer: "Bufor logistyczny",
     overdue: "Przeterminowane",
+    conflict: "KONFLIKT - Nakładające się terminy",
   }[state];
 
   const handleOrderClick = (e: React.MouseEvent) => {
@@ -728,7 +742,17 @@ function TimelineCell(props: {
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-2">
-            <div className="font-semibold text-xs">{stateLabel}</div>
+            <div className={cn(
+              "font-semibold text-xs",
+              state === "conflict" && "text-purple-700"
+            )}>
+              {stateLabel}
+              {state === "conflict" && cellData.conflictCount && (
+                <span className="ml-1.5 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
+                  {cellData.conflictCount} zamówień
+                </span>
+              )}
+            </div>
             <div className="text-xs space-y-0.5">
               <div><span className="text-slate-400">Klient:</span> {customerName}</div>
               <div><span className="text-slate-400">Zamówienie:</span> {orderNumber}</div>
@@ -750,16 +774,20 @@ function TimelineCell(props: {
   );
 }
 
-type CellState = "none" | "buffer" | "rent" | "overdue";
+type CellState = "none" | "buffer" | "rent" | "overdue" | "conflict";
 
 type CellData = {
   state: CellState;
   order: OrderRow | null;
+  conflictCount?: number;
 };
 
 function getCellData(dayIso: string, orders: OrderRow[], bufferBefore: number, bufferAfter: number): CellData {
   const day = parseISO(dayIso);
   const today = startOfDay(new Date());
+
+  // Zbierz wszystkie zamówienia, które pokrywają się z tym dniem
+  const matchingOrders: Array<{ order: OrderRow; isRent: boolean; isOverdue: boolean }> = [];
 
   for (const o of orders) {
     const start = parseISO(o.start_date);
@@ -769,22 +797,40 @@ function getCellData(dayIso: string, orders: OrderRow[], bufferBefore: number, b
     const blockedEnd = addDays(end, bufferAfter);
 
     if (!isBefore(day, blockedStart) && !isAfter(day, blockedEnd)) {
-      if (!isBefore(day, start) && !isAfter(day, end)) {
-        const isOverdue = isPast(end) && !isPast(addDays(end, bufferAfter)) && 
-                         ["picked_up", "reserved"].includes(o.order_status?.toLowerCase() || "");
-        return {
-          state: isOverdue ? "overdue" : "rent",
-          order: o,
-        };
-      }
-      return {
-        state: "buffer",
-        order: o,
-      };
+      const isRent = !isBefore(day, start) && !isAfter(day, end);
+      const isOverdue = isRent && isPast(end) && !isPast(addDays(end, bufferAfter)) && 
+                       ["picked_up", "reserved"].includes(o.order_status?.toLowerCase() || "");
+      matchingOrders.push({ order: o, isRent, isOverdue });
     }
   }
 
-  return { state: "none", order: null };
+  if (matchingOrders.length === 0) {
+    return { state: "none", order: null };
+  }
+
+  // Jeśli więcej niż jedno zamówienie pokrywa ten dzień - KONFLIKT!
+  if (matchingOrders.length > 1) {
+    // Priorytet: najpierw wynajem, potem przeterminowane, potem bufor
+    const rentOrder = matchingOrders.find(m => m.isRent && !m.isOverdue);
+    const overdueOrder = matchingOrders.find(m => m.isOverdue);
+    const primaryOrder = rentOrder || overdueOrder || matchingOrders[0];
+    
+    return {
+      state: "conflict",
+      order: primaryOrder.order,
+      conflictCount: matchingOrders.length,
+    };
+  }
+
+  // Tylko jedno zamówienie - normalny stan
+  const match = matchingOrders[0];
+  if (match.isOverdue) {
+    return { state: "overdue", order: match.order };
+  }
+  if (match.isRent) {
+    return { state: "rent", order: match.order };
+  }
+  return { state: "buffer", order: match.order };
 }
 
 type DispatchCardItem = {
