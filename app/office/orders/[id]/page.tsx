@@ -404,6 +404,11 @@ export default function OfficeOrderDetailsPage() {
   const [editingDates, setEditingDates] = useState(false);
   const [dateDraft, setDateDraft] = useState({ start: "", end: "" });
   const [savingDates, setSavingDates] = useState(false);
+
+  // Inline delivery editing
+  const [editingDelivery, setEditingDelivery] = useState(false);
+  const [deliveryDraft, setDeliveryDraft] = useState({ method: "inpost" as "inpost" | "personal_pickup", inpostPointId: "" });
+  const [savingDelivery, setSavingDelivery] = useState(false);
   async function saveDates() {
     if (!orderId) return;
     setSavingDates(true);
@@ -414,6 +419,25 @@ export default function OfficeOrderDetailsPage() {
     setSavingDates(false);
     if (error) { setError(error.message); return; }
     setEditingDates(false);
+    await loadOrder();
+  }
+
+  async function saveDelivery() {
+    if (!orderId) return;
+    setSavingDelivery(true);
+    const updateData: any = { delivery_method: deliveryDraft.method };
+    if (deliveryDraft.method === "inpost") {
+      updateData.inpost_point_id = deliveryDraft.inpostPointId.trim() || null;
+    } else {
+      updateData.inpost_point_id = null;
+    }
+    const { error } = await supabase
+      .from("orders")
+      .update(updateData)
+      .eq("id", orderId);
+    setSavingDelivery(false);
+    if (error) { setError(error.message); return; }
+    setEditingDelivery(false);
     await loadOrder();
   }
 
@@ -1133,22 +1157,106 @@ export default function OfficeOrderDetailsPage() {
                         <div className="mt-1 text-sm font-semibold text-violet-900">Poznań, ul. Cumownicza</div>
                         <div className="mt-0.5 text-xs text-violet-700">Klient odbierze osobiście</div>
                       </div>
+                      <button
+                        onClick={() => {
+                          setDeliveryDraft({
+                            method: "personal_pickup",
+                            inpostPointId: ""
+                          });
+                          setEditingDelivery(true);
+                        }}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-violet-400 hover:bg-violet-100 hover:text-violet-600 transition-colors"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
-                ) : order.inpost_point_id ? (
+                ) : order.delivery_method === "inpost" || order.inpost_point_id ? (
                   <>
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                      <div className="flex items-start gap-3">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold uppercase tracking-wider text-emerald-600">InPost Paczkomat</div>
-                          <div className="mt-1 font-mono text-sm font-semibold text-emerald-900">{order.inpost_point_id}</div>
-                          {order.inpost_point_address && (
-                            <div className="mt-0.5 text-xs text-emerald-700">{order.inpost_point_address}</div>
-                          )}
+                    {editingDelivery ? (
+                      <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+                        <div>
+                          <Label className="text-xs text-slate-500 mb-2 block">Metoda dostawy</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setDeliveryDraft({ ...deliveryDraft, method: "inpost" })}
+                              className={`flex items-center gap-2 rounded-lg border p-2.5 text-left transition-all ${
+                                deliveryDraft.method === "inpost"
+                                  ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200"
+                                  : "border-slate-200 bg-slate-50 hover:bg-slate-100"
+                              }`}
+                            >
+                              <Package className="h-4 w-4 shrink-0 text-slate-500" />
+                              <div>
+                                <p className="text-xs font-semibold text-slate-900">Paczkomat</p>
+                              </div>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeliveryDraft({ ...deliveryDraft, method: "personal_pickup" })}
+                              className={`flex items-center gap-2 rounded-lg border p-2.5 text-left transition-all ${
+                                deliveryDraft.method === "personal_pickup"
+                                  ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200"
+                                  : "border-slate-200 bg-slate-50 hover:bg-slate-100"
+                              }`}
+                            >
+                              <Store className="h-4 w-4 shrink-0 text-slate-500" />
+                              <div>
+                                <p className="text-xs font-semibold text-slate-900">Odbiór osobisty</p>
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                        {deliveryDraft.method === "inpost" && (
+                          <div>
+                            <Label className="text-xs text-slate-500">Kod Paczkomatu</Label>
+                            <Input
+                              type="text"
+                              value={deliveryDraft.inpostPointId}
+                              onChange={(e) => setDeliveryDraft({ ...deliveryDraft, inpostPointId: e.target.value.toUpperCase() })}
+                              placeholder="np. POZ08M"
+                              className="mt-1 h-8 text-sm font-mono uppercase"
+                              maxLength={10}
+                            />
+                          </div>
+                        )}
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingDelivery(false)}>
+                            Anuluj
+                          </Button>
+                          <Button size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => void saveDelivery()} disabled={savingDelivery}>
+                            {savingDelivery ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
+                            Zapisz
+                          </Button>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                        <div className="flex items-start gap-3">
+                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-semibold uppercase tracking-wider text-emerald-600">InPost Paczkomat</div>
+                            <div className="mt-1 font-mono text-sm font-semibold text-emerald-900">{order.inpost_point_id || "Brak kodu"}</div>
+                            {order.inpost_point_address && (
+                              <div className="mt-0.5 text-xs text-emerald-700">{order.inpost_point_address}</div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => {
+                              setDeliveryDraft({
+                                method: (order.delivery_method as "inpost" | "personal_pickup") || "inpost",
+                                inpostPointId: order.inpost_point_id || ""
+                              });
+                              setEditingDelivery(true);
+                            }}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-emerald-100 hover:text-emerald-600 transition-colors"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     
                     {/* Courier Labels */}
                     <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -1168,10 +1276,22 @@ export default function OfficeOrderDetailsPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <div className="flex items-start gap-3">
-                      <Truck className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                      <div className="text-xs text-slate-500">Brak informacji o dostawie</div>
+                      <Truck className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold text-amber-900">Brak informacji o dostawie</div>
+                        <div className="text-xs text-amber-700 mt-0.5">Kliknij, aby dodać metodę dostawy</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setDeliveryDraft({ method: "inpost", inpostPointId: "" });
+                          setEditingDelivery(true);
+                        }}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-amber-600 hover:bg-amber-100 transition-colors"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 )}
