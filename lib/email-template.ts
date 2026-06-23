@@ -189,21 +189,27 @@ function ctaButton(text: string, href: string): string {
 }
 
 /** Review request link used in the order-returned email */
-export const REVIEW_FORM_URL = "https://forms.gle/S5ejJfi8EKNrsw3W6";
+export const REVIEW_FORM_URL = "https://g.page/r/CbdJd0FtRNfLEAE/review";
 
 /**
  * {{review_box}} — friendly, encouraging call-to-action asking the customer
- * to leave a review via Google Forms. Used in: Order Returned.
+ * to leave a Google review. Used in: Order Returned.
  */
 export function renderReviewBox(): string {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0">
-    <tr><td style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid ${BRAND.gold};border-radius:14px;padding:28px 24px;text-align:center">
-      <p style="margin:0;font-size:30px;line-height:1">⭐️⭐️⭐️⭐️⭐️</p>
-      <p style="margin:12px 0 6px;font-size:19px;font-weight:700;color:${BRAND.dark}">Jak Ci się korzystało?</p>
-      <p style="margin:0 0 20px;font-size:14px;color:#92400e;line-height:1.6">Twoja opinia zajmie tylko <strong>chwilę</strong>, a dla nas znaczy <strong>bardzo dużo</strong> — pomaga nam się rozwijać i lepiej obsługiwać kolejnych klientów. Będziemy wdzięczni za kilka słów! 🙏</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto" align="center">
-        <tr><td style="background-color:${BRAND.dark};border-radius:8px">
-          <a href="${REVIEW_FORM_URL}" target="_blank" style="display:inline-block;padding:15px 38px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;font-family:${BRAND.font}">✍️ Wystaw opinię</a>
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0">
+    <tr><td style="background:linear-gradient(135deg,#1a1a2e 0%,#2d2d4a 100%);border-radius:18px;padding:0;overflow:hidden">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="height:5px;background:linear-gradient(90deg,${BRAND.gold},#e8c65a,${BRAND.gold})"></td></tr>
+        <tr><td style="padding:34px 28px;text-align:center">
+          <p style="margin:0 0 4px;font-size:38px;line-height:1;letter-spacing:3px">⭐️⭐️⭐️⭐️⭐️</p>
+          <p style="margin:16px 0 8px;font-size:22px;font-weight:800;color:#ffffff;line-height:1.3">Podobała Ci się współpraca?</p>
+          <p style="margin:0 auto 22px;max-width:420px;font-size:14px;color:#cbd5e1;line-height:1.7">Zostaw nam <strong style="color:${BRAND.gold}">opinię w Google</strong> — to tylko chwila, a Twoje słowa pomagają nam się rozwijać i ułatwiają decyzję kolejnym osobom, które szukają niezawodnego internetu Starlink. 🙏</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto" align="center">
+            <tr><td style="background:linear-gradient(135deg,${BRAND.gold},#e8c65a);border-radius:50px;box-shadow:0 4px 14px rgba(212,168,67,0.45)">
+              <a href="${REVIEW_FORM_URL}" target="_blank" style="display:inline-block;padding:16px 44px;font-size:16px;font-weight:800;color:${BRAND.dark};text-decoration:none;font-family:${BRAND.font};letter-spacing:0.3px">⭐ Oceń nas w Google</a>
+            </td></tr>
+          </table>
+          <p style="margin:18px 0 0;font-size:12px;color:#94a3b8;line-height:1.5">Dziękujemy, że jesteś z nami — Twoje wsparcie znaczy dla nas bardzo dużo! 💛</p>
         </td></tr>
       </table>
     </td></tr>
