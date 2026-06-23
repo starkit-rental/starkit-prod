@@ -283,10 +283,10 @@ export function CourierPanel({
     lastName: receiverLastName,
     phoneNumber: customerPhone || '000000000',
     email: customerEmail || senderData.email,
-    street: 'Paczkomat InPost',
-    buildingNumber: inpostPointId || '',
-    flatNumber: '',
-    postCode: customerAddress?.zip || '00-000', // Use customer's postal code (paczkomat is in their city)
+    street: customerAddress?.street || '',
+    buildingNumber: customerAddress?.street?.match(/(\d+[a-zA-Z]?)(?:\/|$)/)?.[1] || '',
+    flatNumber: customerAddress?.street?.match(/\/(\d+[a-zA-Z]?)$/)?.[1] || '',
+    postCode: customerAddress?.zip || '00-000',
     city: customerAddress?.city || 'Polska',
     postingCode: inpostPointId || '',
   };

@@ -180,40 +180,26 @@ export async function POST(request: NextRequest) {
       pointId: undefined as string | undefined,
     };
 
-    // Apply overrides from modal if provided
-    if (senderOverride && receiverOverride) {
-      const isOutbound = shipmentType === 'outbound';
-      
-      // Use override data for sender
-      if (isOutbound && senderOverride.postingCode) {
-        myAddress.pointId = senderOverride.postingCode;
-      } else if (!isOutbound && senderOverride.destinationCode) {
-        customerAddr.pointId = senderOverride.destinationCode;
-      }
-      
-      // Use override data for receiver
-      if (isOutbound && receiverOverride.destinationCode) {
-        customerAddr.pointId = receiverOverride.destinationCode;
-      } else if (!isOutbound && receiverOverride.postingCode) {
-        myAddress.pointId = receiverOverride.postingCode;
-      }
-    } else {
-      // Set paczkomat codes based on shipment type
-      if (order.inpost_point_id) {
-        if (shipmentType === 'outbound') {
-          // Outbound: customer receives at paczkomat
-          customerAddr.pointId = order.inpost_point_id;
-          myAddress.pointId = senderConfig.postingCode;
-        } else {
-          // Return: customer sends from paczkomat
-          customerAddr.pointId = order.inpost_point_id;
-          myAddress.pointId = senderConfig.postingCode;
-        }
-      }
-    }
-
     const senderAddress = isOutbound ? myAddress : customerAddr;
     const receiverAddress = isOutbound ? customerAddr : myAddress;
+
+    // Set paczkomat point IDs.
+    // The sender posts the parcel (postingCode); the receiver collects it (destinationCode).
+    // This holds for both outbound and return shipments.
+    if (senderOverride && receiverOverride) {
+      senderAddress.pointId = senderOverride.postingCode || undefined;
+      receiverAddress.pointId = receiverOverride.destinationCode || undefined;
+    } else if (order.inpost_point_id) {
+      if (isOutbound) {
+        // Outbound: we post from our paczkomat, customer collects at their paczkomat
+        senderAddress.pointId = senderConfig.postingCode;
+        receiverAddress.pointId = order.inpost_point_id;
+      } else {
+        // Return: customer posts from their paczkomat, we collect at our paczkomat
+        senderAddress.pointId = order.inpost_point_id;
+        receiverAddress.pointId = senderConfig.postingCode;
+      }
+    }
 
     // Create order request using bestPrice.
     // If a productId was selected (carrier picker), use it; otherwise let API auto-select InPost.
@@ -266,8 +252,8 @@ export async function POST(request: NextRequest) {
         price_gross: orderResponse.pricing.priceGross,
         price_net: orderResponse.pricing.priceNet,
         currency: orderResponse.pricing.currency,
-        destination_code: isOutbound ? order.inpost_point_id : senderConfig.postingCode,
-        posting_code: isOutbound ? senderConfig.postingCode : order.inpost_point_id,
+        destination_code: receiverAddress.pointId || null,
+        posting_code: senderAddress.pointId || null,
       })
       .select()
       .single();
