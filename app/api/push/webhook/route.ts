@@ -8,7 +8,7 @@
  *   - Events: INSERT
  *   - Type: HTTP Request
  *   - Method: POST
- *   - URL: https://starkit.pl/api/push/webhook
+ *   - URL: https://www.starkit.pl/api/push/webhook
  *   - Headers: x-widget-api-key: <twój WIDGET_API_KEY>
  */
 

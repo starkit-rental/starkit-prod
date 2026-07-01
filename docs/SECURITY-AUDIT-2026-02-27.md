@@ -387,7 +387,7 @@ WHERE schemaname = 'public';
 - [ ] **P2 #10:** Ustalić harmonogram rotacji kluczy
 
 ### Konfiguracja produkcyjna:
-- [ ] Ustawić wszystkie env vars w Vercel/Netlify
+- [ ] Ustawić wszystkie env vars w Vercel
 - [ ] `STRIPE_WEBHOOK_SECRET` - utworzyć webhook w Stripe dla produkcji
 - [ ] Skonfigurować custom domain z SSL
 - [ ] Skonfigurować backup bazy Supabase

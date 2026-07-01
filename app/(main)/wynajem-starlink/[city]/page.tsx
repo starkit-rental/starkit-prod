@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const page = await client.fetch(cityPageQuery, { slug: city });
   if (!page) return {};
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
   const title = page.meta_title || `Wynajem Starlink ${page.city} – dostawa 24-48h | Starkit`;
   const description =
     page.meta_description ||
@@ -74,7 +74,7 @@ export default async function CityPage({ params }: PageProps) {
     notFound();
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
   const breadcrumbLinks = [
     { label: "Strona główna", href: "/" },
     { label: "Oferta", href: "/products" },

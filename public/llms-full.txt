@@ -39,26 +39,28 @@ Godziny pracy: Pon-Pt 9:00-18:00, Sob 9:00-14:00
 
 ## Cennik szczegółowy
 
-### Starlink Mini
-| Okres | Cena/dzień | Cena łączna |
-|---|---|---|
-| 3 dni (minimum) | 39 zł | 240 zł |
-| 7 dni | 39 zł | 273 zł |
-| 14 dni | 39 zł | 546 zł |
-| 30 dni | 39 zł | 1170 zł |
+Obowiązuje cennik progowy: im dłuższy wynajem, tym niższa średnia stawka dzienna. Poniższe kwoty to ceny łączne za cały okres.
 
-### Starlink Standard
-| Okres | Cena/dzień | Cena łączna |
+### Starlink Mini (kaucja zwrotna: 500 zł)
+| Okres | Cena łączna | Śr. stawka/dzień |
 |---|---|---|
-| 3 dni (minimum) | 59 zł | 360 zł |
-| 7 dni | 59 zł | 413 zł |
-| 14 dni | 59 zł | 826 zł |
-| 30 dni | 59 zł | 1770 zł |
+| 3 dni (minimum) | 240 zł | 80 zł |
+| 7 dni | 520 zł | ~74 zł |
+| 14 dni | 800 zł | ~57 zł |
+| 30 dni | 1200 zł | 40 zł |
 
-*Im dłuższy wynajem, tym niższa stawka dzienna. Dokładne ceny kalkulowane na stronie produktu.*
+### Starlink Standard (kaucja zwrotna: 800 zł)
+| Okres | Cena łączna | Śr. stawka/dzień |
+|---|---|---|
+| 3 dni (minimum) | 360 zł | 120 zł |
+| 7 dni | 780 zł | ~111 zł |
+| 14 dni | 1200 zł | ~86 zł |
+| 30 dni | 1800 zł | 60 zł |
+
+*Im dłuższy wynajem, tym niższa średnia stawka dzienna (przy wynajmie miesięcznym od ok. 39 zł/dzień dla Mini). Dokładne ceny kalkulowane na stronie produktu.*
 
 Dodatkowe informacje:
-- Kaucja zwrotna (zwracana po oddaniu sprawnego sprzętu)
+- Kaucja zwrotna: Starlink Mini 500 zł, Starlink Standard 800 zł (zwracana po oddaniu sprawnego sprzętu)
 - Darmowa dostawa kurierem / paczkomatem
 - Brak abonamentu i umów długoterminowych
 - Płatność kartą lub przelewem

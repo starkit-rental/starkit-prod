@@ -131,7 +131,7 @@ create table push_tokens (
 
 ### Krok 3 – Zmienne środowiskowe
 
-W `.env.local` i Netlify/Vercel:
+W `.env.local` i Vercel:
 ```
 WIDGET_API_KEY=twoj-tajny-klucz-12345
 APNS_KEY_ID=ABCDE12345        # z developer.apple.com

@@ -72,16 +72,16 @@ export const availabilityLimiter = createUpstashLimiter(20, 10);
 export const publicLimiter = createUpstashLimiter(30, 60);
 
 // ─── IP extraction ────────────────────────────────────────────────────────────
-// Priority:
-//   1. x-nf-client-connection-ip — Netlify edge-injected, cannot be spoofed
-//   2. x-real-ip                 — set by some reverse proxies
+// Deployed on Vercel. Priority:
+//   1. x-real-ip                 — Vercel proxy-injected client IP, reliable
+//   2. x-vercel-forwarded-for    — Vercel-injected, cannot be spoofed by client
 //   3. x-forwarded-for (first)   — can be spoofed; last resort only
 export function getClientIp(req: Request): string {
-  const netlifyIp = req.headers.get("x-nf-client-connection-ip");
-  if (netlifyIp) return netlifyIp.trim();
-
   const realIp = req.headers.get("x-real-ip");
   if (realIp) return realIp.trim();
+
+  const vercelForwarded = req.headers.get("x-vercel-forwarded-for");
+  if (vercelForwarded) return vercelForwarded.split(",")[0].trim();
 
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();

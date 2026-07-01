@@ -4,7 +4,7 @@ type HowToSchemaProps = {
 };
 
 export default function HowToSchema({ productName, productSlug }: HowToSchemaProps) {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
   const productUrl = `${baseUrl}/products/${productSlug}`;
 
   const schema = {

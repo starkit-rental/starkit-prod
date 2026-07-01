@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
   const title = product.meta_title || `Wynajem ${product.title} – cena od ${product.pricePerDay || 39} zł/dzień, dostawa 24h | Starkit.pl`;
   const description =
     product.meta_description ||

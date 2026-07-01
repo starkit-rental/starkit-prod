@@ -11,7 +11,7 @@ export default function ServiceSchema({
   pricePerDay,
   description,
 }: ServiceSchemaProps) {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
   const productUrl = `${baseUrl}/products/${productSlug}`;
   const price = pricePerDay && pricePerDay > 0 ? pricePerDay : 39;
 

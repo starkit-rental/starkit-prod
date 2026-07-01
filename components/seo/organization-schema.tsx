@@ -1,5 +1,5 @@
 export default function OrganizationSchema() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
 
   const schema = {
     "@context": "https://schema.org",

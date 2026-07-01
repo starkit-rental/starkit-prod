@@ -13,7 +13,7 @@ type ProductSchemaProps = {
 };
 
 export default function ProductSchema({ product }: ProductSchemaProps) {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
   const productUrl = `${baseUrl}/products/${product.slug}`;
   const description =
     product.excerpt ||
@@ -69,7 +69,7 @@ export default function ProductSchema({ product }: ProductSchemaProps) {
       availability:
         product.status === "available"
           ? "https://schema.org/InStock"
-          : "https://schema.org/InStock",
+          : "https://schema.org/OutOfStock",
       priceValidUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
         .toISOString()
         .split("T")[0],

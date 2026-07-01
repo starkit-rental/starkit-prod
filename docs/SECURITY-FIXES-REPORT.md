@@ -219,7 +219,7 @@ Możesz wdrożyć aplikację na produkcję, ale rozważ też:
 - ✅ Wszystkie P0 naprawione
 - ✅ Kod commitowany i wypchnięty (`5071b52`)
 - ✅ TypeScript kompiluje się bez błędów
-- ⚠️ **TODO:** Ustaw environment variables w Vercel/Netlify:
+- ⚠️ **TODO:** Ustaw environment variables w Vercel:
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
   - `SUPABASE_SERVICE_ROLE_KEY` ⚠️ (KRYTYCZNE)

@@ -257,7 +257,7 @@ Wszystkie próby botów są logowane:
 [Bot Protection] Turnstile verification failed for IP: 192.168.1.1
 ```
 
-Sprawdź logi w Vercel/Netlify Dashboard.
+Sprawdź logi w Vercel Dashboard.
 
 ---
 

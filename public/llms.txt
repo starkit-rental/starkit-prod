@@ -16,10 +16,10 @@
 
 ## Cennik
 
-- Starlink Mini: od 39 zł/dzień (min. 3 dni = 240 zł)
-- Starlink Standard: od 59 zł/dzień (min. 3 dni = 360 zł)
-- Im dłuższy wynajem, tym niższa stawka dzienna
-- Kaucja zwrotna
+- Starlink Mini: od 39 zł/dzień (min. 3 dni = 240 zł, 7 dni = 520 zł, 30 dni = 1200 zł)
+- Starlink Standard: od 59 zł/dzień (min. 3 dni = 360 zł, 7 dni = 780 zł, 30 dni = 1800 zł)
+- Cennik progowy – im dłuższy wynajem, tym niższa średnia stawka dzienna
+- Kaucja zwrotna: Starlink Mini 500 zł, Starlink Standard 800 zł
 
 ## Jak wynająć?
 

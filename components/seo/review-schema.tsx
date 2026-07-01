@@ -14,7 +14,7 @@ type ReviewSchemaProps = {
 export default function ReviewSchema({ productName, productSlug, reviews }: ReviewSchemaProps) {
   if (!reviews.length) return null;
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
   const productUrl = `${baseUrl}/products/${productSlug}`;
 
   const avgRating =

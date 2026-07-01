@@ -10,7 +10,7 @@ export function generatePageMetadata({
   page: PAGE_QUERYResult | POST_QUERYResult;
   slug: string;
 }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
   const pageUrl = siteUrl + `/${slug === "index" ? "" : slug}`;
   const isBlogPost = slug.startsWith("blog/");
   const ogImage = page?.ogImage

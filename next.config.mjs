@@ -20,14 +20,34 @@ const nextConfig = {
     ]
   },
   async headers() {
-    // NOTE: Content-Security-Policy is managed exclusively in netlify.toml
-    // to avoid conflicts between Next.js and Netlify CDN headers.
-    // The netlify.toml CSP is the authoritative source and includes all
-    // required domains (InPost, Smartsupp, Turnstile, Stripe, Sanity, etc.).
+    // NOTE: Deployed on Vercel. Content-Security-Policy is defined here so that
+    // Vercel applies it (Vercel does not read netlify.toml). This is the
+    // authoritative CSP and includes all required domains (InPost, Smartsupp,
+    // Turnstile, Stripe, Sanity, Google Analytics/Tag Manager, OpenStreetMap).
+    const contentSecurityPolicy = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.sanity.io https://js.stripe.com https://*.inpost.pl https://cdn.jsdelivr.net https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://*.googleadservices.com https://www.smartsuppchat.com https://*.smartsuppchat.com https://*.smartsupcdn.com",
+      "script-src-elem 'self' 'unsafe-inline' https://cdn.sanity.io https://js.stripe.com https://*.inpost.pl https://cdn.jsdelivr.net https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://*.googleadservices.com https://www.smartsuppchat.com https://*.smartsuppchat.com https://*.smartsupcdn.com",
+      "style-src 'self' 'unsafe-inline' https://*.inpost.pl https://cdn.jsdelivr.net https://fonts.googleapis.com https://*.smartsupcdn.com",
+      "style-src-elem 'self' 'unsafe-inline' https://*.inpost.pl https://cdn.jsdelivr.net https://fonts.googleapis.com https://*.smartsupcdn.com",
+      "img-src 'self' data: blob: https://cdn.sanity.io https://*.inpost.pl https://*.tile.openstreetmap.org https://*.openstreetmap.org https://www.google-analytics.com https://googleads.g.doubleclick.net https://*.googleadservices.com https://www.smartsuppchat.com https://*.smartsuppchat.com https://*.smartsupp.com https://*.smartsupcdn.com",
+      "font-src 'self' data: https://*.inpost.pl https://fonts.gstatic.com https://fonts.googleapis.com https://*.smartsupcdn.com",
+      "connect-src 'self' https://*.supabase.co https://api.stripe.com https://*.inpost.pl https://challenges.cloudflare.com https://www.google-analytics.com https://region1.google-analytics.com https://region1.analytics.google.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://*.googleadservices.com https://*.tile.openstreetmap.org https://nominatim.openstreetmap.org https://www.smartsuppchat.com https://*.smartsuppchat.com wss://www.smartsuppchat.com wss://*.smartsuppchat.com https://www.smartsupp.com https://*.smartsupp.com https://widget-v3.smartsupcdn.com https://*.smartsupcdn.com wss://*.smartsupcdn.com",
+      "frame-src 'self' https://js.stripe.com https://www.openstreetmap.org https://*.inpost.pl https://challenges.cloudflare.com https://bid.g.doubleclick.net https://www.smartsuppchat.com https://*.smartsuppchat.com https://www.smartsupp.com",
+      "worker-src 'self' blob:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; ');
+
     return [
       {
         source: '/:path*',
         headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: contentSecurityPolicy,
+          },
           {
             key: 'X-Frame-Options',
             value: 'SAMEORIGIN',

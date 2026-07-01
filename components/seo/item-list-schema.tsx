@@ -13,7 +13,7 @@ type ItemListSchemaProps = {
 export default function ItemListSchema({ items }: ItemListSchemaProps) {
   if (!items?.length) return null;
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
 
   const schema = {
     "@context": "https://schema.org",

@@ -10,7 +10,7 @@ export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await client.fetch(productsPageQuery);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://starkit.pl";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.starkit.pl";
   const title =
     page?.meta_title ||
     "Wynajem Starlink i Starlink Mini – oferta, ceny, dostawa | Starkit";

@@ -154,7 +154,7 @@ https://securityheaders.com → powinno być **A+**
 ```bash
 # 1. Załóż konto: https://dash.cloudflare.com/
 # 2. Stwórz site key (darmowe)
-# 3. Dodaj do Vercel/Netlify env vars:
+# 3. Dodaj do Vercel env vars:
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAA...  # Public (frontend)
 TURNSTILE_SECRET_KEY=0x4BBB...            # Secret (backend)
 ```
@@ -256,7 +256,7 @@ const [formTimestamp] = useState(() => new Date().toISOString());
 
 ### ⚠️ KRYTYCZNE - Ustaw Environment Variables
 
-**W Vercel/Netlify Dashboard:**
+**W Vercel Dashboard:**
 
 ```bash
 # Supabase (KRYTYCZNE!)
@@ -284,7 +284,7 @@ TURNSTILE_SECRET_KEY=0x4BBB...            # Cloudflare Secret
 ## 📋 CHECKLIST PRZED PRODUKCJĄ
 
 ### Must-Have (BLOKUJĄCE):
-- [ ] Wszystkie env vars ustawione w Vercel/Netlify
+- [ ] Wszystkie env vars ustawione w Vercel
 - [ ] `STRIPE_SECRET_KEY` = **live key** (NIE test!)
 - [ ] Stripe webhook utworzony dla produkcji (`/api/stripe-webhook`)
 - [ ] Custom domain skonfigurowana z SSL
@@ -463,7 +463,7 @@ Pełna dokumentacja w `/docs`:
 **Status:** 🟢 **BEZPIECZNE - MOŻESZ IŚĆ NA PRODUKCJĘ**
 
 Pamiętaj tylko o:
-1. Ustawieniu env vars w Vercel/Netlify
+1. Ustawieniu env vars w Vercel
 2. Utworzeniu Stripe webhook dla produkcji
 3. Skonfigurowaniu Cloudflare Turnstile (opcjonalnie, ale polecane)
 
