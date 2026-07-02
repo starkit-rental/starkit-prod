@@ -54,7 +54,7 @@ type OrderRow = {
   delivery_method: string | null;
   inpost_point_id: string | null;
   inpost_point_address: string | null;
-  order_items?: Array<{ stock_item_id: string }>;
+  order_items?: Array<{ stock_item_id: string; product_id: string }>;
   customers?: {
     full_name: string | null;
     email: string | null;
@@ -177,7 +177,7 @@ export default function OfficeDashboardPage() {
 
     const { data: ordersData, error: ordersError } = await supabase
       .from("orders")
-      .select("id,order_number,start_date,end_date,payment_status,order_status,total_rental_price,total_deposit,delivery_method,inpost_point_id,inpost_point_address,order_items(stock_item_id),customers:customer_id(full_name,email,phone)")
+      .select("id,order_number,start_date,end_date,payment_status,order_status,total_rental_price,total_deposit,delivery_method,inpost_point_id,inpost_point_address,order_items(stock_item_id,product_id),customers:customer_id(full_name,email,phone)")
       .not("order_status", "eq", "cancelled")
       .order("start_date", { ascending: true });
 
