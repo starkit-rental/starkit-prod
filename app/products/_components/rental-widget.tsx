@@ -483,11 +483,15 @@ export default function RentalWidget({ sanitySlug, productTitle, availableAddons
       if (next.has(addonId)) {
         next.delete(addonId);
       } else {
+        // Prevent adding unavailable addons
+        if (addonAvailability[addonId]?.available === false) {
+          return prev;
+        }
         next.add(addonId);
       }
       return next;
     });
-  }, []);
+  }, [addonAvailability]);
 
   // ── Navigate to checkout ──
   function onContinue() {
